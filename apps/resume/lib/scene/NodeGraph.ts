@@ -19,6 +19,8 @@ export class NodeGraph {
   private dummy = new Object3D()
   private edgePositions: Float32Array
   private currentPositions: Float32Array
+  private ambient: AmbientLight
+  private point: PointLight
 
   constructor(scene: Scene, config: SceneConfig) {
     this.config = config
@@ -60,10 +62,10 @@ export class NodeGraph {
       new LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.12 }),
     )
 
-    const ambient = new AmbientLight(0xffffff, config.ambientIntensity)
-    const point = new PointLight(0xffffff, config.pointLightIntensity, config.pointLightDistance)
-    point.position.set(0, 5, 5)
-    scene.add(this.mesh, this.lines, ambient, point)
+    this.ambient = new AmbientLight(0xffffff, config.ambientIntensity)
+    this.point = new PointLight(0xffffff, config.pointLightIntensity, config.pointLightDistance)
+    this.point.position.set(0, 5, 5)
+    scene.add(this.mesh, this.lines, this.ambient, this.point)
   }
 
   update(elapsed: number): void {
@@ -121,5 +123,7 @@ export class NodeGraph {
     this.lines.geometry.dispose()
     ;(this.lines.material as LineBasicMaterial).dispose()
     this.lines.removeFromParent()
+    this.ambient.removeFromParent()
+    this.point.removeFromParent()
   }
 }

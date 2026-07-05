@@ -31,11 +31,11 @@ export function GlowButton({
   const classes = cn(baseClasses, variantClasses[variant], className)
 
   if (href) {
+    const isExternal = href.startsWith('http')
     return (
       <a
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         className={classes}
         onClick={onClick}
       >

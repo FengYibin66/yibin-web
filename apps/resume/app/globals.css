@@ -41,6 +41,7 @@
   --accent-indigo: #6366f1;
   --accent-violet: #8b5cf6;
   --accent-primary: #00d4ff;
+  --accent-secondary: #6366f1;
 
   --text-primary: #f0f4ff;
   --text-secondary: #8b9bbc;
@@ -61,6 +62,7 @@
   --bg-border: #e2e8f0;
 
   --accent-primary: #0ea5e9;
+  --accent-secondary: #6366f1;
 
   --text-primary: #0f172a;
   --text-secondary: #64748b;

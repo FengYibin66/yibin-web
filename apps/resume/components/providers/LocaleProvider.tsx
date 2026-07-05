@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useState, useEffect, type ReactNode } from 'react'
 import type { Locale } from '../../lib/content/types'
 
 export interface LocaleContextValue {
@@ -9,40 +9,29 @@ export interface LocaleContextValue {
 }
 
 const throwingDefault: LocaleContextValue = {
-  get locale(): Locale {
-    throw new Error('useLocale must be used within LocaleProvider')
-  },
-  toggle() {
-    throw new Error('useLocale must be used within LocaleProvider')
-  },
+  get locale(): Locale { throw new Error('useLocale must be used within LocaleProvider') },
+  toggle() { throw new Error('useLocale must be used within LocaleProvider') },
 }
 
 export const LocaleContext = createContext<LocaleContextValue>(throwingDefault)
 
-function getInitialLocale(): Locale {
-  if (typeof window === 'undefined') return 'en'
-  const stored = localStorage.getItem('resume-locale')
-  return stored === 'zh' ? 'zh' : 'en'
-}
-
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(getInitialLocale)
+  // Always start with 'en' — SSR and CSR hydration must produce identical output.
+  // localStorage is only read after hydration completes (useEffect).
+  const [locale, setLocale] = useState<Locale>('en')
 
   useEffect(() => {
     const stored = localStorage.getItem('resume-locale')
-    const synced: Locale = stored === 'zh' ? 'zh' : 'en'
-    setLocale(synced)
-    document.documentElement.lang = synced
+    const persisted: Locale = stored === 'zh' ? 'zh' : 'en'
+    setLocale(persisted)
+    document.documentElement.lang = persisted
   }, [])
-
-  useEffect(() => {
-    document.documentElement.lang = locale
-  }, [locale])
 
   const toggle = () => {
     setLocale(prev => {
       const next: Locale = prev === 'en' ? 'zh' : 'en'
       localStorage.setItem('resume-locale', next)
+      document.documentElement.lang = next
       return next
     })
   }

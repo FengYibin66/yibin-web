@@ -1,0 +1,46 @@
+<!-- 微信公众号模板：答题翻转卡 -->
+<!--
+  TEMPLATE_META:
+  name: 答题翻转卡
+  description: 点击选项后同组遮罩 peel 淡出，露出底层答案解析（合规 peel，无 scale 误触）
+  tags: [大模型, 安全, 论文]
+  hasSvg: true
+  INTERACTION: 答题翻转 / 点击显示答案
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#f8fafc;">
+
+  <section style="padding:24px 20px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#6366f1;">QUIZ FLIP</p>
+    <p style="margin:0;font-size:20px;font-weight:800;color:#0f172a;">AI 快问快答 · 点选揭晓</p>
+  </section>
+
+  <section style="padding:8px 16px 24px;">
+    <p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.6;">Q：下列哪项是公众号正文内唯一可实现的「复杂交互」原生方案？</p>
+
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="360" fill="#eef2ff"/>
+
+      <!-- 背面：答案解析（底层，始终预绘） -->
+      <rect x="32" y="24" width="576" height="312" fill="#312e81" rx="14"/>
+      <text x="56" y="64" font-size="14" font-weight="700" fill="#a5b4fc" font-family="-apple-system,PingFang SC,sans-serif">✓ 正确答案：B. SVG + SMIL</text>
+      <text x="56" y="96" font-size="12" fill="#c7d2fe" font-family="-apple-system,PingFang SC,sans-serif">微信过滤 script/style，正文交互只能依赖</text>
+      <text x="56" y="118" font-size="12" fill="#c7d2fe" font-family="-apple-system,PingFang SC,sans-serif">SVG 的 begin="click" 动画链，H5/小程序需跳转。</text>
+      <rect x="56" y="140" width="528" height="2" fill="#4f46e5" opacity="0.5"/>
+      <text x="56" y="172" font-size="11" fill="#818cf8" font-family="-apple-system,PingFang SC,sans-serif">扩展阅读：docs/09-wechat-layout-methodology.md</text>
+
+      <!-- 正面：选项卡遮罩（点击 B 选项区域 peel） -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="32" y="24" width="576" height="96" fill="#ffffff" rx="12"/>
+        <text x="56" y="58" font-size="13" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">A. 内联 JavaScript 动画</text>
+        <rect x="32" y="136" width="576" height="96" fill="#ffffff" rx="12" stroke="#c7d2fe" stroke-width="2"/>
+        <text x="56" y="170" font-size="13" font-weight="600" fill="#4338ca" font-family="-apple-system,PingFang SC,sans-serif">B. SVG + SMIL 动画（点击我）</text>
+        <circle cx="580" cy="184" r="10" fill="#6366f1">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/>
+        </circle>
+        <rect x="32" y="248" width="576" height="88" fill="#ffffff" rx="12"/>
+        <text x="56" y="282" font-size="13" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">C. CSS @keyframes 关键帧</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+  </section>
+</section>

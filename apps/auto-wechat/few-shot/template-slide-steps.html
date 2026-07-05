@@ -1,0 +1,57 @@
+<!-- 微信公众号模板：滑动后点击（分步 peel 模拟） -->
+<!--
+  TEMPLATE_META:
+  name: 分步滑动模拟
+  description: 分步卡片同组 opacity peel（合规：animate 与可点击卡片同 g）
+  tags: [大模型, Agent, 应用]
+  hasSvg: true
+  INTERACTION: 滑动后点击 / 分步 peel
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#0b1220;">
+
+  <section style="padding:22px 18px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#34d399;">SLIDE STEPS</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#ecfdf5;">三步读懂今日 Agent 趋势</p>
+    <p style="margin:6px 0 0;font-size:12px;color:#6ee7b7;">点击卡片继续 · 共 3 步</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="300" fill="#111827"/>
+
+    <!-- Step 3（底层） -->
+    <g>
+      <rect x="20" y="20" width="600" height="260" fill="#064e3b" rx="14"/>
+      <text x="44" y="58" font-size="11" fill="#6ee7b7" font-family="-apple-system,PingFang SC,sans-serif">STEP 3 / 3</text>
+      <text x="44" y="92" font-size="18" font-weight="700" fill="#ecfdf5" font-family="-apple-system,PingFang SC,sans-serif">生态整合 · 工具链闭环</text>
+      <text x="44" y="122" font-size="12" fill="#a7f3d0" font-family="-apple-system,PingFang SC,sans-serif">MCP 协议统一工具调用，Agent 从 Demo 走向生产。</text>
+      <image href="amazon-tshirt-main-images/05-model-back.png" x="44" y="140" width="552" height="120" preserveAspectRatio="xMidYMid slice" opacity="0.8"/>
+    </g>
+
+    <!-- Step 2 peel -->
+    <g style="outline:none" cursor="pointer">
+      <rect x="20" y="20" width="600" height="260" fill="#312e81" rx="14"/>
+      <text x="44" y="58" font-size="11" fill="#a5b4fc" font-family="-apple-system,PingFang SC,sans-serif">STEP 2 / 3</text>
+      <text x="44" y="92" font-size="18" font-weight="700" fill="#eef2ff" font-family="-apple-system,PingFang SC,sans-serif">多 Agent 协作 · 角色分工</text>
+      <text x="44" y="122" font-size="12" fill="#c7d2fe" font-family="-apple-system,PingFang SC,sans-serif">Planner / Executor / Critic 三角色编排成为主流。</text>
+      <image href="amazon-tshirt-main-images/03-model-front.png" x="44" y="140" width="552" height="120" preserveAspectRatio="xMidYMid slice" opacity="0.85"/>
+      <text x="560" y="58" font-size="18" fill="#818cf8" text-anchor="end" font-family="-apple-system,PingFang SC,sans-serif">→</text>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <!-- opacity=0 在 Chrome 仍挡点击，peel 后须 visibility=hidden 释放下层热区 -->
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+
+    <!-- Step 1 peel（顶层） -->
+    <g style="outline:none" cursor="pointer">
+      <rect x="20" y="20" width="600" height="260" fill="#1e3a8a" rx="14"/>
+      <text x="44" y="58" font-size="11" fill="#93c5fd" font-family="-apple-system,PingFang SC,sans-serif">STEP 1 / 3</text>
+      <text x="44" y="92" font-size="18" font-weight="700" fill="#eff6ff" font-family="-apple-system,PingFang SC,sans-serif">ReAct 范式 · 推理与行动交织</text>
+      <text x="44" y="122" font-size="12" fill="#bfdbfe" font-family="-apple-system,PingFang SC,sans-serif">Thought → Action → Observation 循环驱动自主决策。</text>
+      <image href="amazon-tshirt-main-images/02-lifestyle.png" x="44" y="140" width="552" height="120" preserveAspectRatio="xMidYMid slice" opacity="0.85"/>
+      <text x="560" y="58" font-size="18" fill="#60a5fa" text-anchor="end" font-family="-apple-system,PingFang SC,sans-serif">→</text>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+
+    <text x="320" y="290" font-size="11" fill="#64748b" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">点击卡片继续 · 真机滑动需 H5</text>
+  </svg>
+</section>

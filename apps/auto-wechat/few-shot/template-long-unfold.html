@@ -1,0 +1,41 @@
+<!-- 微信公众号模板：长图纵向展开 -->
+<!--
+  TEMPLATE_META:
+  name: 长图纵向展开
+  description: 预览缩略 + 点击同组遮罩 peel 淡出露出完整长图（点击-伸长，hero 遮罩范式）
+  tags: [产品发布, 基础设施]
+  hasSvg: true
+  INTERACTION: 点击-伸长 / 长图展开
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#0f172a;">
+
+  <section style="padding:22px 18px 6px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#f472b6;">LONG UNFOLD</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#fff;">点击展开 · 完整路线图</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 520" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="520" fill="#0f172a"/>
+
+    <!-- 完整长图内容（始终预绘在底层） -->
+    <rect x="16" y="0" width="608" height="500" fill="#111827" rx="10"/>
+    <image href="amazon-tshirt-main-images/02-lifestyle.png" x="16" y="0" width="608" height="160" preserveAspectRatio="xMidYMid slice"/>
+    <text x="32" y="190" font-size="13" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">阶段一：数据采集与清洗</text>
+    <image href="amazon-tshirt-main-images/03-model-front.png" x="16" y="200" width="608" height="160" preserveAspectRatio="xMidYMid slice"/>
+    <text x="32" y="390" font-size="13" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">阶段二：模型训练与对齐</text>
+    <image href="amazon-tshirt-main-images/04-fabric-detail.png" x="16" y="400" width="608" height="100" preserveAspectRatio="xMidYMid slice"/>
+
+    <!-- 折叠遮罩：点击整组淡出（animate 与遮罩 rect 同 g） -->
+    <g style="outline:none" cursor="pointer">
+      <rect x="0" y="120" width="640" height="400" fill="#0f172a"/>
+      <rect x="16" y="130" width="608" height="200" fill="#1e293b" rx="10"/>
+      <image href="amazon-tshirt-main-images/01-main-white.png" x="16" y="130" width="608" height="200" preserveAspectRatio="xMidYMid slice" opacity="0.75"/>
+      <rect x="16" y="130" width="608" height="200" fill="#0f172a" opacity="0.35" rx="10"/>
+      <circle cx="320" cy="370" r="7" fill="#f472b6">
+        <animate attributeName="r" values="7;11;7" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <text x="320" y="400" font-size="13" fill="#fbcfe8" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">点击展开完整路线图</text>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+    </g>
+  </svg>
+</section>

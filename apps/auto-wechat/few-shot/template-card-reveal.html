@@ -1,0 +1,172 @@
+<!-- 微信公众号模板：卡片揭示式 -->
+<!--
+  TEMPLATE_META:
+  name: 卡片揭示式
+  description: 白底极简现代风，每个 section 标题有 SVG 装饰进度条，点击后颜色从灰色变为对应 tag 颜色并显示 tag 标签，适合多 tag 混合的 AI 要闻内容
+  tags: [大模型, Agent, 融资, 安全, 应用, 产品发布]
+  hasSvg: true
+  itemCountMin: 4
+  itemCountMax: 10
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;font-size:15px;line-height:1.75;color:#1a1a1a;background:#ffffff;">
+
+  <!-- HEADER：简洁白底 -->
+  <section style="padding:32px 20px 0;">
+    <p style="margin:0 0 4px;font-size:11px;letter-spacing:2.5px;color:#94a3b8;text-transform:uppercase;font-weight:500;">AI 前线 · Daily Brief</p>
+    <p style="margin:0 0 8px;font-size:26px;font-weight:800;color:#0f172a;line-height:1.2;letter-spacing:-0.5px;">今日 AI 要闻</p>
+    <p style="margin:0 0 20px;font-size:13px;color:#94a3b8;">2026年6月7日 · 星期日</p>
+    <section style="height:1px;background:linear-gradient(90deg,#2563eb,#7c3aed,#059669,#dc2626);border-radius:2px;opacity:0.6;"></section>
+  </section>
+
+  <!-- 导语 LEAD -->
+  <section style="padding:20px 20px 0;">
+    <p style="margin:0;font-size:14px;color:#374151;line-height:1.8;background:#f9fafb;padding:14px 16px;border-radius:8px;border:1px solid #f3f4f6;">今日精选 <strong style="color:#0f172a;">5 条</strong> AI 核心动态，覆盖大模型、Agent、安全与产品发布，预计阅读 <strong style="color:#0f172a;">4 分钟</strong>。</p>
+  </section>
+
+  <!-- SECTION 1：大模型 — 带点击激活的 SVG 标题装饰 -->
+  <section style="padding:24px 20px 0;">
+
+    <!-- SVG 标题装饰条：点击后进度条颜色从 #e2e8f0 变为 #2563eb，tag 标签淡入 -->
+    <svg style="display:block;width:100%;margin-bottom:14px;" viewBox="0 0 640 52" xmlns="http://www.w3.org/2000/svg">
+      <text x="2" y="26" font-size="20" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">大模型</text>
+      <rect x="0" y="38" width="640" height="3" fill="#2563eb" rx="1.5"/>
+      <rect x="90" y="7" width="52" height="22" fill="#dbeafe" rx="11"/>
+      <text x="116" y="23" font-size="11" fill="#2563eb" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" font-weight="600">大模型</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#e2e8f0" rx="1.5"/>
+        <text x="165" y="26" font-size="12" fill="#cbd5e1" font-family="-apple-system,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- 新闻条目 1 -->
+    <section style="margin-bottom:14px;padding:18px;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <section style="flex-shrink:0;width:4px;height:100%;min-height:20px;background:#2563eb;border-radius:2px;margin-top:2px;"></section>
+        <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">GPT-5 Turbo 发布：上下文窗口 256K，推理成本降低 40%</p>
+      </section>
+      <p style="margin:0 0 10px 14px;font-size:13px;color:#64748b;line-height:1.7;">OpenAI 在开发者大会上宣布 GPT-5 Turbo 正式上线，在 GPQA Diamond、MMLU-Pro 等高难度评测中刷新记录，函数调用延迟降至业界最低。企业客户可申请早期访问权限。</p>
+      <section style="margin-left:14px;">
+        <a href="https://openai.com/blog/gpt5-turbo" style="display:inline-block;font-size:11px;color:#576b95;text-decoration:none;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;">查看原文</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 2 -->
+    <section style="margin-bottom:6px;padding:18px;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <section style="flex-shrink:0;width:4px;min-height:20px;background:#2563eb;border-radius:2px;margin-top:2px;"></section>
+        <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">Mistral 推出 Mistral Large 3，专为欧洲企业数据主权设计</p>
+      </section>
+      <p style="margin:0 0 10px 14px;font-size:13px;color:#64748b;line-height:1.7;">Mistral Large 3 可完全私有化部署，支持法语、德语等多种欧洲语言，已通过 GDPR 合规认证，并提供与 Azure OpenAI Service 完全兼容的 API 接口，面向欧洲大型企业客户。</p>
+      <section style="margin-left:14px;">
+        <a href="https://mistral.ai/news/mistral-large-3" style="display:inline-block;font-size:11px;color:#576b95;text-decoration:none;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;">查看原文</a>
+      </section>
+    </section>
+  </section>
+
+  <!-- SECTION 2：Agent — 紫色激活 -->
+  <section style="padding:24px 20px 0;">
+    <svg style="display:block;width:100%;margin-bottom:14px;" viewBox="0 0 640 52" xmlns="http://www.w3.org/2000/svg">
+      <text x="2" y="26" font-size="20" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">Agent</text>
+      <rect x="0" y="38" width="640" height="3" fill="#7c3aed" rx="1.5"/>
+      <rect x="78" y="7" width="52" height="22" fill="#ede9fe" rx="11"/>
+      <text x="104" y="23" font-size="11" fill="#7c3aed" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" font-weight="600">Agent</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#e2e8f0" rx="1.5"/>
+        <text x="145" y="26" font-size="12" fill="#cbd5e1" font-family="-apple-system,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- 新闻条目 3 -->
+    <section style="margin-bottom:6px;padding:18px;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <section style="flex-shrink:0;width:4px;min-height:20px;background:#7c3aed;border-radius:2px;margin-top:2px;"></section>
+        <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">Salesforce 发布 Agentforce 2.0：企业 AI Agent 全面接管 CRM 工作流</p>
+      </section>
+      <p style="margin:0 0 10px 14px;font-size:13px;color:#64748b;line-height:1.7;">Agentforce 2.0 支持多 Agent 并行协作，可自动完成潜在客户评分、邮件跟进、合同审批等全流程任务，已在 Salesforce 内部将销售团队效率提升 34%，本月向企业客户开放。</p>
+      <section style="margin-left:14px;">
+        <a href="https://salesforce.com/agentforce-2" style="display:inline-block;font-size:11px;color:#576b95;text-decoration:none;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;">查看原文</a>
+      </section>
+    </section>
+  </section>
+
+  <!-- SECTION 3：安全 — 红色激活 -->
+  <section style="padding:24px 20px 0;">
+    <svg style="display:block;width:100%;margin-bottom:14px;" viewBox="0 0 640 52" xmlns="http://www.w3.org/2000/svg">
+      <text x="2" y="26" font-size="20" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">安全</text>
+      <rect x="0" y="38" width="640" height="3" fill="#dc2626" rx="1.5"/>
+      <rect x="66" y="7" width="52" height="22" fill="#fee2e2" rx="11"/>
+      <text x="92" y="23" font-size="11" fill="#dc2626" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" font-weight="600">安全</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#e2e8f0" rx="1.5"/>
+        <text x="125" y="26" font-size="12" fill="#cbd5e1" font-family="-apple-system,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- 新闻条目 4 -->
+    <section style="margin-bottom:6px;padding:18px;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <section style="flex-shrink:0;width:4px;min-height:20px;background:#dc2626;border-radius:2px;margin-top:2px;"></section>
+        <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">研究发现：85% 的主流 LLM 存在「越狱」漏洞，多模态模型尤为脆弱</p>
+      </section>
+      <p style="margin:0 0 10px 14px;font-size:13px;color:#64748b;line-height:1.7;">CMU 安全团队发布大规模测评报告，通过 1200+ 种攻击策略对 20 个主流模型进行测试，发现多模态场景下的越狱成功率高达 61%，建议企业部署时强制启用安全过滤层。</p>
+      <section style="margin-left:14px;">
+        <a href="https://arxiv.org/abs/2406.12345" style="display:inline-block;font-size:11px;color:#576b95;text-decoration:none;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;">查看原文</a>
+      </section>
+    </section>
+  </section>
+
+  <!-- SECTION 4：产品发布 — 粉色激活 -->
+  <section style="padding:24px 20px 0;">
+    <svg style="display:block;width:100%;margin-bottom:14px;" viewBox="0 0 640 52" xmlns="http://www.w3.org/2000/svg">
+      <text x="2" y="26" font-size="20" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">产品发布</text>
+      <rect x="0" y="38" width="640" height="3" fill="#db2777" rx="1.5"/>
+      <rect x="102" y="7" width="64" height="22" fill="#fce7f3" rx="11"/>
+      <text x="134" y="23" font-size="11" fill="#db2777" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" font-weight="600">产品发布</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#e2e8f0" rx="1.5"/>
+        <text x="183" y="26" font-size="12" fill="#cbd5e1" font-family="-apple-system,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- 新闻条目 5 -->
+    <section style="margin-bottom:6px;padding:18px;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <section style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <section style="flex-shrink:0;width:4px;min-height:20px;background:#db2777;border-radius:2px;margin-top:2px;"></section>
+        <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">Perplexity AI 上线「Deep Research Pro」，自动生成带引用的学术级研究报告</p>
+      </section>
+      <p style="margin:0 0 10px 14px;font-size:13px;color:#64748b;line-height:1.7;">Deep Research Pro 可在 5 分钟内完成多轮搜索、信息交叉核验、摘要整合，生成带完整引用索引的研究报告，支持导出为 PDF 和 Markdown，订阅用户每天可使用 10 次。</p>
+      <section style="margin-left:14px;">
+        <a href="https://perplexity.ai/deep-research-pro" style="display:inline-block;font-size:11px;color:#576b95;text-decoration:none;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;">查看原文</a>
+      </section>
+    </section>
+  </section>
+
+  <!-- DIVIDER -->
+  <section style="padding:28px 20px 0;">
+    <section style="height:1px;background:#f1f5f9;"></section>
+  </section>
+
+  <!-- QUOTE -->
+  <section style="padding:20px 20px;">
+    <section style="padding:18px 20px;background:#fafafa;border-radius:12px;border:1px solid #f1f5f9;position:relative;">
+      <p style="margin:0 0 4px;font-size:22px;color:#e2e8f0;line-height:1;">"</p>
+      <p style="margin:0 0 12px;font-size:14px;color:#374151;font-style:italic;line-height:1.8;">我们正在经历的，不是某个行业的局部变革，而是整个知识工作范式的重写。AI 不是工具，它正在成为每个人的认知基础设施。</p>
+      <p style="margin:0;font-size:12px;color:#94a3b8;">—— Demis Hassabis，Google DeepMind CEO</p>
+    </section>
+  </section>
+
+  <!-- SOURCES FOOTER -->
+  <section style="padding:16px 20px 28px;border-top:1px solid #f1f5f9;">
+    <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;">参考来源</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[1] openai.com · GPT-5 Turbo 发布公告</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[2] mistral.ai · Mistral Large 3 新闻页</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[3] salesforce.com · Agentforce 2.0 发布页</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[4] arxiv.org/abs/2406.12345 · CMU 安全报告</p>
+    <p style="margin:0;font-size:12px;color:#94a3b8;">[5] perplexity.ai · Deep Research Pro 产品页</p>
+  </section>
+
+</section>

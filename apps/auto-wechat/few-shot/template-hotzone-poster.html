@@ -1,0 +1,76 @@
+<!-- 微信公众号模板：多热区弹出式海报 -->
+<!--
+  TEMPLATE_META:
+  name: 多热区弹出海报
+  description: 主海报 + 3 热区，点击同组遮罩 peel 淡出露出预绘详情（合规：无 id，animate 与点击遮罩同 g）
+  tags: [产品发布, 大模型, 应用]
+  hasSvg: true
+  INTERACTION: 多热区弹出式海报
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#020617;">
+
+  <section style="padding:22px 18px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#22d3ee;">HOTZONE POSTER</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#f8fafc;">点击热点 · 解锁发布亮点</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 560" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="200" fill="#0f172a"/>
+    <image href="amazon-tshirt-main-images/06-ghost-mannequin.png" x="0" y="0" width="640" height="200" preserveAspectRatio="xMidYMid slice" opacity="0.5"/>
+    <rect x="0" y="0" width="640" height="200" fill="#0c4a6e" opacity="0.4"/>
+    <text x="28" y="44" font-size="20" font-weight="800" fill="#ffffff" font-family="-apple-system,PingFang SC,sans-serif">AI 新品发布会</text>
+    <text x="28" y="68" font-size="12" fill="#bae6fd" font-family="-apple-system,PingFang SC,sans-serif">点击下方条目展开详情</text>
+
+    <!-- 热区 A：性能（详情预绘在底层，遮罩 peel 露出） -->
+    <g transform="translate(24,220)">
+      <rect x="0" y="0" width="592" height="100" fill="#1e3a8a" rx="10"/>
+      <text x="16" y="32" font-size="14" font-weight="700" fill="#93c5fd" font-family="-apple-system,PingFang SC,sans-serif">性能突破</text>
+      <text x="16" y="56" font-size="11" fill="#bfdbfe" font-family="-apple-system,PingFang SC,sans-serif">推理 3× · 训练 +120% · 128K→256K 上下文</text>
+      <image href="amazon-tshirt-main-images/01-main-white.png" x="16" y="64" width="560" height="32" preserveAspectRatio="xMidYMid slice" opacity="0.8"/>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="592" height="100" fill="#0f172a" rx="10"/>
+        <circle cx="16" cy="22" r="7" fill="#38bdf8">
+          <animate attributeName="r" values="7;11;7" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="32" y="26" font-size="12" fill="#7dd3fc" font-family="-apple-system,PingFang SC,sans-serif">性能 · 点击展开</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </g>
+
+    <!-- 热区 B：多模态 -->
+    <g transform="translate(24,336)">
+      <rect x="0" y="0" width="592" height="88" fill="#4c1d95" rx="10"/>
+      <text x="16" y="32" font-size="14" font-weight="700" fill="#c4b5fd" font-family="-apple-system,PingFang SC,sans-serif">多模态能力</text>
+      <text x="16" y="56" font-size="11" fill="#ddd6fe" font-family="-apple-system,PingFang SC,sans-serif">图文音视频统一编码 · 实时屏幕理解 · OCR 99.2%</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="592" height="88" fill="#0f172a" rx="10"/>
+        <circle cx="16" cy="22" r="7" fill="#a78bfa">
+          <animate attributeName="r" values="7;11;7" dur="1.7s" repeatCount="indefinite"/>
+        </circle>
+        <text x="32" y="26" font-size="12" fill="#c4b5fd" font-family="-apple-system,PingFang SC,sans-serif">多模态 · 点击展开</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </g>
+
+    <!-- 热区 C：定价 -->
+    <g transform="translate(24,440)">
+      <rect x="0" y="0" width="592" height="72" fill="#064e3b" rx="10"/>
+      <text x="16" y="32" font-size="14" font-weight="700" fill="#6ee7b7" font-family="-apple-system,PingFang SC,sans-serif">定价策略</text>
+      <text x="16" y="54" font-size="11" fill="#a7f3d0" font-family="-apple-system,PingFang SC,sans-serif">API 降价 40% · 企业 7 折 · 学生额度翻倍</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="592" height="72" fill="#0f172a" rx="10"/>
+        <circle cx="16" cy="22" r="7" fill="#34d399">
+          <animate attributeName="r" values="7;11;7" dur="1.9s" repeatCount="indefinite"/>
+        </circle>
+        <text x="32" y="26" font-size="12" fill="#6ee7b7" font-family="-apple-system,PingFang SC,sans-serif">定价 · 点击展开</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </g>
+
+    <text x="32" y="540" font-size="11" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">各热区独立 peel · 外链用 HTML a 标签</text>
+  </svg>
+
+  <p style="margin:0;padding:12px 18px 20px;font-size:12px;text-align:center;">
+    <a href="https://example.com/launch-event" style="color:#38bdf8;text-decoration:none;">查看发布会完整专题 →</a>
+  </p>
+</section>

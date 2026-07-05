@@ -1,0 +1,189 @@
+<!-- 微信公众号模板：英雄展开式 -->
+<!--
+  TEMPLATE_META:
+  name: 英雄展开式
+  description: 深色科技风 masthead + 蓝色渐变 hero SVG，点击展开显示导语摘要，适合 AI 日报/要闻速览类内容
+  tags: [大模型, Agent, 融资, 开源, 应用, 论文]
+  hasSvg: true
+  itemCountMin: 3
+  itemCountMax: 8
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;font-size:15px;line-height:1.75;color:#1a1a1a;background:#ffffff;">
+
+  <!-- MASTHEAD -->
+  <section style="background:#0f172a;padding:28px 24px 22px;border-radius:12px 12px 0 0;">
+    <p style="margin:0 0 6px;font-size:11px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase;">AI 前线 · 每日要闻</p>
+    <p style="margin:0 0 10px;font-size:22px;font-weight:700;color:#f8fafc;line-height:1.3;">今日 AI 要闻速览</p>
+    <p style="margin:0;font-size:12px;color:#64748b;">2026年6月7日 · 共 6 条精选动态</p>
+  </section>
+
+  <!-- HERO SVG：viewBox 一次性设为 400 高，遮罩层覆盖下半部分，点击遮罩淡出即露出内容 -->
+  <!-- 原理：内容全部预先绘制在坐标 0-400 范围内，下半部分用同色遮罩覆盖；
+       点击遮罩 <g> 时，<animate begin="click"> 触发遮罩淡出，无需跨元素 id 引用 -->
+  <svg style="display:block;width:100%;" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 全高背景（400 单位，始终铺满） -->
+    <rect x="0" y="0" width="640" height="400" fill="#1e3a8a"/>
+    <rect x="0" y="0" width="640" height="400" fill="#2563eb" opacity="0.4"/>
+
+    <!-- 装饰光晕 -->
+    <circle cx="580" cy="40" r="80" fill="#3b82f6" opacity="0.15"/>
+    <circle cx="80" cy="330" r="60" fill="#60a5fa" opacity="0.08"/>
+
+    <!-- 始终可见：主标题区（y < 200） -->
+    <text x="32" y="68" font-size="15" font-weight="700" fill="#bfdbfe" letter-spacing="1" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">今日要点</text>
+    <text x="32" y="106" font-size="26" font-weight="800" fill="#ffffff" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">OpenAI 发布 GPT-5 Turbo</text>
+    <text x="32" y="136" font-size="14" fill="#93c5fd" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">推理速度提升 3×，API 价格下调 40%</text>
+
+    <!-- 展开区内容（y > 200），始终在 DOM 中，被下方遮罩覆盖 -->
+    <rect x="24" y="215" width="592" height="1" fill="#3b82f6" opacity="0.4"/>
+    <text x="32" y="248" font-size="13" fill="#bfdbfe" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">今日 AI 圈共 6 条核心动态：大模型竞速持续加剧，</text>
+    <text x="32" y="272" font-size="13" fill="#bfdbfe" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">GPT-5 Turbo 以碾压性性能登场；国内 Agent 赛道迎来新融资潮；</text>
+    <text x="32" y="296" font-size="13" fill="#bfdbfe" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">谷歌 DeepMind 开源最新推理模型，多模态能力大幅领先。</text>
+    <text x="32" y="330" font-size="13" fill="#bfdbfe" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">此外：欧盟 AI Act 合规指南正式发布，出海企业需关注。</text>
+    <text x="32" y="368" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">↓ 向下滚动查看完整动态</text>
+
+    <!-- 遮罩组：覆盖下半部分 + 包含点击提示，点击后整组淡出 -->
+    <!-- begin="click" 作用于此 <g> 被点击时，无需 id 引用 -->
+    <g cursor="pointer">
+      <!-- 遮罩主体（与背景同色，覆盖 y=195 以下） -->
+      <rect x="0" y="195" width="640" height="205" fill="#1e3a8a"/>
+      <!-- 顶部羽化渐变效果（用两层半透明矩形模拟） -->
+      <rect x="0" y="178" width="640" height="20" fill="#1e3a8a" opacity="0.85"/>
+      <rect x="0" y="165" width="640" height="16" fill="#1e3a8a" opacity="0.5"/>
+
+      <!-- 点击提示：脉冲圆点 + 文字 -->
+      <circle cx="295" cy="182" r="6" fill="#60a5fa">
+        <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" begin="0s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="6;9;6" dur="1.8s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+      <text x="312" y="187" font-size="13" fill="#93c5fd" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">点击查看今日导读</text>
+
+      <!-- 点击时整个遮罩组淡出 → 露出下方内容 -->
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+    </g>
+
+  </svg>
+
+  <!-- LEAD 导语卡片 -->
+  <section style="background:#f0f9ff;border-left:4px solid #2563eb;padding:16px 20px;margin:0 0 0;border-radius:0 0 8px 8px;">
+    <p style="margin:0;font-size:14px;color:#1e40af;font-weight:600;line-height:1.6;">本期速览：OpenAI 重磅更新 · 国内 Agent 融资热潮 · DeepMind 开源突破 · 监管新规落地</p>
+  </section>
+
+  <!-- DIVIDER -->
+  <p style="text-align:center;color:#94a3b8;letter-spacing:6px;margin:24px 0;font-size:13px;">· · ·</p>
+
+  <!-- SECTION 1: 大模型 -->
+  <section style="padding:0 16px;">
+    <!-- Section 标题带 SVG 色标 -->
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 44" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="44" fill="#eff6ff" rx="6"/>
+      <rect x="0" y="0" width="4" height="44" fill="#2563eb" rx="2"/>
+      <text x="18" y="28" font-size="16" font-weight="700" fill="#1e40af" font-family="-apple-system,PingFang SC,sans-serif">大模型</text>
+      <rect x="78" y="13" width="40" height="18" fill="#dbeafe" rx="9"/>
+      <text x="98" y="26" font-size="11" fill="#2563eb" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">热点</text>
+    </svg>
+
+    <!-- 新闻条目 1 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">OpenAI 发布 GPT-5 Turbo：推理速度 3×，定价下调 40%</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">GPT-5 Turbo 在 MMLU、HumanEval 等主流基准上全面超越前代，128K 上下文窗口支持更长文档分析，API 调用成本大幅降低，被业界视为 OpenAI 重夺定价权的关键动作。</p>
+      <a href="https://openai.com/blog/gpt5-turbo" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+
+    <!-- 新闻条目 2 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">Anthropic Claude 4.5 发布，首次支持实时语音对话</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">Claude 4.5 新增语音输入模式，延迟降至 200ms 以内，同时在代码生成和长文档理解能力上取得显著提升，Artifacts 功能支持直接预览生成的 Web 应用。</p>
+      <a href="https://anthropic.com/news/claude-4-5" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+  </section>
+
+  <!-- DIVIDER -->
+  <p style="text-align:center;color:#e8e8e8;margin:8px 0 20px;font-size:20px;">···</p>
+
+  <!-- SECTION 2: Agent -->
+  <section style="padding:0 16px;">
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 44" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="44" fill="#f5f3ff" rx="6"/>
+      <rect x="0" y="0" width="4" height="44" fill="#7c3aed" rx="2"/>
+      <text x="18" y="28" font-size="16" font-weight="700" fill="#5b21b6" font-family="-apple-system,PingFang SC,sans-serif">Agent</text>
+      <rect x="72" y="13" width="40" height="18" fill="#ede9fe" rx="9"/>
+      <text x="92" y="26" font-size="11" fill="#7c3aed" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">融资</text>
+    </svg>
+
+    <!-- 新闻条目 3 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">国内 Agent 公司「智行科技」完成 B 轮融资，红杉领投 2 亿元</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">智行科技专注企业流程自动化 Agent，核心产品可无缝对接 SAP、Salesforce 等主流 ERP 系统，本轮融资将用于扩展海外市场和加强模型自研能力。</p>
+      <a href="https://example.com/zhixing-series-b" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+  </section>
+
+  <!-- DIVIDER -->
+  <p style="text-align:center;color:#e8e8e8;margin:8px 0 20px;font-size:20px;">···</p>
+
+  <!-- SECTION 3: 开源 -->
+  <section style="padding:0 16px;">
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 44" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="44" fill="#fefce8" rx="6"/>
+      <rect x="0" y="0" width="4" height="44" fill="#ca8a04" rx="2"/>
+      <text x="18" y="28" font-size="16" font-weight="700" fill="#92400e" font-family="-apple-system,PingFang SC,sans-serif">开源</text>
+      <rect x="72" y="13" width="40" height="18" fill="#fef9c3" rx="9"/>
+      <text x="92" y="26" font-size="11" fill="#ca8a04" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">重磅</text>
+    </svg>
+
+    <!-- 新闻条目 4 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">谷歌 DeepMind 开源 Gemini Nano 2，手机端可本地运行</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">Gemini Nano 2 参数量 3B，量化后仅 1.8GB，可在 Pixel 9 及同级 Android 设备离线运行，支持文字摘要、实时翻译、智能回复三大场景，已在 GitHub 开放权重下载。</p>
+      <a href="https://github.com/google-deepmind/gemini-nano-2" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+
+    <!-- 新闻条目 5 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">Meta 开源 LLaMA 3.2 视觉版，图文理解直逼 GPT-4o</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">LLaMA 3.2-Vision 提供 11B 和 90B 两个版本，在 DocVQA、ChartQA 等图文理解基准上大幅超越前代，支持商业使用，已可在 Ollama 和 HuggingFace 直接部署。</p>
+      <a href="https://huggingface.co/meta-llama/Llama-3.2-Vision" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+  </section>
+
+  <!-- SECTION 4: 监管 -->
+  <section style="padding:0 16px;">
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 44" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="44" fill="#f8fafc" rx="6"/>
+      <rect x="0" y="0" width="4" height="44" fill="#64748b" rx="2"/>
+      <text x="18" y="28" font-size="16" font-weight="700" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">监管</text>
+    </svg>
+
+    <!-- 新闻条目 6 -->
+    <section style="background:#ffffff;border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:20px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.4;">欧盟 AI Act 企业合规指南正式发布，高风险系统须于 8 月前完成备案</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#666666;line-height:1.65;">欧盟 AI 办公室发布《AI Act 实施细则》，明确医疗、金融、执法等高风险 AI 系统的强制备案要求，并提供在线合规评估工具，中国出海企业需重点关注。</p>
+      <a href="https://artificialintelligenceact.eu/compliance-guide" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+  </section>
+
+  <!-- QUOTE -->
+  <section style="padding:0 16px 20px;">
+    <section style="border-left:3px solid #2563eb;padding:14px 18px;background:#f0f9ff;border-radius:0 8px 8px 0;">
+      <p style="margin:0;font-size:14px;color:#1e40af;font-style:italic;line-height:1.7;">「AI 能力的民主化正在加速，今天旗舰级模型的能力，6 个月后就会出现在你手机里。」</p>
+      <p style="margin:8px 0 0;font-size:12px;color:#64748b;">—— Sam Altman，OpenAI CEO</p>
+    </section>
+  </section>
+
+  <!-- DIVIDER -->
+  <p style="text-align:center;color:#94a3b8;letter-spacing:6px;margin:4px 0 20px;font-size:13px;">· · ·</p>
+
+  <!-- SOURCES FOOTER -->
+  <section style="padding:16px 16px 24px;background:#f8fafc;border-top:1px solid #e8e8e8;border-radius:0 0 12px 12px;">
+    <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;">参考来源</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;line-height:1.6;">[1] OpenAI Blog · GPT-5 Turbo 发布公告</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;line-height:1.6;">[2] Anthropic News · Claude 4.5 发布说明</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;line-height:1.6;">[3] 36氪 · 智行科技 B 轮融资报道</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;line-height:1.6;">[4] GitHub · google-deepmind/gemini-nano-2</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;line-height:1.6;">[5] HuggingFace · Meta LLaMA 3.2 Vision</p>
+    <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">[6] EU AI Office · AI Act Compliance Guide</p>
+  </section>
+
+</section>

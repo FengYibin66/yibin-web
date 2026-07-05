@@ -1,0 +1,47 @@
+{
+  "seriesTitle": "AI 科技日报",
+  "typography": {
+    "fontFamily": "-apple-system,BlinkMacSystemFont,\"Helvetica Neue\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif",
+    "bodySize": "16px",
+    "bodyLineHeight": "1.75",
+    "leadSize": "15px",
+    "leadLineHeight": "1.65",
+    "sectionSize": "17px",
+    "metaSize": "12px",
+    "mastheadSize": "13px"
+  },
+  "colors": {
+    "textPrimary": "#1a1a1a",
+    "textSecondary": "#666666",
+    "textMuted": "#999999",
+    "link": "#576b95",
+    "surfaceLead": "#f7f8fa",
+    "surfaceCard": "#ffffff",
+    "borderSubtle": "#e8e8e8",
+    "divider": "#eeeeee",
+    "mastheadBg": "#0f172a",
+    "mastheadText": "#f8fafc",
+    "heroGradientStart": "#1e3a8a",
+    "heroGradientEnd": "#2563eb"
+  },
+  "spacing": {
+    "pagePadding": "16px",
+    "sectionGap": "28px",
+    "itemGap": "20px",
+    "leadPadding": "16px",
+    "blockRadius": "8px"
+  },
+  "tagAccents": {
+    "大模型": "#2563eb",
+    "Agent": "#7c3aed",
+    "融资": "#059669",
+    "安全": "#dc2626",
+    "应用": "#0891b2",
+    "开源": "#ca8a04",
+    "论文": "#4f46e5",
+    "产品发布": "#db2777",
+    "监管": "#64748b",
+    "基础设施": "#0d9488",
+    "其他动态": "#6b7280"
+  }
+}

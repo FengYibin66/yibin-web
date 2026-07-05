@@ -1,0 +1,108 @@
+services:
+  mysql:
+    image: docker.m.daocloud.io/library/mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root_change_me
+      MYSQL_DATABASE: wechat_ai
+      MYSQL_USER: wechat
+      MYSQL_PASSWORD: change_me
+    ports:
+      # 宿主机 3306 常被本机 MySQL 占用；GUI/本机 Go 请连 3307
+      - "3307:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+      - --mysql-native-password=ON
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uwechat", "-pchange_me"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  llm-service:
+    build:
+      context: ./llm-service
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env.development
+    environment:
+      PORT: "8090"
+    volumes:
+      - ./llm-service/app:/app/app:ro
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8090", "--reload"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      target: dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.development
+    environment:
+      DATABASE_URL: mysql://wechat:change_me@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
+      REDIS_URL: redis://redis:6379/0
+      LLM_SERVICE_URL: http://llm-service:8090
+      MIGRATIONS_PATH: /src/migrations
+    volumes:
+      - ./backend:/src
+      - go-mod-cache:/go/pkg/mod
+      - media_data:/app/media
+    command: ["air", "-c", ".air.api.toml"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      target: dev
+    env_file:
+      - .env.development
+    environment:
+      DATABASE_URL: mysql://wechat:change_me@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
+      REDIS_URL: redis://redis:6379/0
+      LLM_SERVICE_URL: http://llm-service:8090
+    volumes:
+      - ./backend:/src
+      - go-mod-cache:/go/pkg/mod
+      - media_data:/app/media
+    command: ["air", "-c", ".air.worker.toml"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+volumes:
+  mysqldata:
+  go-mod-cache:
+  media_data:

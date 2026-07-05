@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Auto WeChat Tech Content API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: OK
+  /health/ready:
+    get:
+      summary: Readiness probe
+      responses:
+        "200":
+          description: OK
+  /pipeline/runs:
+    get:
+      summary: List pipeline runs
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create pipeline run
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publishMode:
+                  type: string
+                  example: draft_only
+      responses:
+        "201":
+          description: Created
+  /pipeline/runs/{id}:
+    get:
+      summary: Get pipeline run
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key

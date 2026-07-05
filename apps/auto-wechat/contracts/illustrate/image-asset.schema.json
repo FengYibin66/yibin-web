@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-wechat-tech.local/contracts/illustrate/image-asset.schema.json",
+  "title": "ImageAsset",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "url",
+    "storage",
+    "source",
+    "mimeType",
+    "byteSize",
+    "contentHash",
+    "usageCount",
+    "autoIngested",
+    "createdAt",
+    "updatedAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "url": { "type": "string", "minLength": 1 },
+    "storage": {
+      "type": "string",
+      "enum": ["local_volume", "wechat_cdn", "cos"]
+    },
+    "source": {
+      "type": "string",
+      "enum": ["generated", "upload", "rss", "og", "scraped"]
+    },
+    "originUrl": { "type": "string" },
+    "prompt": { "type": "string" },
+    "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png"] },
+    "byteSize": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+    "width": { "type": "integer", "minimum": 1 },
+    "height": { "type": "integer", "minimum": 1 },
+    "contentHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "firstRunId": { "type": "string", "format": "uuid" },
+        "firstSlotId": { "type": "string" },
+        "headline": { "type": "string" }
+      }
+    },
+    "usageCount": { "type": "integer", "minimum": 0 },
+    "autoIngested": { "type": "boolean" },
+    "deletedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

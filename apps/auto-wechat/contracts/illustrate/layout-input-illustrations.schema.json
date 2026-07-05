@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-wechat-tech.local/contracts/illustrate/layout-input-illustrations.schema.json",
+  "title": "LayoutIllustrationsInput",
+  "type": "object",
+  "required": ["slots", "bySourceUrl"],
+  "additionalProperties": false,
+  "properties": {
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "bindTo", "image", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "bindTo": {
+            "type": "object",
+            "required": ["sourceUrl", "headline"],
+            "properties": {
+              "sourceUrl": { "type": "string" },
+              "headline": { "type": "string" },
+              "section": { "type": "string" }
+            }
+          },
+          "image": {
+            "type": "object",
+            "required": ["url"],
+            "properties": {
+              "url": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          },
+          "status": { "type": "string", "enum": ["ready", "failed"] }
+        }
+      }
+    },
+    "bySourceUrl": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "原文 URL -> 配图 URL，仅 status=ready 的槽位"
+    }
+  }
+}

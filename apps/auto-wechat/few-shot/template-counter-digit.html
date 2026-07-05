@@ -1,0 +1,60 @@
+<!-- 微信公众号模板：数字计数脉冲 -->
+<!--
+  TEMPLATE_META:
+  name: 数字指标脉冲
+  description: KPI 脉冲环 + 点击同组遮罩 peel 展开解读
+  tags: [融资, 产品发布, 基础设施]
+  hasSvg: true
+  INTERACTION: 脉动引导 + 点击展开
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#000;">
+
+  <section style="padding:22px 18px 6px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#22d3ee;">KPI PULSE</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#fff;">今日核心指标</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 280" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="280" fill="#030712"/>
+
+    <g transform="translate(120,140)">
+      <circle cx="0" cy="0" r="52" fill="none" stroke="#1d4ed8" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="52;62;52" dur="2.2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-6" font-size="26" font-weight="800" fill="#60a5fa" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">3×</text>
+      <text x="0" y="18" font-size="10" fill="#93c5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">推理提速</text>
+    </g>
+    <g transform="translate(320,140)">
+      <circle cx="0" cy="0" r="52" fill="none" stroke="#7c3aed" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="52;62;52" dur="2.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-6" font-size="26" font-weight="800" fill="#a78bfa" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">40%</text>
+      <text x="0" y="18" font-size="10" fill="#c4b5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">API 降价</text>
+    </g>
+    <g transform="translate(520,140)">
+      <circle cx="0" cy="0" r="52" fill="none" stroke="#059669" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="52;62;52" dur="2.8s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-6" font-size="26" font-weight="800" fill="#34d399" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">3.2K</text>
+      <text x="0" y="18" font-size="10" fill="#6ee7b7" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">GitHub Star</text>
+    </g>
+
+    <!-- 解读正文（底层） -->
+    <rect x="40" y="200" width="560" height="68" fill="#0f172a" rx="10" stroke="#1e293b"/>
+    <text x="60" y="228" font-size="11" fill="#cbd5e1" font-family="-apple-system,PingFang SC,sans-serif">3× 来自 FP8 推理优化 · 40% 为 GPT-5 Turbo 官方调价</text>
+    <text x="60" y="250" font-size="11" fill="#94a3b8" font-family="-apple-system,PingFang SC,sans-serif">3.2K Star 指 Seed-Agent 开源首日数据（样例）</text>
+
+    <!-- 折叠遮罩 peel -->
+    <g style="outline:none" cursor="pointer">
+      <rect x="40" y="200" width="560" height="68" fill="#111827" rx="10"/>
+      <text x="60" y="238" font-size="12" fill="#94a3b8" font-family="-apple-system,PingFang SC,sans-serif">点击查看指标解读</text>
+      <circle cx="560" cy="234" r="5" fill="#38bdf8">
+        <animate attributeName="opacity" values="1;0.2;1" dur="1.4s" repeatCount="indefinite"/>
+      </circle>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+    </g>
+  </svg>
+</section>

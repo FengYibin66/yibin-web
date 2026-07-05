@@ -1,0 +1,37 @@
+<!-- 微信公众号模板：点击切换对比（Before/After） -->
+<!--
+  TEMPLATE_META:
+  name: 点击切换对比
+  description: BEFORE 遮罩 peel 露出 AFTER（单次切换，合规同组 peel）
+  tags: [大模型, 基础设施]
+  hasSvg: true
+  INTERACTION: 点击换图 / 对比滑块（点击模拟）
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#f1f5f9;">
+
+  <section style="padding:22px 18px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#0ea5e9;">BEFORE / AFTER</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#0f172a;">一代 vs 三代 · 点击切换</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;" viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">
+    <rect x="16" y="16" width="608" height="280" fill="#e2e8f0" rx="12"/>
+
+    <!-- AFTER（底层预绘） -->
+    <image href="amazon-tshirt-main-images/03-model-front.png" x="16" y="16" width="608" height="280" preserveAspectRatio="xMidYMid slice"/>
+    <rect x="16" y="16" width="608" height="280" fill="#0ea5e9" opacity="0.22" rx="12"/>
+    <text x="40" y="52" font-size="14" font-weight="700" fill="#ffffff" font-family="-apple-system,PingFang SC,sans-serif">AFTER · GPT-5 时代</text>
+    <text x="40" y="78" font-size="11" fill="#e0f2fe" font-family="-apple-system,PingFang SC,sans-serif">推理 3× · 128K 上下文 · API -40%</text>
+
+    <!-- BEFORE 遮罩（顶层，点击 peel） -->
+    <g style="outline:none" cursor="pointer">
+      <image href="amazon-tshirt-main-images/06-ghost-mannequin.png" x="16" y="16" width="608" height="280" preserveAspectRatio="xMidYMid slice"/>
+      <rect x="16" y="16" width="608" height="280" fill="#64748b" opacity="0.32" rx="12"/>
+      <text x="40" y="52" font-size="14" font-weight="700" fill="#f8fafc" font-family="-apple-system,PingFang SC,sans-serif">BEFORE · GPT-3.5 时代</text>
+      <text x="40" y="78" font-size="11" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">点击切换至 AFTER</text>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+    </g>
+
+    <text x="320" y="318" font-size="11" fill="#64748b" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">点击图片区域切换至 AFTER</text>
+  </svg>
+</section>

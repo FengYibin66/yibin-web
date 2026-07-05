@@ -1,0 +1,33 @@
+{
+  "name": "@yibin/portal",
+  "version": "1.0.0",
+  "description": "Central portal showcasing all yibinfeng.com projects",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intl-ui/react": "^1.0.7",
+    "clsx": "^2",
+    "framer-motion": "^11",
+    "next": "^14",
+    "next-intl": "^3.26.5",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^9",
+    "eslint-config-next": "14.2.x",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

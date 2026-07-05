@@ -1,0 +1,42 @@
+<!-- 微信公众号模板：刮刮卡式揭晓 -->
+<!--
+  TEMPLATE_META:
+  name: 刮刮卡揭晓
+  description: 灰色蒙层覆盖惊喜内容，点击模拟「刮开」淡出（抽奖/彩蛋）
+  tags: [应用, 产品发布]
+  hasSvg: true
+  INTERACTION: 刮刮卡 / 点击揭晓
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#18181b;">
+
+  <section style="padding:22px 18px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#facc15;">SCRATCH REVEAL</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#fafafa;">刮开今日彩蛋</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fbbf24"/>
+        <stop offset="100%" stop-color="#f59e0b"/>
+      </linearGradient>
+    </defs>
+    <!-- 奖品层 -->
+    <rect x="20" y="20" width="600" height="260" fill="#422006" rx="16"/>
+    <text x="48" y="72" font-size="20" font-weight="800" fill="#fde68a" font-family="-apple-system,PingFang SC,sans-serif">🎉 今日彩蛋</text>
+    <text x="48" y="108" font-size="14" fill="#fcd34d" font-family="-apple-system,PingFang SC,sans-serif">DeepSeek V4 内测邀请码：AI2026</text>
+    <text x="48" y="138" font-size="12" fill="#fef3c7" font-family="-apple-system,PingFang SC,sans-serif">（样例文案 · 正式刊出替换真实福利）</text>
+    <image href="amazon-tshirt-main-images/05-model-back.png" x="48" y="155" width="544" height="110" preserveAspectRatio="xMidYMid slice" opacity="0.75" rx="8"/>
+
+    <!-- 刮刮蒙层 -->
+    <g style="outline:none" cursor="pointer">
+      <rect x="20" y="20" width="600" height="260" fill="#71717a" rx="16"/>
+      <text x="320" y="130" font-size="16" fill="#e4e4e7" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">████ 刮开区域 ████</text>
+      <text x="320" y="160" font-size="12" fill="#a1a1aa" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">点击模拟刮开</text>
+      <circle cx="280" cy="200" r="6" fill="#facc15">
+        <animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.5s" fill="freeze" restart="never"/>
+    </g>
+  </svg>
+</section>

@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "about": "About"
+  },
+  "hero": {
+    "title": "Yibin Feng",
+    "subtitle": "Software Engineer & AI Enthusiast",
+    "cta": "View Projects"
+  },
+  "projects": {
+    "title": "Featured Projects",
+    "resume": {
+      "name": "Interactive Resume",
+      "description": "3D interactive personal resume website with particle effects"
+    },
+    "wechat": {
+      "name": "WeChat Platform",
+      "description": "AI-powered WeChat Official Account automation"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 Yibin Feng. All rights reserved."
+  }
+}

@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: #070b12;
+    --bg-surface: #0d1220;
+    --bg-elevated: #141926;
+    --bg-border: #1e2740;
+    --accent-cyan: #00d4ff;
+    --accent-indigo: #6366f1;
+    --accent-violet: #8b5cf6;
+    --text-primary: #f0f4ff;
+    --text-secondary: #8b9bbc;
+    --text-muted: #4a5568;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(15, 23, 42);
+  color: rgb(241, 245, 255);
+}
+
+*::selection {
+  background-color: rgb(0, 212, 255, 0.2);
+  color: rgb(0, 212, 255);
+}

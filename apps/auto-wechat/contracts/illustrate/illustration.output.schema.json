@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-wechat-tech.local/contracts/illustrate/illustration.output.schema.json",
+  "title": "IllustrationOutput",
+  "type": "object",
+  "required": ["planVersion", "slots", "stats"],
+  "additionalProperties": false,
+  "properties": {
+    "planVersion": { "type": "string", "const": "v1" },
+    "slots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/IllustrationSlot" }
+    },
+    "stats": { "$ref": "#/$defs/IllustrationStats" }
+  },
+  "$defs": {
+    "IllustrationSlot": {
+      "type": "object",
+      "required": ["id", "role", "bindTo", "image", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^news_[0-9]+$" },
+        "role": { "type": "string", "const": "news_thumbnail" },
+        "bindTo": {
+          "type": "object",
+          "required": ["sourceUrl", "headline", "rank"],
+          "additionalProperties": false,
+          "properties": {
+            "sourceUrl": { "type": "string", "format": "uri" },
+            "headline": { "type": "string", "minLength": 1 },
+            "section": { "type": "string" },
+            "rank": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "image": {
+          "type": "object",
+          "required": ["url", "source"],
+          "additionalProperties": false,
+          "properties": {
+            "assetId": { "type": ["string", "null"], "format": "uuid" },
+            "inLibrary": { "type": "boolean" },
+            "url": { "type": "string", "minLength": 1 },
+            "source": {
+              "type": "string",
+              "enum": ["rss", "og", "scraped", "generated", "upload", "library"]
+            },
+            "originUrl": { "type": "string" },
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "relevanceScore": { "type": "number", "minimum": 0, "maximum": 1 },
+            "prompt": { "type": "string" }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "ready", "failed"]
+        },
+        "errorMessage": { "type": ["string", "null"] }
+      }
+    },
+    "IllustrationStats": {
+      "type": "object",
+      "required": ["total", "ready", "failed"],
+      "additionalProperties": false,
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "ready": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "inLibrary": { "type": "integer", "minimum": 0 },
+        "bySource": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

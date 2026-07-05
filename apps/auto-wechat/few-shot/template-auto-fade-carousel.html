@@ -1,0 +1,57 @@
+<!-- 微信公众号模板：自动交叉淡入轮播 -->
+<!--
+  TEMPLATE_META:
+  name: 自动交叉淡入轮播
+  description: 多图 opacity 自动交替淡入淡出，无需点击（自动轮播）
+  tags: [产品发布, 应用]
+  hasSvg: true
+  INTERACTION: 自动轮播
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#0f172a;">
+
+  <section style="padding:22px 18px 8px;">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#a78bfa;">AUTO FADE</p>
+    <p style="margin:0;font-size:19px;font-weight:800;color:#f8fafc;">自动轮播 · 交叉淡入</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;" viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg">
+    <rect x="16" y="16" width="608" height="288" fill="#111827" rx="12"/>
+    <text x="32" y="44" font-size="11" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">AUTO CAROUSEL · 4s 交叉</text>
+
+    <!-- 图 1 -->
+    <g opacity="1">
+      <image href="amazon-tshirt-main-images/01-main-white.png" x="32" y="56" width="576" height="220" preserveAspectRatio="xMidYMid slice"/>
+      <text x="48" y="280" font-size="12" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">01 · 主视觉</text>
+      <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.2;0.25;0.95;1" dur="16s" repeatCount="indefinite"/>
+    </g>
+    <!-- 图 2 -->
+    <g opacity="0">
+      <image href="amazon-tshirt-main-images/02-lifestyle.png" x="32" y="56" width="576" height="220" preserveAspectRatio="xMidYMid slice"/>
+      <text x="48" y="280" font-size="12" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">02 · 场景</text>
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2;0.25;0.45;0.5;1" dur="16s" repeatCount="indefinite"/>
+    </g>
+    <!-- 图 3 -->
+    <g opacity="0">
+      <image href="amazon-tshirt-main-images/03-model-front.png" x="32" y="56" width="576" height="220" preserveAspectRatio="xMidYMid slice"/>
+      <text x="48" y="280" font-size="12" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">03 · 正面</text>
+      <animate attributeName="opacity" values="0;0;0;0;1;1;0;0" keyTimes="0;0.45;0.5;0.7;0.75;0.95;1;1" dur="16s" repeatCount="indefinite"/>
+    </g>
+    <!-- 图 4 -->
+    <g opacity="0">
+      <image href="amazon-tshirt-main-images/04-fabric-detail.png" x="32" y="56" width="576" height="220" preserveAspectRatio="xMidYMid slice"/>
+      <text x="48" y="280" font-size="12" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">04 · 细节</text>
+      <animate attributeName="opacity" values="0;0;0;0;0;0;1;1;0" keyTimes="0;0.7;0.75;0.95;1;1;1;1;1" dur="16s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- 指示点脉冲 -->
+    <circle cx="300" cy="300" r="4" fill="#6366f1">
+      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="320" cy="300" r="4" fill="#818cf8">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="340" cy="300" r="4" fill="#6366f1">
+      <animate attributeName="opacity" values="1;0.3;1" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+</section>

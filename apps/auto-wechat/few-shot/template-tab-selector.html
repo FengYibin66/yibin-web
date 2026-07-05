@@ -1,0 +1,83 @@
+<!-- 微信公众号模板：标签选择器（无限选择器风格） -->
+<!--
+  TEMPLATE_META:
+  name: 标签选择器·分层切换
+  description: 四层预绘状态 + 仅 Tab 热区可点（pointer-events:none 防误触）+ peel 切换
+  tags: [大模型, Agent, 开源, 基础设施]
+  hasSvg: true
+  INTERACTION: 无限选择器 / 点击切换画面
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:#0b1220;color:#e2e8f0;">
+
+  <section style="padding:24px 20px 12px;background:linear-gradient(180deg,#0f172a,#111827);">
+    <p style="margin:0 0 4px;font-size:10px;letter-spacing:2px;color:#60a5fa;">TAB SELECTOR</p>
+    <p style="margin:0;font-size:20px;font-weight:800;color:#f8fafc;">点击高亮标签 · 切换赛道</p>
+    <p style="margin:6px 0 0;font-size:11px;color:#64748b;">仅彩色 Tab 可点 · 逐层 peel</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 底层：算力 -->
+    <rect x="0" y="0" width="640" height="420" fill="#0f172a" style="pointer-events:none;"/>
+    <rect x="16" y="16" width="148" height="36" fill="#1e293b" rx="18" style="pointer-events:none;"/>
+    <rect x="172" y="16" width="148" height="36" fill="#1e293b" rx="18" style="pointer-events:none;"/>
+    <rect x="328" y="16" width="148" height="36" fill="#1e293b" rx="18" style="pointer-events:none;"/>
+    <rect x="484" y="16" width="140" height="36" fill="#064e3b" rx="18" style="pointer-events:none;"/>
+    <text x="90" y="39" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">大模型</text>
+    <text x="246" y="39" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">Agent</text>
+    <text x="402" y="39" font-size="12" fill="#94a3b8" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">开源</text>
+    <text x="554" y="39" font-size="12" fill="#6ee7b7" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">算力</text>
+    <rect x="16" y="64" width="608" height="340" fill="#022c22" rx="12" style="pointer-events:none;"/>
+    <text x="32" y="100" font-size="18" font-weight="700" fill="#34d399" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">Blackwell B300 · 算力再翻倍</text>
+    <text x="32" y="130" font-size="12" fill="#a7f3d0" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">FP8 18,000 TFLOPS · HBM4 288GB · NVLink 5.0</text>
+    <image href="amazon-tshirt-main-images/04-fabric-detail.png" x="32" y="150" width="576" height="220" preserveAspectRatio="xMidYMid slice" opacity="0.85" style="pointer-events:none;"/>
+
+    <!-- 第3层：开源 → 点「算力」peel -->
+    <g style="outline:none" opacity="1">
+      <rect x="0" y="0" width="640" height="420" fill="#0f172a" style="pointer-events:none;"/>
+      <rect x="328" y="16" width="148" height="36" fill="#713f12" rx="18" style="pointer-events:none;"/>
+      <text x="402" y="39" font-size="12" fill="#fcd34d" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">开源</text>
+      <rect x="16" y="64" width="608" height="340" fill="#422006" rx="12" style="pointer-events:none;"/>
+      <text x="32" y="100" font-size="18" font-weight="700" fill="#fbbf24" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">Seed-Agent · 首日 3.2K Star</text>
+      <text x="32" y="130" font-size="12" fill="#fde68a" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">ReAct / Plan-and-Execute · 错误恢复内置</text>
+      <image href="amazon-tshirt-main-images/03-model-front.png" x="32" y="150" width="576" height="220" preserveAspectRatio="xMidYMid slice" opacity="0.9" style="pointer-events:none;"/>
+      <rect x="484" y="16" width="140" height="36" fill="transparent" cursor="pointer"/>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+
+    <!-- 第2层：Agent → 点「开源」peel -->
+    <g style="outline:none" opacity="1">
+      <rect x="0" y="0" width="640" height="420" fill="#0f172a" style="pointer-events:none;"/>
+      <rect x="172" y="16" width="148" height="36" fill="#4c1d95" rx="18" style="pointer-events:none;"/>
+      <text x="246" y="39" font-size="12" fill="#c4b5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">Agent</text>
+      <rect x="16" y="64" width="608" height="340" fill="#2e1065" rx="12" style="pointer-events:none;"/>
+      <text x="32" y="100" font-size="18" font-weight="700" fill="#a78bfa" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">Agentforce 2.0 · CRM 全自动</text>
+      <text x="32" y="130" font-size="12" fill="#ddd6fe" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">多 Agent 并行 · 销售效率 +34%</text>
+      <image href="amazon-tshirt-main-images/02-lifestyle.png" x="32" y="150" width="576" height="220" preserveAspectRatio="xMidYMid slice" opacity="0.9" style="pointer-events:none;"/>
+      <rect x="328" y="16" width="148" height="36" fill="transparent" cursor="pointer"/>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+
+    <!-- 顶层：大模型 → 点「Agent」peel -->
+    <g style="outline:none" opacity="1">
+      <rect x="0" y="0" width="640" height="420" fill="#0f172a" style="pointer-events:none;"/>
+      <rect x="16" y="16" width="148" height="36" fill="#1e40af" rx="18" style="pointer-events:none;"/>
+      <text x="90" y="39" font-size="12" fill="#93c5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">大模型</text>
+      <rect x="16" y="64" width="608" height="340" fill="#172554" rx="12" style="pointer-events:none;"/>
+      <text x="32" y="100" font-size="18" font-weight="700" fill="#60a5fa" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">GPT-5 Turbo · 降价 40%</text>
+      <text x="32" y="130" font-size="12" fill="#bfdbfe" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">256K 上下文 · 函数调用延迟新低</text>
+      <image href="amazon-tshirt-main-images/01-main-white.png" x="32" y="150" width="576" height="220" preserveAspectRatio="xMidYMid slice" style="pointer-events:none;"/>
+      <rect x="172" y="16" width="148" height="36" fill="transparent" cursor="pointer"/>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+
+    <text x="320" y="408" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif" style="pointer-events:none;">大模型 → Agent → 开源 → 算力</text>
+  </svg>
+
+  <section style="padding:16px 20px 24px;font-size:12px;color:#64748b;line-height:1.6;">
+    <p style="margin:0;">说明：非当前 Tab 区域设 pointer-events:none，避免误 peel；仅高亮 Tab 条可点。微信真机若不支持 pointer-events，请改用分块独立 SVG。</p>
+  </section>
+</section>

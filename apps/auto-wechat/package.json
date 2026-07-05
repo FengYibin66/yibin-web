@@ -1,0 +1,17 @@
+{
+  "name": "@yibin/auto-wechat",
+  "version": "1.0.0",
+  "description": "AI-driven WeChat Official Account automation system",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "frontend:dev": "pnpm --filter ./frontend dev",
+    "frontend:build": "pnpm --filter ./frontend build"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "devDependencies": {}
+}

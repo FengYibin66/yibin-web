@@ -1,0 +1,232 @@
+<!-- 微信公众号模板：科技风全交互日报（合集） -->
+<!--
+  TEMPLATE_META:
+  name: 科技风全交互日报
+  description: 深色科技刊头 + 点击展开导读 + 自动滚动无缝图廊 + 点击逐层换图轮播 + 脉冲时间线 + 点击激活板块条 + 资讯卡片，样例图见 amazon-tshirt-main-images（发布前须 uploadimg 换 mmbiz.qpic.cn）
+  tags: [大模型, Agent, 开源, 基础设施, 产品发布, 全交互]
+  hasSvg: true
+  itemCountMin: 4
+  itemCountMax: 8
+
+  IMAGE_SLOTS（本地预览用相对路径，微信发布替换为 mmbiz.qpic.cn）:
+  IMG1 amazon-tshirt-main-images/01-main-white.png
+  IMG2 amazon-tshirt-main-images/02-lifestyle.png
+  IMG3 amazon-tshirt-main-images/03-model-front.png
+  IMG4 amazon-tshirt-main-images/04-fabric-detail.png
+  IMG5 amazon-tshirt-main-images/05-model-back.png
+  IMG6 amazon-tshirt-main-images/06-ghost-mannequin.png
+
+  INTERACTION_MAP（对标第三方组件库动效分类，自研 SMIL 实现）:
+  - 自动滚动无缝换图带文字 → SVG animateTransform 无限横向滚动
+  - 图片轮播点图切换 → 点击逐层 peel 淡出露出下一张
+  - 点击展开导读 → 遮罩组 click 淡出
+  - 时间线脉冲 → 节点 repeatCount indefinite
+  - 板块点击激活 → 同组 begin=click 进度条展开
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;font-size:15px;line-height:1.75;color:#1a1a1a;background:#0b1220;">
+
+  <!-- MASTHEAD -->
+  <section style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);padding:26px 22px 20px;border-radius:14px 14px 0 0;">
+    <p style="margin:0 0 6px;font-size:10px;letter-spacing:3px;color:#60a5fa;text-transform:uppercase;font-weight:600;">AI TECH DAILY</p>
+    <p style="margin:0 0 8px;font-size:24px;font-weight:800;color:#f8fafc;line-height:1.25;">AI 科技日报 · 交互特刊</p>
+    <p style="margin:0;font-size:12px;color:#94a3b8;">2026年6月7日 · 7 条动态 · 5 组 SVG 交互</p>
+  </section>
+
+  <!-- INTERACTION 1：点击展开导读（hero mask peel） -->
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="360" fill="#0f172a"/>
+    <rect x="0" y="0" width="640" height="360" fill="#1d4ed8" opacity="0.35"/>
+    <circle cx="560" cy="50" r="90" fill="#3b82f6" opacity="0.12"/>
+    <circle cx="70" cy="300" r="70" fill="#22d3ee" opacity="0.08"/>
+    <text x="28" y="58" font-size="13" font-weight="700" fill="#93c5fd" letter-spacing="1" font-family="-apple-system,PingFang SC,sans-serif">TODAY BRIEF</text>
+    <text x="28" y="98" font-size="24" font-weight="800" fill="#ffffff" font-family="-apple-system,PingFang SC,sans-serif">算力、Agent 与开源三线并进</text>
+    <text x="28" y="128" font-size="13" fill="#bfdbfe" font-family="-apple-system,PingFang SC,sans-serif">点击展开今日导读 · 无跳转阅读</text>
+    <rect x="24" y="168" width="592" height="1" fill="#3b82f6" opacity="0.35"/>
+    <text x="28" y="200" font-size="12" fill="#cbd5e1" font-family="-apple-system,PingFang SC,sans-serif">① GPT-5 Turbo 降价 40% ② Seed-Agent 开源 ③ B300 算力翻倍</text>
+    <text x="28" y="224" font-size="12" fill="#cbd5e1" font-family="-apple-system,PingFang SC,sans-serif">④ Agentforce 2.0 接管 CRM ⑤ Deep Research Pro 上线</text>
+    <text x="28" y="248" font-size="12" fill="#cbd5e1" font-family="-apple-system,PingFang SC,sans-serif">⑥ 主流 LLM 越狱漏洞报告 ⑦ 欧盟 AI Act 合规指南</text>
+    <text x="28" y="320" font-size="11" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">↓ 向下查看图廊与分板块详情</text>
+    <g style="outline:none" cursor="pointer">
+      <rect x="0" y="145" width="640" height="215" fill="#0f172a"/>
+      <rect x="0" y="132" width="640" height="18" fill="#0f172a" opacity="0.7"/>
+      <circle cx="288" cy="158" r="5" fill="#38bdf8">
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.6s" begin="0s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="5;8;5" dur="1.6s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+      <text x="304" y="163" font-size="12" fill="#7dd3fc" font-family="-apple-system,PingFang SC,sans-serif">点击查看今日导读</text>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+    </g>
+  </svg>
+
+  <!-- INTERACTION 2：自动滚动无缝换图 + 文字（对标 S100780） -->
+  <section style="background:#0f172a;padding:0 0 8px;">
+    <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="220" fill="#020617"/>
+      <rect x="16" y="12" width="608" height="196" fill="#111827" rx="10"/>
+      <text x="32" y="36" font-size="11" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">AUTO SCROLL · 无缝图廊</text>
+      <text x="32" y="58" font-size="15" font-weight="700" fill="#e2e8f0" font-family="-apple-system,PingFang SC,sans-serif">踩着算力浪潮 · 拥抱 Agent 时代</text>
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 0;-960 0" dur="18s" begin="0s" repeatCount="indefinite"/>
+        <image href="amazon-tshirt-main-images/01-main-white.png" x="32" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+        <image href="amazon-tshirt-main-images/02-lifestyle.png" x="328" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+        <image href="amazon-tshirt-main-images/03-model-front.png" x="624" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+        <image href="amazon-tshirt-main-images/04-fabric-detail.png" x="920" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+        <image href="amazon-tshirt-main-images/01-main-white.png" x="1216" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+        <image href="amazon-tshirt-main-images/02-lifestyle.png" x="1512" y="72" width="280" height="140" preserveAspectRatio="xMidYMid slice"/>
+      </g>
+      <rect x="16" y="12" width="608" height="196" fill="none" stroke="#1e293b" stroke-width="1" rx="10"/>
+    </svg>
+  </section>
+
+  <!-- INTERACTION 3：点击逐层换图轮播 + 配文（对标 S100779，SVG 内不可 a 标签，链接放 HTML） -->
+  <section style="background:#0f172a;padding:8px 16px 16px;">
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:10px;" viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="300" fill="#111827"/>
+      <text x="20" y="32" font-size="11" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">TAP TO NEXT · 点图切换</text>
+      <text x="20" y="54" font-size="14" font-weight="700" fill="#f1f5f9" font-family="-apple-system,PingFang SC,sans-serif">今日视觉精选 · 点击看下一张</text>
+      <!-- 底层：最后一张；顶层：第一张。每次点击 peel 露出下一张 -->
+      <image href="amazon-tshirt-main-images/06-ghost-mannequin.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+      <g style="outline:none" cursor="pointer">
+        <image href="amazon-tshirt-main-images/05-model-back.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+      <g style="outline:none" cursor="pointer">
+        <image href="amazon-tshirt-main-images/04-fabric-detail.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+      <g style="outline:none" cursor="pointer">
+        <image href="amazon-tshirt-main-images/03-model-front.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+      <g style="outline:none" cursor="pointer">
+        <image href="amazon-tshirt-main-images/02-lifestyle.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+      <g style="outline:none" cursor="pointer">
+        <image href="amazon-tshirt-main-images/01-main-white.png" x="20" y="68" width="600" height="200" preserveAspectRatio="xMidYMid slice"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+      <text x="320" y="286" font-size="11" fill="#94a3b8" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">剩余图层请点击切换 · 文末附跳转链接</text>
+    </svg>
+    <p style="margin:10px 0 0;font-size:12px;color:#94a3b8;text-align:center;">
+      <a href="https://example.com/visual-feature" style="color:#60a5fa;text-decoration:none;">关联专题：今日视觉稿解读 →</a>
+    </p>
+  </section>
+
+  <!-- INTERACTION 4：脉冲时间线（自动） -->
+  <svg style="display:block;width:100%;" viewBox="0 0 640 72" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="72" fill="#0f172a"/>
+    <line x1="40" y1="36" x2="600" y2="36" stroke="#1e293b" stroke-width="2"/>
+    <line x1="40" y1="36" x2="40" y2="36" stroke="#3b82f6" stroke-width="2">
+      <animate attributeName="x2" values="40;600" begin="0.3s" dur="2.2s" fill="freeze"/>
+    </line>
+    <circle cx="120" cy="36" r="6" fill="#3b82f6">
+      <animate attributeName="r" values="6;10;6" dur="1.4s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;0.5;1" dur="1.4s" begin="0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="240" cy="36" r="6" fill="#8b5cf6">
+      <animate attributeName="r" values="6;10;6" dur="1.6s" begin="1.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="360" cy="36" r="6" fill="#10b981">
+      <animate attributeName="r" values="6;10;6" dur="1.8s" begin="1.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="480" cy="36" r="6" fill="#f59e0b">
+      <animate attributeName="r" values="6;10;6" dur="2s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="120" y="58" font-size="9" fill="#64748b" text-anchor="middle" font-family="-apple-system,sans-serif">LLM</text>
+    <text x="240" y="58" font-size="9" fill="#64748b" text-anchor="middle" font-family="-apple-system,sans-serif">Agent</text>
+    <text x="360" y="58" font-size="9" fill="#64748b" text-anchor="middle" font-family="-apple-system,sans-serif">开源</text>
+    <text x="480" y="58" font-size="9" fill="#64748b" text-anchor="middle" font-family="-apple-system,sans-serif">算力</text>
+  </svg>
+
+  <!-- 导语 -->
+  <section style="margin:0 16px;padding:14px 16px;background:#111827;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;">
+    <p style="margin:0;font-size:13px;color:#cbd5e1;line-height:1.7;">本期 7 条精选：旗舰模型价格战、Agent 框架开源潮、算力基础设施迭代。下图廊为版式样例，正式刊出请替换为当期配图并上传微信素材库。</p>
+  </section>
+
+  <p style="text-align:center;color:#334155;letter-spacing:5px;margin:20px 0 12px;font-size:12px;">· · ·</p>
+
+  <!-- 正文区（浅底） -->
+  <section style="background:#f8fafc;border-radius:16px 16px 0 0;padding:20px 16px 0;margin-top:8px;">
+
+    <!-- INTERACTION 5：点击激活板块条（大模型） -->
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="48" fill="#eff6ff" rx="8"/>
+      <rect x="0" y="38" width="640" height="3" fill="#2563eb" rx="1.5"/>
+      <rect x="0" y="10" width="4" height="28" fill="#2563eb" rx="2"/>
+      <text x="16" y="30" font-size="16" font-weight="700" fill="#1e40af" font-family="-apple-system,PingFang SC,sans-serif">大模型</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#dbeafe" rx="1.5"/>
+        <text x="100" y="30" font-size="11" fill="#93c5fd" font-family="-apple-system,PingFang SC,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <section style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">GPT-5 Turbo 发布：推理 3× 提速，API 降价 40%</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#64748b;line-height:1.65;">128K→256K 上下文，多模态与函数调用延迟同步优化，企业可申请早期访问。</p>
+      <a href="https://openai.com/blog/gpt5-turbo" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+    <section style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">Gemini 2.5 Ultra 刷新 6 项权威基准</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#64748b;line-height:1.65;">视频理解与科学推理领先，Flash 版定价仅为 Ultra 十分之一。</p>
+      <a href="https://deepmind.google/gemini-2-5-ultra" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+
+    <!-- 板块：Agent -->
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="48" fill="#f5f3ff" rx="8"/>
+      <rect x="0" y="38" width="640" height="3" fill="#7c3aed" rx="1.5"/>
+      <rect x="0" y="10" width="4" height="28" fill="#7c3aed" rx="2"/>
+      <text x="16" y="30" font-size="16" font-weight="700" fill="#5b21b6" font-family="-apple-system,PingFang SC,sans-serif">Agent</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#ede9fe" rx="1.5"/>
+        <text x="90" y="30" font-size="11" fill="#a78bfa" font-family="-apple-system,PingFang SC,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+    <section style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">字节 Seed-Agent 开源：首日 3.2K Star</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#64748b;line-height:1.65;">支持 ReAct / Plan-and-Execute，内置任务分解与错误恢复。</p>
+      <a href="https://github.com/bytedance/seed-agent" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+
+    <!-- 板块：基础设施 -->
+    <svg style="display:block;width:100%;margin-bottom:12px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="48" fill="#ecfdf5" rx="8"/>
+      <rect x="0" y="38" width="640" height="3" fill="#059669" rx="1.5"/>
+      <rect x="0" y="10" width="4" height="28" fill="#059669" rx="2"/>
+      <text x="16" y="30" font-size="16" font-weight="700" fill="#047857" font-family="-apple-system,PingFang SC,sans-serif">基础设施</text>
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="38" width="640" height="3" fill="#d1fae5" rx="1.5"/>
+        <text x="110" y="30" font-size="11" fill="#34d399" font-family="-apple-system,PingFang SC,sans-serif">点击激活 ›</text>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.4s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+    <section style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">NVIDIA Blackwell Ultra B300 算力再翻倍</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#64748b;line-height:1.65;">FP8 算力 18,000 TFLOPS，HBM4 288GB，预计 2027 Q1 量产。</p>
+      <a href="https://nvidianews.nvidia.com/blackwell-ultra-b300" style="font-size:12px;color:#576b95;text-decoration:none;">阅读原文 →</a>
+    </section>
+
+    <!-- 洞察 -->
+    <section style="background:#0f172a;border-radius:12px;padding:18px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;font-size:11px;color:#64748b;letter-spacing:1px;">EDITOR INSIGHT</p>
+      <p style="margin:0;font-size:13px;color:#e2e8f0;line-height:1.75;">交互不应喧宾夺主：1 组导读展开 + 1 组自动图廊 + 1 组点击轮播，已足够撑起科技日报的「可玩性」。重度表单/支付请走阅读原文 H5。</p>
+    </section>
+
+    <!-- 来源 -->
+    <section style="padding:8px 4px 24px;border-top:1px solid #e2e8f0;">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:1px;">参考来源</p>
+      <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[1] openai.com · GPT-5 Turbo</p>
+      <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[2] deepmind.google · Gemini 2.5 Ultra</p>
+      <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[3] github.com/bytedance/seed-agent</p>
+      <p style="margin:0;font-size:12px;color:#94a3b8;">[4] nvidianews.nvidia.com · B300</p>
+    </section>
+  </section>
+</section>

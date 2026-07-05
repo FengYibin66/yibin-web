@@ -1,0 +1,703 @@
+<!-- 微信公众号样例模板：每日 AI 科技必看（淡色版） -->
+<!--
+  TEMPLATE_META:
+  name: 每日AI科技必看·淡色
+  description: 轨道刊头 + KPI 脉冲 + 点击渐变展开新闻卡 + 参考来源 + 作者致谢；淡色系全篇
+  tags: [大模型, Agent, 开源, 基础设施, 日报, 全交互]
+  hasSvg: true
+  itemCountMin: 5
+  itemCountMax: 10
+  theme: light
+
+  IMAGE_SLOTS（image_assets public URL；layout 排版时换为本期 illustrate URL；16:9 推荐 1024×576）：
+  CARD1 http://localhost:8080/api/v1/public/media/03266026-be8d-430a-9197-efab8d786fda
+  CARD2 http://localhost:8080/api/v1/public/media/3cc65cde-b5fd-4e0d-a66c-2125974b75e7
+  CARD3 http://localhost:8080/api/v1/public/media/91111212-2cda-44a6-87c4-7db22711701a
+  CARD4 http://localhost:8080/api/v1/public/media/1c748943-ff6a-4cbb-8fcf-3dc7f7c61b5b
+  CARD5 http://localhost:8080/api/v1/public/media/8f094da0-4bbe-4798-a5b2-ed6b04c1fa2e
+  CARD6 http://localhost:8080/api/v1/public/media/c24edfd5-8802-4716-b8eb-8e452c6729ee
+  CARD7 http://localhost:8080/api/v1/public/media/03266026-be8d-430a-9197-efab8d786fda
+  CARD8 http://localhost:8080/api/v1/public/media/3cc65cde-b5fd-4e0d-a66c-2125974b75e7
+  CARD9 http://localhost:8080/api/v1/public/media/91111212-2cda-44a6-87c4-7db22711701a
+  CARD10 http://localhost:8080/api/v1/public/media/1c748943-ff6a-4cbb-8fcf-3dc7f7c61b5b
+
+  SECTIONS:
+  1. orbit-hero 刊头（每日AI科技必看 × 日期）
+  2. counter-digit 今日核心指标
+  3. news-cards × N（封面图+吸睛标题 → 点击 peel 渐变展开详情）
+  4. 参考来源
+  5. 作者致谢
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;font-size:22px;line-height:1.75;color:#1e293b;background:#f8fafc;">
+
+  <!-- §1 轨道粒子刊头（淡色） -->
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="400" fill="#f0f9ff"/>
+    <line x1="0" y1="100" x2="640" y2="80" stroke="#dbeafe" stroke-width="1"/>
+    <line x1="0" y1="200" x2="640" y2="160" stroke="#dbeafe" stroke-width="1"/>
+    <line x1="0" y1="300" x2="640" y2="240" stroke="#dbeafe" stroke-width="1"/>
+    <line x1="160" y1="0" x2="160" y2="400" stroke="#dbeafe" stroke-width="1"/>
+    <line x1="320" y1="0" x2="320" y2="400" stroke="#dbeafe" stroke-width="1"/>
+    <line x1="480" y1="0" x2="480" y2="400" stroke="#dbeafe" stroke-width="1"/>
+
+    <g transform="translate(320,185)">
+      <animateTransform attributeName="transform" type="rotate" values="0;360" dur="24s" begin="0s" repeatCount="indefinite" additive="sum"/>
+      <ellipse cx="0" cy="0" rx="200" ry="70" fill="none" stroke="#93c5fd" stroke-width="1" opacity="0.8"/>
+      <circle cx="200" cy="0" r="6" fill="#3b82f6">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="-200" cy="0" r="4" fill="#6366f1"/>
+      <circle cx="0" cy="70" r="5" fill="#06b6d4"/>
+      <circle cx="0" cy="-70" r="4" fill="#8b5cf6"/>
+    </g>
+
+    <text x="320" y="108" font-size="17" fill="#64748b" text-anchor="middle" letter-spacing="3" font-family="-apple-system,PingFang SC,sans-serif">DAILY AI TECH DIGEST</text>
+    <text x="320" y="168" font-size="36" font-weight="800" fill="#0f172a" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">每日AI科技必看</text>
+    <text x="320" y="228" font-size="24" font-weight="600" fill="#2563eb" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">× 2026年6月4日</text>
+    <text x="320" y="288" font-size="18" fill="#64748b" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">算力 · 模型 · Agent · 开源 · 10 条精选</text>
+
+    <g style="outline:none" cursor="pointer">
+      <circle cx="320" cy="185" r="48" fill="transparent" stroke="#3b82f6" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="48;200" begin="click" dur="0.8s" fill="freeze" restart="never"/>
+        <animate attributeName="opacity" values="0.5;0" begin="click" dur="0.8s" fill="freeze" restart="never"/>
+      </circle>
+    </g>
+  </svg>
+
+  <!-- §2 今日核心指标（footnote 动态折行 + 垂直居中） -->
+  <section style="padding:24px 20px 12px;">
+    <p style="margin:0 0 4px;font-size:17px;letter-spacing:2px;color:#0891b2;">KPI PULSE</p>
+    <p style="margin:0;font-size:28px;font-weight:800;color:#0f172a;">今日核心指标</p>
+  </section>
+
+  <svg style="display:block;width:100%;overflow:hidden;" viewBox="0 0 640 356" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="640" height="356" fill="#f8fafc"/>
+
+    <g transform="translate(100,128)">
+      <circle cx="0" cy="0" r="58" fill="none" stroke="#1d4ed8" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="58;68;58" dur="2.2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-12" font-size="40" font-weight="800" fill="#60a5fa" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">3×</text>
+      <text x="0" y="32" font-size="17" fill="#93c5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">推理提速</text>
+    </g>
+    <g transform="translate(320,128)">
+      <circle cx="0" cy="0" r="58" fill="none" stroke="#7c3aed" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="58;68;58" dur="2.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-12" font-size="40" font-weight="800" fill="#a78bfa" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">40%</text>
+      <text x="0" y="32" font-size="17" fill="#c4b5fd" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">API 降价</text>
+    </g>
+    <g transform="translate(540,128)">
+      <circle cx="0" cy="0" r="58" fill="none" stroke="#059669" stroke-width="2" opacity="0.5">
+        <animate attributeName="r" values="58;68;58" dur="2.8s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <text x="0" y="-12" font-size="40" font-weight="800" fill="#34d399" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">3.2K</text>
+      <text x="0" y="32" font-size="17" fill="#6ee7b7" text-anchor="middle" font-family="-apple-system,PingFang SC,sans-serif">GitHub Star</text>
+    </g>
+
+    <rect x="32" y="202" width="576" height="126" fill="#f1f5f9" rx="12" stroke="#e2e8f0"/>
+      <text x="52" y="241" font-size="18" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="52" dy="0" fill="#334155">3× 来自 FP8 推理优化 · 40% 为 GPT-5 Turbo 官方调价</tspan>
+        <tspan x="52" dy="26" fill="#64748b">3.2K Star 指 Seed-Agent 开源首日数据（样例占位，</tspan>
+        <tspan x="52" dy="26" fill="#64748b">正式刊出由流水线替换）</tspan>
+      </text>
+
+    <g style="outline:none" cursor="pointer">
+      <rect x="32" y="202" width="576" height="126" fill="#ffffff" rx="12"/>
+      <text x="52" y="271" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">点击查看指标解读</text>
+      <circle cx="560" cy="265" r="6" fill="#2563eb">
+        <animate attributeName="opacity" values="1;0.2;1" dur="1.4s" repeatCount="indefinite"/>
+      </circle>
+      <animate attributeName="opacity" values="1;0" begin="click" dur="0.35s" fill="freeze" restart="never"/>
+      <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+    </g>
+  </svg>
+
+
+  <p style="text-align:center;color:#334155;letter-spacing:5px;margin:28px 0 18px;font-size:19px;">· · ·</p>
+
+  <!-- §3 新闻卡片区（Top 10；详情 tspan 折行；cover 不透明底板） -->
+  <section style="padding:0 16px;">
+    <p style="margin:0 0 10px;font-size:17px;letter-spacing:2px;color:#64748b;">TODAY'S PICKS</p>
+    <p style="margin:0 0 22px;font-size:28px;font-weight:800;color:#0f172a;">今日要闻 · 点击展开详情 · 共 10 条</p>
+
+    <!-- CARD 1 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f8fafc"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">大模型</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">GPT-5 Turbo 推理三倍狂飙</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">128K→256K 上下文 · API 官方降价 40%</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">GPT-5 Turbo 在 MMLU-Pro、LiveCodeBench 等多项权威评测中夺冠</tspan>
+        <tspan x="24" dy="28">，128K 上下文窗口扩展至 256K，被视为 OpenAI 反击竞争对手的核心</tspan>
+        <tspan x="24" dy="28">策略。</tspan>
+      </text>
+      <text x="24" y="276" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">多模态与函数调用延迟同步优化，Structured Outputs 与 Batch API</tspan>
+        <tspan x="24" dy="28">同步更新，企业客户可申请早期访问与专属 SLA。</tspan>
+      </text>
+      <text x="24" y="342" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">FP8 推理栈落地后，同等算力下吞吐提升约 3 倍；按 token 计费单价</tspan>
+        <tspan x="24" dy="28">下调 40%，中小团队调用成本显著下降。</tspan>
+      </text>
+      <rect x="24" y="412" width="592" height="1" fill="#e2e8f0"/>
+      <text x="24" y="440" font-size="18" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → openai.com/blog/gpt5-turbo</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f8fafc"/>
+        <image href="http://localhost:8080/api/v1/public/media/03266026-be8d-430a-9197-efab8d786fda" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#ffffff" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f8fafc"/>
+        <rect x="24" y="324" width="104" height="36" fill="#dbeafe" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#1d4ed8" font-family="-apple-system,PingFang SC,sans-serif">重磅</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">价格战再掀浪潮：GPT-5 Turbo 登场</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">推理 3× · API 降价 40% · 多模态同步升级</text>
+        <circle cx="268" cy="494" r="5" fill="#3b82f6">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 2 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f8fafc"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">大模型</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">Gemini 2.5 Ultra 六榜登顶</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">视频理解与科学推理领先 · Flash 定价仅为 Ultra 1/10</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Gemini 2.5 Ultra 在视频理解、科学推理、代码生成三个维度全面超</tspan>
+        <tspan x="24" dy="28">越竞品，刷新六项主流基准测试记录。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">长视频摘要准确率提升 22%，SWE-bench 代码修复通过率创模型系列新</tspan>
+        <tspan x="24" dy="28">高；Flash 版本同步推出，定价策略强调开发者友好。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Google AI Studio 已开放 API 预览，Vertex AI 企业通道支持 VPC</tspan>
+        <tspan x="24" dy="28">-SC 与数据驻留合规，预计本季度 GA。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#e2e8f0"/>
+      <text x="24" y="412" font-size="18" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → deepmind.google/gemini-2-5-ultra</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f8fafc"/>
+        <image href="http://localhost:8080/api/v1/public/media/3cc65cde-b5fd-4e0d-a66c-2125974b75e7" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#ffffff" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f8fafc"/>
+        <rect x="24" y="324" width="104" height="36" fill="#dbeafe" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#1d4ed8" font-family="-apple-system,PingFang SC,sans-serif">标杆</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">视频理解碾压同级对手</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">六榜第一 · 多模态新王座</text>
+        <circle cx="268" cy="494" r="5" fill="#3b82f6">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#2563eb" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 3 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#faf5ff"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#7c3aed" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">Agent</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">Seed-Agent 开源首日破 3.2K Star</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">ReAct / Plan-and-Execute 双模式 · 内置错误恢复</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Seed-Agent 支持 Tool-Use、ReAct、Plan-and-Execute 三种 Agen</tspan>
+        <tspan x="24" dy="28">t 范式，内置任务分解、并行执行与错误恢复机制。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">已在字节内部服务于数十个业务场景，涵盖客服、运维与内容审核；</tspan>
+        <tspan x="24" dy="28">GitHub 首日获 3.2K Star，Issues 响应活跃。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">社区反馈文档完善度优于同类框架，提供 OpenTelemetry 可观测性插</tspan>
+        <tspan x="24" dy="28">件与 LangChain 适配层，上手成本低。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#e9d5ff"/>
+      <text x="24" y="412" font-size="18" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → github.com/bytedance/seed-agent</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#faf5ff"/>
+        <image href="http://localhost:8080/api/v1/public/media/91111212-2cda-44a6-87c4-7db22711701a" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#faf5ff" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#faf5ff"/>
+        <rect x="24" y="324" width="116" height="36" fill="#ede9fe" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#5b21b6" font-family="-apple-system,PingFang SC,sans-serif">开源速递</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#1e1b4b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">国产 Agent 框架一夜爆火</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">首日 3.2K Star · 开发者争相试用</text>
+        <circle cx="268" cy="494" r="5" fill="#7c3aed">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 4 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f0fdf4"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#059669" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">融资</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">望远AI 完成 A 轮 1.5 亿元融资</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">IDG 领投 · 肺结节检测准确率 97.3%</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">望远AI 专注影像诊断 AI，其肺结节检测准确率在三甲医院多中心试点</tspan>
+        <tspan x="24" dy="28">中达到 97.3%，超过平均主治医师水平。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">本轮由 IDG 领投，将用于获得三类医疗器械注册证，并拓展 ICU 智能</tspan>
+        <tspan x="24" dy="28">监护与术后并发症预警新产品线。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">公司已与 12 家三甲医院建立数据合作，模型在 DICOM 标准工作流中可</tspan>
+        <tspan x="24" dy="28">即插即用，降低部署改造成本。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#bbf7d0"/>
+      <text x="24" y="412" font-size="18" fill="#047857" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → 36kr.com/wangyuan-ai-series-a</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f0fdf4"/>
+        <image href="http://localhost:8080/api/v1/public/media/1c748943-ff6a-4cbb-8fcf-3dc7f7c61b5b" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#f0fdf4" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f0fdf4"/>
+        <rect x="24" y="324" width="104" height="36" fill="#d1fae5" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#047857" font-family="-apple-system,PingFang SC,sans-serif">医疗AI</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#064e3b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">医疗影像 AI 再获资本加注</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#059669" font-family="-apple-system,PingFang SC,sans-serif">A 轮 1.5 亿 · 三类证冲刺</text>
+        <circle cx="268" cy="494" r="5" fill="#059669">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#047857" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 5 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f5f3ff"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#4f46e5" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">论文</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">MIT：思维链催生 LLM「元认知」</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">不确定场景主动降置信 · 幻觉率下降 41%</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">MIT CSAIL 团队发现，经过充分思维链训练的 LLM 会自发形成「我不</tspan>
+        <tspan x="24" dy="28">知道」「这个问题有歧义」等元认知表达。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">在开放域问答与医疗辅助诊断场景中，模型在不确定问题上主动降低置信</tspan>
+        <tspan x="24" dy="28">度，整体幻觉率下降 41%。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">论文已提交 NeurIPS 2026，作者建议生产系统为 CoT 输出增加校准层</tspan>
+        <tspan x="24" dy="28">，并与 RAG 置信度联动。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#c7d2fe"/>
+      <text x="24" y="412" font-size="18" fill="#4338ca" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → arxiv.org/abs/2406.99999</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f5f3ff"/>
+        <image href="http://localhost:8080/api/v1/public/media/8f094da0-4bbe-4798-a5b2-ed6b04c1fa2e" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#f5f3ff" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f5f3ff"/>
+        <rect x="24" y="324" width="104" height="36" fill="#e0e7ff" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#4338ca" font-family="-apple-system,PingFang SC,sans-serif">NeurIPS</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#312e81" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">LLM 开始「知道自己不知道」</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#4f46e5" font-family="-apple-system,PingFang SC,sans-serif">元认知 · 幻觉治理新思路</text>
+        <circle cx="268" cy="494" r="5" fill="#4f46e5">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#4338ca" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 6 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f0fdfa"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#0d9488" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">基础设施</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">Blackwell Ultra B300 算力再翻倍</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">FP8 算力 18,000 TFLOPS · HBM4 288GB</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">NVIDIA 发布 Blackwell Ultra B300，FP8 算力达到 18,000 TFLOP</tspan>
+        <tspan x="24" dy="28">S，HBM4 显存容量扩展至 288GB。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">单卡可承载千亿参数模型推理，NVLink 5.0 互联带宽提升至 3.6TB/s</tspan>
+        <tspan x="24" dy="28">，训练集群 TCO 有望下降 30%。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">预计 2027 年 Q1 量产，AWS、Azure、GCP 已公布预览实例计划，</tspan>
+        <tspan x="24" dy="28">云厂商预订窗口已开放。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#99f6e4"/>
+      <text x="24" y="412" font-size="18" fill="#0f766e" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → nvidianews.nvidia.com/blackwell-ultra-b300</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f0fdfa"/>
+        <image href="http://localhost:8080/api/v1/public/media/c24edfd5-8802-4716-b8eb-8e452c6729ee" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#f0fdfa" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f0fdfa"/>
+        <rect x="24" y="324" width="104" height="36" fill="#ccfbf1" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#0f766e" font-family="-apple-system,PingFang SC,sans-serif">算力</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#134e4a" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">芯片军备竞赛进入新回合</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#0d9488" font-family="-apple-system,PingFang SC,sans-serif">B300 官宣 · 训练推理双场景碾压</text>
+        <circle cx="268" cy="494" r="5" fill="#0d9488">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#0f766e" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 7 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#faf5ff"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#7c3aed" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">Agent</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">Salesforce Agentforce 2.0 全面接管 CRM</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">自然语言驱动销售漏斗 · 与 Slack 深度集成</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Agentforce 2.0 允许销售与客服团队用自然语言配置自动化工作流，</tspan>
+        <tspan x="24" dy="28">覆盖线索评分、跟进提醒与工单分派。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">与 Slack、Tableau 数据层打通，Agent 可读取 CRM 历史并生成可审</tspan>
+        <tspan x="24" dy="28">计的操作计划，减少「黑盒自动化」顾虑。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Dreamforce 现场演示显示，平均线索响应时间缩短 58%；</tspan>
+        <tspan x="24" dy="28">Enterprise 版按席位 + Agent 调用量混合计费。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#e9d5ff"/>
+      <text x="24" y="412" font-size="18" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → salesforce.com/agentforce-2</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#faf5ff"/>
+        <image href="http://localhost:8080/api/v1/public/media/03266026-be8d-430a-9197-efab8d786fda" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#faf5ff" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#faf5ff"/>
+        <rect x="24" y="324" width="104" height="36" fill="#ede9fe" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#5b21b6" font-family="-apple-system,PingFang SC,sans-serif">企业级</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#1e1b4b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">CRM 进入 Agent 原生时代</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">Agentforce 2.0 · 销售自动化重构</text>
+        <circle cx="268" cy="494" r="5" fill="#7c3aed">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#6d28d9" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 8 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#fffbeb"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#d97706" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">产品</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">OpenAI Deep Research Pro 开放公测</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">多步检索 + 代码执行 · 报告级输出</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">Deep Research Pro 在 o3 推理栈上运行，可自主规划检索路径、</tspan>
+        <tspan x="24" dy="28">调用 Python 沙箱并交叉验证来源，输出带引用的长篇报告。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">面向分析师、投资研究与学术综述场景，单次任务可消耗 10–30 分钟</tspan>
+        <tspan x="24" dy="28">算力，Pro 订阅用户每日配额提升 5 倍。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">与 ChatGPT 主站深度整合，支持一键导出 Notion / Google Docs；</tspan>
+        <tspan x="24" dy="28">企业版可接入私有知识库与 SSO。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#fde68a"/>
+      <text x="24" y="412" font-size="18" fill="#b45309" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → openai.com/deep-research-pro</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#fffbeb"/>
+        <image href="http://localhost:8080/api/v1/public/media/3cc65cde-b5fd-4e0d-a66c-2125974b75e7" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#fffbeb" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#fffbeb"/>
+        <rect x="24" y="324" width="116" height="36" fill="#fef3c7" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#b45309" font-family="-apple-system,PingFang SC,sans-serif">深度研究</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#78350f" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">AI 研究员替你做尽职调查</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#d97706" font-family="-apple-system,PingFang SC,sans-serif">Deep Research Pro · 多步推理报告</text>
+        <circle cx="268" cy="494" r="5" fill="#d97706">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#b45309" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 9 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#fef2f2"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#dc2626" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">安全</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">主流 LLM 统一越狱漏洞披露</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">多模型共享攻击面 · 厂商紧急补丁</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">安全研究机构披露一类跨模型越狱提示模板，可在 GPT、Claude、</tspan>
+        <tspan x="24" dy="28">Gemini 等主流 API 上绕过安全对齐策略。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">攻击利用长上下文中的「指令嵌套」与多轮角色混淆，可在不触发明显违</tspan>
+        <tspan x="24" dy="28">规关键词的情况下输出受限内容。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">OpenAI、Anthropic、Google 均已发布缓解措施，</tspan>
+        <tspan x="24" dy="28">建议企业启用输出过滤、Prompt 防火墙与人工复核三道防线。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#fecaca"/>
+      <text x="24" y="412" font-size="18" fill="#b91c1c" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → security.example.com/llm-jailbreak-2026</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#fef2f2"/>
+        <image href="http://localhost:8080/api/v1/public/media/91111212-2cda-44a6-87c4-7db22711701a" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#fef2f2" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#fef2f2"/>
+        <rect x="24" y="324" width="104" height="36" fill="#fee2e2" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#b91c1c" font-family="-apple-system,PingFang SC,sans-serif">警示</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#7f1d1d" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">对齐防线并非铜墙铁壁</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#dc2626" font-family="-apple-system,PingFang SC,sans-serif">跨模型越狱 · 企业需升级防护</text>
+        <circle cx="268" cy="494" r="5" fill="#dc2626">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#b91c1c" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+
+    <!-- CARD 10 -->
+    <svg style="display:block;width:100%;overflow:hidden;border-radius:12px;margin-bottom:28px;box-shadow:0 2px 12px rgba(15,23,42,0.06)" viewBox="0 0 640 526" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="640" height="526" fill="#f8fafc"/>
+      <!-- 底层：详情（SVG text 不自动换行，须 tspan 折行；点击 cover 后可见） -->
+      <text x="24" y="52" font-size="17" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif" font-weight="700">
+        <tspan x="24" dy="0">政策</tspan>
+      </text>
+      <text x="24" y="88" font-size="28" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif" font-weight="800">
+        <tspan x="24" dy="0">欧盟 AI Act 高风险系统合规指南出炉</tspan>
+      </text>
+      <text x="24" y="136" font-size="20" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">2026 年 8 月全面生效 · 含生成式 AI 细则</tspan>
+      </text>
+      <text x="24" y="182" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">欧盟委员会发布 AI Act 实施指南，明确高风险 AI 系统的数据治理、</tspan>
+        <tspan x="24" dy="28">人类监督与透明度日志要求。</tspan>
+      </text>
+      <text x="24" y="248" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">生成式 AI 需标注合成内容水印，基础模型提供者须提交技术文档与系</tspan>
+        <tspan x="24" dy="28">统性风险评估（FRIA）。</tspan>
+      </text>
+      <text x="24" y="314" font-size="19" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">出海企业需在 8 月前完成差距分析；违规最高罚款为全球营业额 7%，</tspan>
+        <tspan x="24" dy="28">或 3500 万欧元取其高者。</tspan>
+      </text>
+      <rect x="24" y="384" width="592" height="1" fill="#e2e8f0"/>
+      <text x="24" y="412" font-size="18" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">阅读原文 → digital-strategy.ec.europa.eu/ai-act-guide</tspan>
+      </text>
+      <!-- 顶层：封面 peel -->
+      <g style="outline:none" cursor="pointer">
+        <rect x="0" y="0" width="640" height="360" fill="#f8fafc"/>
+        <image href="http://localhost:8080/api/v1/public/media/1c748943-ff6a-4cbb-8fcf-3dc7f7c61b5b" x="0" y="0" width="640" height="360" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="0" y="240" width="640" height="60" fill="#f8fafc" opacity="0.35"/>
+        <rect x="0" y="300" width="640" height="226" fill="#f8fafc"/>
+        <rect x="24" y="324" width="104" height="36" fill="#e2e8f0" rx="4"/>
+        <text x="36" y="348" font-size="17" font-weight="700" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">合规</text>
+      <text x="24" y="402" font-size="32" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">
+        <tspan x="24" dy="0">合规倒计时：AI Act 实操手册</tspan>
+      </text>
+        <text x="24" y="437" font-size="19" fill="#475569" font-family="-apple-system,PingFang SC,sans-serif">高风险清单 · 生成式 AI 义务</text>
+        <circle cx="268" cy="494" r="5" fill="#64748b">
+          <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="284" y="500" font-size="19" fill="#334155" font-family="-apple-system,PingFang SC,sans-serif">点击查看详情</text>
+        <rect x="0" y="0" width="640" height="526" fill="transparent"/>
+        <animate attributeName="opacity" values="1;0" begin="click" dur="0.45s" fill="freeze" restart="never"/>
+        <animate attributeName="visibility" values="visible;hidden" begin="click" dur="0.01s" fill="freeze" restart="never"/>
+      </g>
+    </svg>
+  </section>
+
+
+  <p style="text-align:center;color:#334155;letter-spacing:5px;margin:8px 0 18px;font-size:19px;">· · ·</p>
+
+  <!-- §4 参考来源 -->
+  <section style="padding:0 16px;">
+    <section style="padding:22px 24px;background:#f1f5f9;border-radius:12px;border:1px solid #e2e8f0;">
+      <p style="margin:0 0 10px;font-size:18px;font-weight:600;color:#64748b;letter-spacing:1px;">参考来源</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[1] openai.com · GPT-5 Turbo 发布公告</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[2] deepmind.google · Gemini 2.5 Ultra 技术报告</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[3] github.com/bytedance/seed-agent · 项目 README</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[4] 36kr.com · 望远AI A 轮融资报道</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[5] arxiv.org · MIT 元认知与思维链论文</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[6] nvidianews.nvidia.com · Blackwell Ultra B300</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[7] salesforce.com · Agentforce 2.0 发布</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[8] openai.com · Deep Research Pro 公测公告</p>
+      <p style="margin:0 0 8px;font-size:19px;color:#475569;">[9] security.example.com · LLM 越狱漏洞联合公告</p>
+      <p style="margin:0;font-size:19px;color:#475569;">[10] digital-strategy.ec.europa.eu · AI Act 合规指南</p>
+    </section>
+  </section>
+
+
+  <!-- §5 作者致谢 -->
+  <section style="padding:20px 16px 32px;">
+    <section style="overflow:hidden;border-radius:16px;border:1px solid #e2e8f0;background:linear-gradient(180deg,#eff6ff 0%,#f8fafc 38%,#ffffff 100%);box-shadow:0 4px 24px rgba(15,23,42,0.06);">
+
+      <svg style="display:block;width:100%;" viewBox="0 0 640 136" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="520" cy="28" r="48" fill="#3b82f6" opacity="0.06"/>
+        <circle cx="90" cy="72" r="32" fill="#8b5cf6" opacity="0.05"/>
+        <path d="M28 28 L28 46 L46 46" fill="none" stroke="#2563eb" stroke-width="1.5" opacity="0.45"/>
+        <path d="M612 28 L612 46 L594 46" fill="none" stroke="#2563eb" stroke-width="1.5" opacity="0.45"/>
+        <path d="M28 72 L28 54 L46 54" fill="none" stroke="#7c3aed" stroke-width="1" opacity="0.3"/>
+        <path d="M612 72 L612 54 L594 54" fill="none" stroke="#7c3aed" stroke-width="1" opacity="0.3"/>
+        <text x="48" y="48" font-size="16" fill="#94a3b8" letter-spacing="3" font-family="-apple-system,PingFang SC,sans-serif">EDITOR'S NOTE</text>
+        <text x="48" y="96" font-size="28" font-weight="800" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">致每一位读者</text>
+        <line x1="48" y1="118" x2="48" y2="118" stroke="#3b82f6" stroke-width="1.5" opacity="0.5">
+          <animate attributeName="x2" values="48;340;48" dur="5s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="580" cy="42" r="4" fill="#3b82f6">
+          <animate attributeName="opacity" values="0.35;1;0.35" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+
+      <section style="padding:8px 28px 32px;">
+        <p style="margin:0 0 18px;font-size:30px;font-weight:800;color:#0f172a;line-height:1.35;letter-spacing:-0.02em;">感谢阅读 · 期待你的声音</p>
+
+        <p style="margin:0 0 5px;font-size:20px;color:#475569;line-height:1.85;">本期内容由 AI 自动运营流水线生成，版式与交互仍在快速迭代。若标题力度、卡片动效或指标呈现仍有改进空间，<span style="color:#2563eb;font-weight:600;">欢迎留言写下宝贵意见</span>——每一条反馈，都会直接助力我把<span style="color:#b45309;font-weight:700;">微信公众号 AI 自动运营平台</span>打磨到理想状态。</p>
+
+        <section style="margin:0 0 22px;text-align:center;">
+          <p style="margin:0 0 10px;font-size:17px;letter-spacing:2px;color:#94a3b8;">SUPPORT THE BUILD</p>
+          <p style="margin:0;font-size:0px;line-height:0;">
+            <span style="display:inline-block;margin:0 4px 8px;padding:10px 16px;font-size:18px;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:20px;">💬 留言反馈</span>
+            <span style="display:inline-block;margin:0 4px 8px;padding:10px 16px;font-size:18px;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:20px;">👍 点赞在看</span>
+            <span style="display:inline-block;margin:0 4px 8px;padding:10px 16px;font-size:18px;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:20px;">↗ 转发扩散</span>
+          </p>
+        </section>
+
+        <section style="padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0 0 4px;font-size:18px;color:#94a3b8;letter-spacing:1px;">— 主编手记 —</p>
+          <p style="margin:0;font-size:19px;color:#64748b;font-style:italic;">与你同行，把 AI 资讯运营做到极致</p>
+        </section>
+      </section>
+    </section>
+  </section>
+
+</section>

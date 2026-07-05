@@ -1,0 +1,36 @@
+{
+  "name": "@yibin/resume",
+  "version": "1.0.0",
+  "description": "Interactive 3D personal resume website",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "framer-motion": "^11",
+    "next": "^14",
+    "next-intl": "^3",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-three-fiber": "^6",
+    "@react-three/drei": "^9",
+    "three": "^0.168",
+    "clsx": "^2",
+    "tailwind-merge": "^2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/three": "^0.168.x",
+    "eslint": "^9",
+    "eslint-config-next": "14.2.x",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

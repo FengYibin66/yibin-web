@@ -1,0 +1,240 @@
+<!-- 微信公众号模板：时间线脉冲式 -->
+<!--
+  TEMPLATE_META:
+  name: 时间线脉冲式
+  description: 时间线叙事布局，顶部 SVG 全局时间线带脉冲动画圆点，每条新闻有序号圆圈，点击序号 SVG 触发高亮动画，深色科技感风格适合快讯/速报类内容
+  tags: [大模型, Agent, 论文, 基础设施, 应用, 融资]
+  hasSvg: true
+  itemCountMin: 4
+  itemCountMax: 7
+-->
+<section style="max-width:680px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;font-size:15px;line-height:1.75;color:#1a1a1a;background:#ffffff;">
+
+  <!-- MASTHEAD 深色 -->
+  <section style="background:#0f172a;padding:26px 22px 20px;border-radius:12px 12px 0 0;">
+    <p style="margin:0 0 5px;font-size:11px;letter-spacing:2px;color:#475569;text-transform:uppercase;font-weight:500;">AI 前线 · Speed Briefing</p>
+    <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;">今日 AI 快讯</p>
+    <p style="margin:0;font-size:12px;color:#475569;">2026年6月7日 · 6 条动态 · 预计阅读 3 分钟</p>
+  </section>
+
+  <!-- 全局时间线 SVG：6 个脉冲节点，依次延迟触发 -->
+  <svg style="display:block;width:100%;background:#0f172a;" viewBox="0 0 640 80" xmlns="http://www.w3.org/2000/svg">
+    <!-- 时间线主轴 -->
+    <line x1="48" y1="40" x2="592" y2="40" stroke="#1e3a5f" stroke-width="2"/>
+    <!-- 已完成填充线（亮蓝，从左向右流动动画） -->
+    <line x1="48" y1="40" x2="48" y2="40" stroke="#3b82f6" stroke-width="2">
+      <animate attributeName="x2" values="48;592" begin="0.5s" dur="2s" fill="freeze"/>
+    </line>
+
+    <!-- 节点1 -->
+    <circle cx="48" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#3b82f6" begin="0.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="48" cy="40" r="12" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="0.8s" dur="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="0.8s" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="48" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">01</text>
+
+    <!-- 节点2 -->
+    <circle cx="144" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#3b82f6" begin="0.9s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="144" cy="40" r="12" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="1.4s" dur="1.4s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="1.4s" dur="1.4s" repeatCount="indefinite"/>
+    </circle>
+    <text x="144" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">02</text>
+
+    <!-- 节点3 -->
+    <circle cx="240" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#7c3aed" begin="1.3s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="240" cy="40" r="12" fill="none" stroke="#7c3aed" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="2s" dur="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="2s" dur="1.6s" repeatCount="indefinite"/>
+    </circle>
+    <text x="240" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">03</text>
+
+    <!-- 节点4 -->
+    <circle cx="336" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#059669" begin="1.7s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="336" cy="40" r="12" fill="none" stroke="#059669" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="2.4s" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="2.4s" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+    <text x="336" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">04</text>
+
+    <!-- 节点5 -->
+    <circle cx="432" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#ca8a04" begin="2.1s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="432" cy="40" r="12" fill="none" stroke="#ca8a04" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="2.8s" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="2.8s" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="432" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">05</text>
+
+    <!-- 节点6 -->
+    <circle cx="528" cy="40" r="7" fill="#1e3a5f">
+      <animate attributeName="fill" values="#1e3a5f;#4f46e5" begin="2.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="528" cy="40" r="12" fill="none" stroke="#4f46e5" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" begin="3.2s" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="7;16;7" begin="3.2s" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="528" y="70" font-size="10" fill="#475569" text-anchor="middle" font-family="-apple-system,sans-serif">06</text>
+  </svg>
+
+  <!-- 主内容区 -->
+  <section style="padding:20px 18px 0;">
+
+    <!-- 新闻条目 1：大模型 蓝 -->
+    <section style="margin-bottom:16px;">
+      <!-- 条目标题行 SVG：序号圆 + 标题 + 点击高亮 -->
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#2563eb"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">01</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">GPT-5 Turbo 正式上线：推理速度提升 3 倍</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">大模型 · OpenAI · 2026-06-07</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#dbeafe"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#2563eb" text-anchor="middle" font-family="-apple-system,sans-serif">01</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <!-- 正文卡片（点击后左边框颜色变深） -->
+      <section style="border-left:3px solid #bfdbfe;padding:12px 16px;background:#f8faff;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">GPT-5 Turbo 在 MMLU-Pro、LiveCodeBench 等多项权威评测中夺冠，128K→256K 上下文窗口扩展，API 价格下调 40%，多模态能力同步强化，被视为 OpenAI 反击竞争对手的核心策略。</p>
+        <a href="https://openai.com/blog/gpt5-turbo" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ openai.com</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 2：大模型 蓝 -->
+    <section style="margin-bottom:16px;">
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#2563eb"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">02</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">Google Gemini 2.5 Ultra 刷新 6 项基准测试记录</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">大模型 · Google DeepMind · 2026-06-07</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#dbeafe"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#2563eb" text-anchor="middle" font-family="-apple-system,sans-serif">02</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <section style="border-left:3px solid #bfdbfe;padding:12px 16px;background:#f8faff;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">Gemini 2.5 Ultra 在视频理解、科学推理、代码生成三个维度全面超越竞品，Flash 版本同步推出，定价仅为 Ultra 的 1/10，Google 强调对开发者友好的价格策略。</p>
+        <a href="https://deepmind.google/gemini-2-5-ultra" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ deepmind.google</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 3：Agent 紫 -->
+    <section style="margin-bottom:16px;">
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#7c3aed"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">03</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">字节跳动内部 Agent 框架「Seed-Agent」开源</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">Agent · 字节跳动 · 开源</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#ede9fe"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#7c3aed" text-anchor="middle" font-family="-apple-system,sans-serif">03</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <section style="border-left:3px solid #ddd6fe;padding:12px 16px;background:#faf5ff;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">Seed-Agent 支持 Tool-Use、ReAct、Plan-and-Execute 三种 Agent 范式，内置任务分解、并行执行、错误恢复机制，已在字节内部服务于数十个业务场景，GitHub 首日获 3.2K Star。</p>
+        <a href="https://github.com/bytedance/seed-agent" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ github.com/bytedance/seed-agent</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 4：融资 绿 -->
+    <section style="margin-bottom:16px;">
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#059669"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">04</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">AI 医疗公司「望远AI」完成 A 轮 1.5 亿元融资</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">融资 · 医疗AI · IDG 领投</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#d1fae5"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#059669" text-anchor="middle" font-family="-apple-system,sans-serif">04</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <section style="border-left:3px solid #a7f3d0;padding:12px 16px;background:#f0fdf4;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">望远AI 专注影像诊断 AI，其肺结节检测准确率在三甲医院试点中达到 97.3%，超过平均主治医师水平，本轮融资将用于获得三类医疗器械注册证并拓展 ICU 智能监护新产品线。</p>
+        <a href="https://36kr.com/wangyuan-ai-series-a" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ 36kr.com</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 5：论文 靛 -->
+    <section style="margin-bottom:16px;">
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#4f46e5"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">05</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">MIT 新论文：思维链让 LLM 产生「元认知」能力</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">论文 · MIT · arXiv</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#e0e7ff"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#4f46e5" text-anchor="middle" font-family="-apple-system,sans-serif">05</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <section style="border-left:3px solid #c7d2fe;padding:12px 16px;background:#f5f3ff;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">MIT CSAIL 团队发现，经过充分思维链训练的 LLM 会自发形成「我不知道」「这个问题有歧义」等元认知表达，在不确定问题上主动降低置信度，幻觉率下降 41%，已提交 NeurIPS 2026。</p>
+        <a href="https://arxiv.org/abs/2406.99999" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ arxiv.org</a>
+      </section>
+    </section>
+
+    <!-- 新闻条目 6：基础设施 青 -->
+    <section style="margin-bottom:8px;">
+      <svg style="display:block;width:100%;margin-bottom:8px;" viewBox="0 0 640 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="24" r="18" fill="#0d9488"/>
+        <text x="22" y="29" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system,sans-serif">06</text>
+        <text x="50" y="20" font-size="15" font-weight="700" fill="#0f172a" font-family="-apple-system,PingFang SC,sans-serif">NVIDIA 发布 Blackwell Ultra B300：AI 训练算力再翻倍</text>
+        <text x="50" y="40" font-size="12" fill="#64748b" font-family="-apple-system,PingFang SC,sans-serif">基础设施 · NVIDIA · GPU</text>
+        <g style="outline:none" cursor="pointer">
+          <circle cx="22" cy="24" r="18" fill="#ccfbf1"/>
+          <text x="22" y="29" font-size="13" font-weight="700" fill="#0d9488" text-anchor="middle" font-family="-apple-system,sans-serif">06</text>
+          <rect x="0" y="0" width="640" height="48" fill="transparent"/>
+          <animate attributeName="opacity" values="1;0" begin="click" dur="0.3s" fill="freeze" restart="never"/>
+        </g>
+      </svg>
+      <section style="border-left:3px solid #99f6e4;padding:12px 16px;background:#f0fdfa;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.75;">B300 的 FP8 算力达到 18,000 TFLOPS，HBM4 显存容量扩展至 288GB，单卡可承载千亿参数模型推理，NVLink 5.0 互联带宽提升至 3.6TB/s，预计 2027 年 Q1 量产。</p>
+        <a href="https://nvidianews.nvidia.com/blackwell-ultra-b300" style="font-size:11px;color:#576b95;text-decoration:none;font-weight:500;">→ nvidianews.nvidia.com</a>
+      </section>
+    </section>
+
+  </section>
+
+  <!-- DIVIDER -->
+  <p style="text-align:center;color:#94a3b8;letter-spacing:6px;margin:20px 0;font-size:13px;">· · ·</p>
+
+  <!-- 总结 QUOTE -->
+  <section style="padding:0 18px 20px;">
+    <section style="background:#0f172a;border-radius:10px;padding:20px 20px;">
+      <p style="margin:0 0 10px;font-size:13px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;font-weight:500;">今日洞察</p>
+      <p style="margin:0 0 12px;font-size:14px;color:#e2e8f0;line-height:1.8;">今天的 6 条动态，清晰呈现了 AI 行业的两条主线：<strong style="color:#60a5fa;">算力军备竞赛继续升级</strong>（GPT-5 Turbo、Gemini 2.5 Ultra、B300），同时 <strong style="color:#34d399;">开源生态持续反攻</strong>（Seed-Agent、国内垂直融资）。这场竞争的终局，不是谁先到达性能天花板，而是谁先把成本打到不可能低的地方。</p>
+      <p style="margin:0;font-size:12px;color:#475569;">—— AI 前线编辑部</p>
+    </section>
+  </section>
+
+  <!-- SOURCES FOOTER -->
+  <section style="padding:16px 18px 28px;background:#f8fafc;border-top:1px solid #e8e8e8;border-radius:0 0 12px 12px;">
+    <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;">参考来源</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[1] openai.com · GPT-5 Turbo Blog</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[2] deepmind.google · Gemini 2.5 Ultra</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[3] github.com/bytedance/seed-agent</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[4] 36kr.com · 望远AI A 轮融资</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#94a3b8;">[5] arxiv.org/abs/2406.99999 · MIT 元认知论文</p>
+    <p style="margin:0;font-size:12px;color:#94a3b8;">[6] nvidianews.nvidia.com · Blackwell Ultra B300</p>
+  </section>
+
+</section>

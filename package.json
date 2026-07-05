@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Monorepo for yibinfeng.com projects",
   "private": true,
-  "packageManager": "pnpm@8.x",
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "dev:portal": "pnpm --filter @yibin/portal dev",
     "dev:resume": "pnpm --filter @yibin/resume dev",

@@ -1,13 +1,10 @@
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { resolve } from 'path'
 import * as schema from './schema.js'
 
-const dbPath = resolve(process.env.DB_PATH ?? '../data/portal.db')
-const sqlite = new Database(dbPath)
+const url = `file:${resolve(process.env.DB_PATH ?? '../data/portal.db')}`
+const client = createClient({ url })
 
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
-
-export const db = drizzle(sqlite, { schema })
+export const db = drizzle(client, { schema })
 export type DB = typeof db

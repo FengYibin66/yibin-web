@@ -1,14 +1,13 @@
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { resolve } from 'path'
 import { profile, project } from './schema.js'
 
-const dbPath = resolve(process.env.DB_PATH ?? '../data/portal.db')
-const sqlite = new Database(dbPath)
-const db = drizzle(sqlite)
+const url = `file:${resolve(process.env.DB_PATH ?? '../data/portal.db')}`
+const client = createClient({ url })
+const db = drizzle(client)
 
-// Seed profile
-db.insert(profile).values({
+await db.insert(profile).values({
   id: 1,
   nameEn: 'Yibin Feng',
   nameZh: '冯一镔',
@@ -19,10 +18,9 @@ db.insert(profile).values({
   linkedin: 'https://linkedin.com/in/yibinfeng-imperial',
   email: 'fengyibinapply@163.com',
   updatedAt: Math.floor(Date.now() / 1000),
-}).onConflictDoNothing().run()
+}).onConflictDoNothing()
 
-// Seed projects
-db.insert(project).values([
+await db.insert(project).values([
   {
     nameEn: 'Resume Site',
     nameZh: '个人简历网站',
@@ -47,7 +45,7 @@ db.insert(project).values([
     order: 1,
     visible: 1,
   },
-]).run()
+])
 
 console.log('Seed complete')
-sqlite.close()
+await client.close()

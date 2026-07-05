@@ -1,10 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
 import { GlowButton } from '@/components/ui'
+
+function ScrollHint({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{text}</span>
+      <div className="flex flex-col items-center -space-y-2 animate-pulse" style={{ color: 'var(--text-muted)' }}>
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+          <path d="M1 1L8 8L15 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+          <path d="M1 1L8 8L15 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
+    </div>
+  )
+}
 
 export function HeroSection() {
   const { locale } = useLocale()
@@ -100,25 +116,20 @@ export function HeroSection() {
       </motion.div>
 
       {/* Scroll hint */}
-      {showScroll && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          className="absolute bottom-10 flex flex-col items-center gap-1"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <span className="text-xs font-mono">{c.scrollHint}</span>
-          <div className="flex flex-col items-center -space-y-2 animate-pulse">
-            <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-              <path d="M1 1L8 8L15 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-              <path d="M1 1L8 8L15 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {showScroll && (
+          <motion.div
+            key="scroll-hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
+          >
+            <ScrollHint text={c.scrollHint} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }

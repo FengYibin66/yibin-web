@@ -77,7 +77,7 @@ export function PublicationCard({ item, featured = false }: PublicationCardProps
       {/* DOI link */}
       {item.doi && (
         <a
-          href={`https://doi.org/${item.doi}`}
+          href={item.doi}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-sm font-medium transition-opacity hover:opacity-80"

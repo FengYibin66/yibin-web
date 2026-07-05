@@ -1,0 +1,19 @@
+{
+  "name": "yibin-web-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo for yibinfeng.com projects",
+  "private": true,
+  "packageManager": "pnpm@8.x",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "setup": "pnpm install",
+    "clean": "pnpm -r exec rm -rf node_modules dist out .next"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

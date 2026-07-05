@@ -1,0 +1,37 @@
+# pnpm
+pnpm-lock.yaml
+node_modules/
+
+# Build outputs
+dist/
+out/
+.next/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.turbo/

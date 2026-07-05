@@ -27,7 +27,12 @@ export class NodeGraph {
     const colors = config.colors.map((hex) => new Color(hex))
 
     const geo = new IcosahedronGeometry(config.nodeRadius, 0)
-    const mat = new MeshStandardMaterial({ color: 0xffffff, emissive: 0x000000 })
+    const mat = new MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x000000,
+      transparent: config.nodeOpacity < 1,
+      opacity: config.nodeOpacity,
+    })
     this.mesh = new InstancedMesh(geo, mat, config.nodeCount)
 
     this.nodes = Array.from({ length: config.nodeCount }, (_, i) => ({
@@ -59,7 +64,7 @@ export class NodeGraph {
     edgeGeo.setDrawRange(0, 0)
     this.lines = new LineSegments(
       edgeGeo,
-      new LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.12 }),
+      new LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: config.edgeOpacity }),
     )
 
     this.ambient = new AmbientLight(0xffffff, config.ambientIntensity)

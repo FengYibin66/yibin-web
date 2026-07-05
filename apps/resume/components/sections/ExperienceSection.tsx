@@ -9,7 +9,8 @@ export function ExperienceSection() {
   const c = content[locale]
 
   return (
-    <section id="experience" className="py-24 px-6 max-w-6xl mx-auto">
+    <section id="experience" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
+      <div className="py-24 px-6 max-w-6xl mx-auto">
       <SectionTitle title={c.experience.title} />
 
       <div className="relative">
@@ -25,6 +26,7 @@ export function ExperienceSection() {
           </div>
         ))}
       </div>
+    </div>
     </section>
   )
 }

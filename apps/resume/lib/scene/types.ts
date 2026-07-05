@@ -1,16 +1,18 @@
 export interface SceneConfig {
   nodeCount: number
-  nodeRadius: number          // geometry radius
+  nodeRadius: number
   edgeDistanceThreshold: number
-  colors: readonly [string, string, string]  // hex strings
+  colors: readonly [string, string, string]
+  nodeOpacity: number         // instance material opacity (1 = opaque)
+  edgeOpacity: number         // edge line opacity
   cameraZ: number
   cameraFov: number
   ambientIntensity: number
   pointLightIntensity: number
   pointLightDistance: number
-  driftSpeed: number          // multiplier for drift animation
-  driftAmplitude: number      // max drift offset
-  lerpFactor: number          // camera parallax lerp factor
+  driftSpeed: number
+  driftAmplitude: number
+  lerpFactor: number
   maxParallaxX: number
   maxParallaxY: number
 }
@@ -20,6 +22,8 @@ export const DESKTOP_CONFIG: SceneConfig = {
   nodeRadius: 0.08,
   edgeDistanceThreshold: 2.5,
   colors: ['#00d4ff', '#6366f1', '#8b5cf6'],
+  nodeOpacity: 1,
+  edgeOpacity: 0.12,
   cameraZ: 8,
   cameraFov: 60,
   ambientIntensity: 0.4,
@@ -32,8 +36,24 @@ export const DESKTOP_CONFIG: SceneConfig = {
   maxParallaxY: 0.3,
 }
 
+// Light theme: fewer nodes, lower opacity to avoid clashing with light background
+export const DESKTOP_CONFIG_LIGHT: SceneConfig = {
+  ...DESKTOP_CONFIG,
+  nodeCount: 60,
+  nodeOpacity: 0.45,
+  edgeOpacity: 0.08,
+  ambientIntensity: 0.6,
+  pointLightIntensity: 1.5,
+}
+
 export const MOBILE_CONFIG: SceneConfig = {
   ...DESKTOP_CONFIG,
   nodeCount: 35,
-  edgeDistanceThreshold: 0,   // 0 = no edges on mobile
+  edgeDistanceThreshold: 0,
+}
+
+export const MOBILE_CONFIG_LIGHT: SceneConfig = {
+  ...DESKTOP_CONFIG_LIGHT,
+  nodeCount: 20,
+  edgeDistanceThreshold: 0,
 }

@@ -9,7 +9,8 @@ export function AboutSection() {
   const c = content[locale]
 
   return (
-    <section id="about" className="py-24 px-6 max-w-6xl mx-auto">
+    <section id="about" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
+      <div className="py-24 px-6 max-w-6xl mx-auto">
       <SectionTitle title={c.about.title} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -71,6 +72,7 @@ export function AboutSection() {
           </div>
         </div>
       </div>
+    </div>
     </section>
   )
 }

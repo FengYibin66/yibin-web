@@ -1,4 +1,3 @@
-import dynamic from 'next/dynamic'
 import { Navbar, Footer } from '@/components/layout'
 import {
   HeroSection,
@@ -10,17 +9,11 @@ import {
   ContactSection,
 } from '@/components/sections'
 
-const HeroCanvas = dynamic(
-  () => import('@/components/canvas/HeroCanvas'),
-  { ssr: false }
-)
-
 export default function Home() {
   return (
     <>
-      <HeroCanvas />
       <Navbar />
-      <main className="relative" style={{ zIndex: 10 }}>
+      <main>
         <HeroSection />
         <AboutSection />
         <SkillsSection />

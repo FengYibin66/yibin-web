@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
 import { GlowButton } from '@/components/ui'
+
+const HeroCanvas = dynamic(() => import('@/components/canvas/HeroCanvas'), { ssr: false })
 
 function ScrollHint({ text }: { text: string }) {
   return (
@@ -43,79 +46,72 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center relative z-10 px-6 text-center">
-      {/* Greeting */}
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="font-mono text-sm mb-3"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {c.greeting}
-      </motion.p>
+    <section className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+      {/* Canvas scoped to Hero — position:absolute stays within this section */}
+      <HeroCanvas />
 
-      {/* Name */}
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="font-display text-5xl md:text-7xl font-bold mb-2 bg-gradient-to-r from-[#00d4ff] to-[#6366f1] bg-clip-text text-transparent"
-      >
-        {c.name}
-      </motion.h1>
-
-      {/* Chinese name */}
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="font-display text-xl mb-6"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {c.nameZh}
-      </motion.p>
-
-      {/* Roles typewriter */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="h-8 flex items-center justify-center mb-6"
-      >
-        <span
-          className="font-display text-xl font-semibold"
-          style={{ color: 'var(--accent-primary)' }}
+      {/* Content layer above canvas */}
+      <div className="relative z-10 flex flex-col items-center">
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="font-mono text-sm mb-3"
+          style={{ color: 'var(--text-secondary)' }}
         >
-          {c.roles[roleIndex]}
-        </span>
-        <span
-          className="ml-0.5 w-0.5 h-5 inline-block animate-pulse"
-          style={{ background: 'var(--accent-primary)' }}
-        />
-      </motion.div>
+          {c.greeting}
+        </motion.p>
 
-      {/* Tagline */}
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="max-w-2xl text-lg mb-10"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {c.tagline}
-      </motion.p>
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="font-display text-5xl md:text-7xl font-bold mb-2 bg-gradient-to-r from-[#00d4ff] to-[#6366f1] bg-clip-text text-transparent"
+        >
+          {c.name}
+        </motion.h1>
 
-      {/* CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.0 }}
-      >
-        <GlowButton href="#about" variant="primary">{c.cta}</GlowButton>
-      </motion.div>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="font-display text-xl mb-6"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {c.nameZh}
+        </motion.p>
 
-      {/* Scroll hint */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="h-8 flex items-center justify-center mb-6"
+        >
+          <span className="font-display text-xl font-semibold" style={{ color: 'var(--accent-primary)' }}>
+            {c.roles[roleIndex]}
+          </span>
+          <span className="ml-0.5 w-0.5 h-5 inline-block animate-pulse" style={{ background: 'var(--accent-primary)' }} />
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="max-w-2xl text-lg mb-10"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {c.tagline}
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+        >
+          <GlowButton href="#about" variant="primary">{c.cta}</GlowButton>
+        </motion.div>
+      </div>
+
       <AnimatePresence>
         {showScroll && (
           <motion.div
@@ -124,7 +120,7 @@ export function HeroSection() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
           >
             <ScrollHint text={c.scrollHint} />
           </motion.div>

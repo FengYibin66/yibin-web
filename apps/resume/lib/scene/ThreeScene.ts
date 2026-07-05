@@ -5,7 +5,7 @@ import {
   Clock,
 } from 'three'
 import { NodeGraph } from './NodeGraph'
-import { DESKTOP_CONFIG, MOBILE_CONFIG } from './types'
+import { DESKTOP_CONFIG, DESKTOP_CONFIG_LIGHT, MOBILE_CONFIG, MOBILE_CONFIG_LIGHT } from './types'
 import type { SceneConfig } from './types'
 
 export class ThreeScene {
@@ -25,7 +25,12 @@ export class ThreeScene {
     this.canvas = canvas
 
     const isMobile = window.innerWidth < 768
-    this.config = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light'
+    if (isMobile) {
+      this.config = isLight ? MOBILE_CONFIG_LIGHT : MOBILE_CONFIG
+    } else {
+      this.config = isLight ? DESKTOP_CONFIG_LIGHT : DESKTOP_CONFIG
+    }
 
     this.renderer = new WebGLRenderer({
       canvas,

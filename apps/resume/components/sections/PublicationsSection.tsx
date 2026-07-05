@@ -12,7 +12,8 @@ export function PublicationsSection() {
   const secondary = c.publications.items.filter((item) => item.featured !== true)
 
   return (
-    <section id="publications" className="py-24 px-6 max-w-6xl mx-auto">
+    <section id="publications" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
+      <div className="py-24 px-6 max-w-6xl mx-auto">
       <SectionTitle title={c.publications.title} />
 
       <div className="space-y-6">
@@ -32,6 +33,7 @@ export function PublicationsSection() {
           </div>
         )}
       </div>
+    </div>
     </section>
   )
 }

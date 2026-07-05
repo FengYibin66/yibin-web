@@ -9,7 +9,8 @@ export function SkillsSection() {
   const c = content[locale]
 
   return (
-    <section id="skills" className="py-24 px-6 max-w-6xl mx-auto">
+    <section id="skills" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
+      <div className="py-24 px-6 max-w-6xl mx-auto">
       <SectionTitle title={c.skills.title} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -31,6 +32,7 @@ export function SkillsSection() {
           </div>
         ))}
       </div>
+    </div>
     </section>
   )
 }

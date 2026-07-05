@@ -16,24 +16,30 @@ export default function SmoothScrollProvider({ children }: { children: ReactNode
     })
 
     // Drive GSAP ticker with Lenis RAF
-    const tickerFn = (time: number) => {
-      lenis.raf(time * 1000)
-    }
+    const tickerFn = (time: number) => { lenis.raf(time * 1000) }
     gsap.ticker.add(tickerFn)
     gsap.ticker.lagSmoothing(0)
 
     // Keep ScrollTrigger in sync with Lenis scroll position
     lenis.on('scroll', ScrollTrigger.update)
 
-    // Register all scroll-triggered animations
-    registerScrollAnimations()
+    // Register animations once the page is fully loaded (DOM + images settled).
+    // Using 'load' guarantees all elements exist and have final dimensions,
+    // so ScrollTrigger.refresh() computes accurate trigger positions.
+    const onLoad = () => {
+      registerScrollAnimations()
+      ScrollTrigger.refresh()
+    }
 
-    // Recalculate trigger positions after DOM is fully laid out
-    // setTimeout 0 ensures we wait for Next.js hydration to settle
-    const refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 100)
+    if (document.readyState === 'complete') {
+      // Already loaded (e.g. client-side navigation)
+      onLoad()
+    } else {
+      window.addEventListener('load', onLoad, { once: true })
+    }
 
     return () => {
-      clearTimeout(refreshTimer)
+      window.removeEventListener('load', onLoad)
       ScrollTrigger.getAll().forEach(t => t.kill())
       lenis.off('scroll', ScrollTrigger.update)
       lenis.destroy()

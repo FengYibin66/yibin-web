@@ -34,7 +34,8 @@ export function ContactSection() {
   }
 
   return (
-    <section id="contact" className="py-24 px-6 max-w-6xl mx-auto text-center">
+    <section id="contact" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
+      <div className="py-24 px-6 max-w-6xl mx-auto text-center">
       <div className="flex justify-center">
         <SectionTitle title={c.title} className="items-center" />
       </div>
@@ -70,6 +71,7 @@ export function ContactSection() {
           </GlowButton>
         </div>
       </div>
+    </div>
     </section>
   )
 }

@@ -41,6 +41,7 @@ export const en: SiteContent = {
         field: 'Computer Science',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/NUS%20SOC.png',
       },
       {
         school: 'Imperial College London · Global Rank #2',
@@ -48,6 +49,7 @@ export const en: SiteContent = {
         field: 'General Structural Engineering',
         period: '2021 – 2022',
         note: 'Merit',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/imperial%20horizontal.png',
       },
       {
         school: 'Sichuan University Jinjiang College',
@@ -55,6 +57,7 @@ export const en: SiteContent = {
         field: 'Civil Engineering',
         period: '2017 – 2021',
         note: 'Rank 1 / 148',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/SCUJJU.jpg',
       },
       {
         school: 'University of Malaya (UM) · QS Rank #59',
@@ -62,6 +65,7 @@ export const en: SiteContent = {
         field: 'Civil Engineering',
         period: '2019 – 2020',
         note: 'Kuala Lumpur, Malaysia',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/UM.png',
       },
     ],
   },
@@ -142,6 +146,11 @@ export const en: SiteContent = {
           'Performed FEA and geotechnical assessment using advanced FEA techniques and Python per Eurocode standards',
           'Supervised UV and thermal curing procedures; analyzed construction data to maintain compliance',
         ],
+        images: [
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/under%20Euston%20Station.jpg',
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/lining%20work%20as%20Oldfield%20Lane.jpg',
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/geospatial%20data%20collection.jpg',
+        ],
       },
     ],
   },
@@ -191,6 +200,7 @@ export const en: SiteContent = {
         abstract:
           'Multi-agent systems can establish virtual social norms to encourage prosocial behavior. In-group agents led to 62% donation increase vs 25% for out-group (χ²=3.95, p<0.05), demonstrating that AI groups can effectively influence human behavior through social identity dynamics.',
         featured: true,
+        image: '/cscw-poster.png',
       },
       {
         title: 'Multi-Agents as Social Groups: Investigating Social Influence of Multiple Agents in Human-Agent Interactions',

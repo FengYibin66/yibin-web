@@ -47,6 +47,29 @@ export function TimelineItem({ item, index }: TimelineItemProps) {
           </li>
         ))}
       </ul>
+
+      {item.images && item.images.length > 0 && (
+        <div className="mt-4 flex gap-2 overflow-hidden">
+          {item.images.slice(0, 3).map((src, i) => (
+            <div
+              key={src}
+              className="relative flex-1 h-24 rounded overflow-hidden"
+              style={{
+                transform: `rotate(${(i - 1) * 2}deg)`,
+                zIndex: i,
+                transition: 'transform 0.4s ease, z-index 0s',
+              }}
+            >
+              <img
+                src={src}
+                alt={`Work photo ${i + 1}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 

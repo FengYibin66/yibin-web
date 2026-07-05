@@ -41,6 +41,7 @@ export const zh: SiteContent = {
         field: '计算机科学',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/NUS%20SOC.png',
       },
       {
         school: 'Imperial College London · 全球排名第 2',
@@ -48,6 +49,7 @@ export const zh: SiteContent = {
         field: '普通结构工程',
         period: '2021 – 2022',
         note: 'Merit（优良）',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/imperial%20horizontal.png',
       },
       {
         school: '四川大学锦江学院',
@@ -55,6 +57,7 @@ export const zh: SiteContent = {
         field: '土木工程',
         period: '2017 – 2021',
         note: '专业排名第 1 / 148',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/SCUJJU.jpg',
       },
       {
         school: 'University of Malaya (UM) · QS 排名第 59',
@@ -62,6 +65,7 @@ export const zh: SiteContent = {
         field: '土木工程',
         period: '2019 – 2020',
         note: '马来西亚·吉隆坡',
+        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/UM.png',
       },
     ],
   },
@@ -142,6 +146,11 @@ export const zh: SiteContent = {
           '依据欧洲规范，运用先进有限元分析技术与 Python 开展岩土评估',
           '监督紫外线与热固化工序，分析施工数据以确保合规性',
         ],
+        images: [
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/under%20Euston%20Station.jpg',
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/lining%20work%20as%20Oldfield%20Lane.jpg',
+          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/geospatial%20data%20collection.jpg',
+        ],
       },
     ],
   },
@@ -191,6 +200,7 @@ export const zh: SiteContent = {
         abstract:
           '多智能体系统可通过建立虚拟社会规范来鼓励亲社会行为。内群体智能体使捐款率提升 62%，而外群体仅为 25%（χ²=3.95，p<0.05），表明 AI 群体可通过社会认同动态有效影响人类行为。',
         featured: true,
+        image: '/cscw-poster.png',
       },
       {
         title: '多智能体作为社会群体：探究多智能体在人机交互中的社会影响力',

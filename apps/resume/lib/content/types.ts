@@ -25,6 +25,7 @@ export interface AboutContent {
     field: string
     period: string
     note?: string
+    logo?: string
   }[]
 }
 
@@ -39,6 +40,7 @@ export interface ExperienceItem {
   period: string
   location: string
   bullets: string[]
+  images?: string[]
 }
 
 export interface ProjectItem {
@@ -58,6 +60,7 @@ export interface PublicationItem {
   keywords: string[]
   abstract?: string
   featured?: boolean
+  image?: string
 }
 
 export interface ContactContent {

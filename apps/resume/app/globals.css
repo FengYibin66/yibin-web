@@ -90,3 +90,25 @@ body {
   background-color: #00d4ff33;
   color: #00d4ff;
 }
+
+/* Scan line animation for Publications featured card */
+.scan-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 212, 255, 0.06) 40%,
+    rgba(0, 212, 255, 0.06) 60%,
+    transparent 100%
+  );
+  animation: scanline 4s linear infinite;
+}
+
+@keyframes scanline {
+  0%   { top: -40%; }
+  100% { top: 140%; }
+}

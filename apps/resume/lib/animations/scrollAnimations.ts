@@ -52,4 +52,14 @@ export function registerScrollAnimations(): void {
 
   // Contact section — links fade in
   animateIn('#contact .contact-item', '#contact', { opacity: 0, y: 30, duration: 0.5, stagger: 0.1, ease: 'power2.out' }, 'top 80%')
+
+  // Education cards — 3D flip entrance
+  animateIn('#about .edu-card', '#about', {
+    opacity: 0,
+    rotateX: -50,
+    transformPerspective: 800,
+    duration: 0.7,
+    stagger: 0.12,
+    ease: 'back.out(1.4)',
+  }, 'top 70%')
 }

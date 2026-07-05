@@ -17,6 +17,18 @@ export function PublicationCard({ item, featured = false }: PublicationCardProps
       )}
       style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
     >
+      {featured && item.image && (
+        <div className="relative h-44 overflow-hidden rounded-t-lg -mx-5 -mt-5 mb-4">
+          <img
+            src={item.image}
+            alt="Publication poster"
+            className="w-full h-full object-cover object-top"
+            loading="lazy"
+          />
+          <div className="scan-line absolute inset-0 pointer-events-none" />
+        </div>
+      )}
+
       {/* Venue label */}
       <div
         className="text-xs font-semibold uppercase tracking-wider mb-2"

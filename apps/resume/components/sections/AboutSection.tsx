@@ -44,27 +44,29 @@ export function AboutSection() {
             {c.about.education.map((edu) => (
               <div
                 key={edu.school}
-                className="rounded-lg px-4 py-3 border"
+                className="edu-card rounded-lg px-4 py-3 border"
                 style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
               >
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="font-display font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                <div className="flex items-center gap-3">
+                  {edu.logo && (
+                    <img
+                      src={edu.logo}
+                      alt={edu.school}
+                      className="h-8 w-auto object-contain flex-shrink-0 opacity-75"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                       {edu.degree} · {edu.field}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
                       {edu.school}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>
-                      {edu.period}
-                    </div>
-                    {edu.note && (
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                        {edu.note}
-                      </div>
-                    )}
+                    <div className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{edu.period}</div>
+                    {edu.note && <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{edu.note}</div>}
                   </div>
                 </div>
               </div>

@@ -1,3 +1,5 @@
 packages:
   - 'apps/*'
+  - 'apps/portal/client'
+  - 'apps/portal/server'
   - 'packages/*'

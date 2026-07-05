@@ -9,13 +9,16 @@ export function Navbar() {
   const { locale } = useLocale()
   const c = content[locale].nav
   const [scrolled, setScrolled] = useState(false)
-  // Read initial theme from DOM (set by the inline script in layout.tsx <head>).
-  // This is always consistent with what the browser painted — no hydration mismatch.
-  const [isDark, setIsDark] = useState(
-    () => typeof document !== 'undefined'
-      ? document.documentElement.getAttribute('data-theme') !== 'light'
-      : true
-  )
+  // Always init true (dark) — matches SSR default and hydration output.
+  // The inline script in layout.tsx <head> already set data-theme before paint
+  // (no FOUC), so the useEffect sync below only causes a React state update,
+  // not a visible flash.
+  const [isDark, setIsDark] = useState(true)
+
+  useEffect(() => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light'
+    setIsDark(!isLight)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)

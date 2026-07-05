@@ -9,15 +9,13 @@ export function Navbar() {
   const { locale } = useLocale()
   const c = content[locale].nav
   const [scrolled, setScrolled] = useState(false)
-  const [isDark, setIsDark] = useState(true)
-
-  useEffect(() => {
-    // Restore theme from localStorage
-    const saved = localStorage.getItem('resume-theme')
-    const dark = saved !== 'light'
-    setIsDark(dark)
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-  }, [])
+  // Read initial theme from DOM (set by the inline script in layout.tsx <head>).
+  // This is always consistent with what the browser painted — no hydration mismatch.
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined'
+      ? document.documentElement.getAttribute('data-theme') !== 'light'
+      : true
+  )
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)

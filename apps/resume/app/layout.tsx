@@ -47,7 +47,16 @@ export default function RootLayout({
       lang="en"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="antialiased" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+      <head>
+        {/* Inline script: reads localStorage before first paint to set data-theme.
+            Runs synchronously in <head> — no FOUC, no hydration mismatch. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('resume-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light')})()`,
+          }}
+        />
+      </head>
+      <body className="antialiased">
         <LocaleProvider>
           <SmoothScrollProvider>
             {children}

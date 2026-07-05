@@ -20,7 +20,7 @@ export function AboutSection() {
             alt="Yibin Feng"
             className="w-40 h-40 rounded-full object-cover ring-2 ring-[#00d4ff] ring-offset-2 ring-offset-[#070b12]"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+          <div className="animate-in grid grid-cols-1 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3 gap-4 w-full">
             {c.about.stats.map((stat) => (
               <StatCard key={stat.label} value={stat.value} label={stat.label} />
             ))}
@@ -30,7 +30,7 @@ export function AboutSection() {
         {/* Right: bio + education */}
         <div className="flex flex-col gap-6">
           {/* Bio */}
-          <div className="space-y-4">
+          <div className="animate-in space-y-4">
             {c.about.bio.map((para, i) => (
               <p key={i} className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 {para}

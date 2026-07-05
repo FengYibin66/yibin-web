@@ -20,7 +20,9 @@ export function ExperienceSection() {
         />
 
         {c.experience.items.map((item, i) => (
-          <TimelineItem key={i} item={item} index={i} />
+          <div key={i} className="timeline-item">
+            <TimelineItem item={item} index={i} />
+          </div>
         ))}
       </div>
     </section>

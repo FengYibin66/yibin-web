@@ -17,13 +17,17 @@ export function PublicationsSection() {
 
       <div className="space-y-6">
         {featured && (
-          <PublicationCard item={featured} featured={true} />
+          <div className="publication-card">
+            <PublicationCard item={featured} featured={true} />
+          </div>
         )}
 
         {secondary.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {secondary.map((item) => (
-              <PublicationCard key={item.title} item={item} featured={false} />
+              <div key={item.title} className="publication-card">
+                <PublicationCard item={item} featured={false} />
+              </div>
             ))}
           </div>
         )}

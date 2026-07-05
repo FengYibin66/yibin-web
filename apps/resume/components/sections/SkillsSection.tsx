@@ -23,7 +23,9 @@ export function SkillsSection() {
             </h3>
             <div className="flex flex-wrap gap-2">
               {group.skills.map((skill) => (
-                <SkillBadge key={skill} skill={skill} />
+                <span key={skill} className="skill-badge">
+                  <SkillBadge skill={skill} />
+                </span>
               ))}
             </div>
           </div>

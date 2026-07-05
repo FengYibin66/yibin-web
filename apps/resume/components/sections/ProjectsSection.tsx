@@ -14,7 +14,9 @@ export function ProjectsSection() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {c.projects.items.map((item) => (
-          <ProjectCard key={item.name} item={item} />
+          <div key={item.name} className="project-card">
+            <ProjectCard item={item} />
+          </div>
         ))}
       </div>
     </section>

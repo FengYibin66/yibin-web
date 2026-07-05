@@ -63,8 +63,8 @@ export function ProjectCard({ item }: ProjectCardProps) {
           className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full border font-medium"
           style={
             isLive
-              ? { color: '#00d4ff', borderColor: '#00d4ff55', background: '#00d4ff11' }
-              : { color: '#6366f1', borderColor: '#6366f155', background: '#6366f111' }
+              ? { color: 'var(--accent-primary)', borderColor: '#00d4ff55', background: '#00d4ff11' }
+              : { color: 'var(--accent-secondary)', borderColor: '#6366f155', background: '#6366f111' }
           }
         >
           {isLive ? 'Live' : 'In Dev'}

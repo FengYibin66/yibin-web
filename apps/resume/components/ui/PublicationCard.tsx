@@ -83,7 +83,7 @@ export function PublicationCard({ item, featured = false }: PublicationCardProps
           className="inline-flex items-center gap-1 text-sm font-medium transition-opacity hover:opacity-80"
           style={{ color: 'var(--accent-primary)' }}
         >
-          ACM Digital Library →
+          View Publication →
         </a>
       )}
     </div>

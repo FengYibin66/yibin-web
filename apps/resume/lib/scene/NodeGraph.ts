@@ -109,7 +109,9 @@ export class NodeGraph {
     }
     const geo = this.lines.geometry
     geo.setDrawRange(0, vertexCount)
-    geo.attributes['position'].needsUpdate = true
+    if (vertexCount > 0) {
+      geo.attributes['position'].needsUpdate = true
+    }
   }
 
   dispose(): void {

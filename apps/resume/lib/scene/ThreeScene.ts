@@ -55,6 +55,7 @@ export class ThreeScene {
   private handleResize(): void {
     const w = this.canvas.clientWidth
     const h = this.canvas.clientHeight
+    if (w === 0 || h === 0) return
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()

@@ -12,10 +12,12 @@ import { uploadsRouter } from './routes/uploads.js'
 const app = new Hono()
 
 app.use(logger())
+
+const allowedOrigins = (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').split(',').map(s => s.trim())
 app.use(
   '/api/*',
   cors({
-    origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+    origin: (origin) => (allowedOrigins.includes(origin ?? '') ? origin : false),
     credentials: true,
   })
 )
@@ -44,4 +46,8 @@ if (process.env.NODE_ENV === 'production') {
 const port = Number(process.env.PORT ?? 3000)
 console.log(`Server running on http://localhost:${port}`)
 
-serve({ fetch: app.fetch, port })
+const server = serve({ fetch: app.fetch, port })
+
+// Graceful shutdown so tsx watch can cleanly reclaim the port on restart
+process.on('SIGTERM', () => server.close())
+process.on('SIGINT', () => server.close())

@@ -11,7 +11,7 @@ export function SectionTitle({ title, className }: SectionTitleProps) {
   return (
     <div className={cn('mb-8', className)}>
       <h2
-        className="font-display text-3xl md:text-4xl font-bold"
+        className="section-title-text font-display text-3xl md:text-4xl font-bold"
         style={{ color: 'var(--text-primary)' }}
       >
         {title}

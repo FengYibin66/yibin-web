@@ -23,6 +23,16 @@ export default function SmoothScrollProvider({ children }: { children: ReactNode
     // Keep ScrollTrigger in sync with Lenis scroll position
     lenis.on('scroll', ScrollTrigger.update)
 
+    // Scroll velocity skew — applies to elements with data-skew attribute
+    lenis.on('scroll', ({ velocity }: { velocity: number }) => {
+      gsap.to('[data-skew]', {
+        skewY: velocity * 0.35,
+        ease: 'power3',
+        overwrite: 'auto',
+        duration: 0.6,
+      })
+    })
+
     // Register animations once the page is fully loaded (DOM + images settled).
     // Using 'load' guarantees all elements exist and have final dimensions,
     // so ScrollTrigger.refresh() computes accurate trigger positions.

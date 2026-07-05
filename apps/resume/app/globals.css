@@ -112,3 +112,27 @@ body {
   0%   { top: -40%; }
   100% { top: 140%; }
 }
+
+/* ============================================================
+   Gallery Page Tokens
+   Applied via .gallery-page or direct element styles
+   ============================================================ */
+.gallery-artwork {
+  transform: translateY(20px);
+}
+
+.gallery-frame {
+  position: relative;
+}
+
+.gallery-spotlight {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 200px;
+  background: radial-gradient(ellipse at top center, rgba(255, 230, 150, 0.2) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 1;
+}

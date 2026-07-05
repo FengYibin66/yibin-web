@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
+import { Space_Grotesk, Inter, JetBrains_Mono, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import SmoothScrollProvider from '@/components/providers/SmoothScrollProvider'
@@ -26,6 +26,14 @@ const jetbrainsMono = JetBrains_Mono({
   preload: false,
 })
 
+const cormorantGaramond = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-gallery',
+  display: 'swap',
+  preload: false,
+})
+
 export const metadata: Metadata = {
   title: 'Yibin Feng — AI Engineer & Researcher',
   description: 'Personal portfolio of Yibin Feng, AI Engineer and Researcher. First author at CSCW 2025. MSc from NUS and Imperial College London.',
@@ -45,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable}`}
       suppressHydrationWarning
     >
       <head>

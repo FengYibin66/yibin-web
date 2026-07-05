@@ -69,6 +69,13 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
+          <a
+            href="/gallery"
+            className="text-sm transition-colors hover:text-[#00d4ff]"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            Gallery
+          </a>
         </div>
 
         {/* Right controls */}

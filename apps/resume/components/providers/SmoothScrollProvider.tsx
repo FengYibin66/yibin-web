@@ -15,29 +15,27 @@ export default function SmoothScrollProvider({ children }: { children: ReactNode
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     })
 
-    ScrollTrigger.scrollerProxy(document.body, {
-      scrollTop(value?: number) {
-        if (value !== undefined) lenis.scrollTo(value, { immediate: true })
-        return lenis.scroll
-      },
-      getBoundingClientRect() {
-        return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }
-      },
-    })
-
-    lenis.on('scroll', ScrollTrigger.update)
-
+    // Drive GSAP ticker with Lenis RAF
     const tickerFn = (time: number) => {
       lenis.raf(time * 1000)
     }
     gsap.ticker.add(tickerFn)
     gsap.ticker.lagSmoothing(0)
 
-    // Register scroll-triggered animations after Lenis is ready
+    // Keep ScrollTrigger in sync with Lenis scroll position
+    lenis.on('scroll', ScrollTrigger.update)
+
+    // Register all scroll-triggered animations
     registerScrollAnimations()
 
+    // Recalculate trigger positions after DOM is fully laid out
+    // setTimeout 0 ensures we wait for Next.js hydration to settle
+    const refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 100)
+
     return () => {
+      clearTimeout(refreshTimer)
       ScrollTrigger.getAll().forEach(t => t.kill())
+      lenis.off('scroll', ScrollTrigger.update)
       lenis.destroy()
       gsap.ticker.remove(tickerFn)
     }

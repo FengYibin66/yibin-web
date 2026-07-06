@@ -44,8 +44,7 @@ export function AboutSection() {
             {c.about.education.map((edu) => (
               <div
                 key={edu.school}
-                className="edu-card rounded-lg px-4 py-3 border"
-                style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
+                className="glass-card edu-card rounded-lg px-4 py-3"
               >
                 <div className="flex items-center gap-3">
                   {edu.logo && (

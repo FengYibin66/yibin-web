@@ -86,9 +86,12 @@ export function GalleryDoorSection() {
             width: '280px',
             height: '420px',
             position: 'relative',
+            outline: 'none',
           }}
           role="button"
           aria-label={`Enter ${label}`}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDoor() } }}
         >
           {/* Door frame (pien — threshold piece) */}
           <div style={{

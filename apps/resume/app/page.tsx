@@ -7,6 +7,8 @@ import gsap from 'gsap'
 export default function EntryPage() {
   const leftRef = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
+  const leftBgRef = useRef<HTMLDivElement>(null)
+  const rightBgRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -29,18 +31,18 @@ export default function EntryPage() {
     const expandLeft = () => {
       gsap.to(left,  { flexBasis: '68%', duration: 0.5, ease: 'power2.out' })
       gsap.to(right, { flexBasis: '32%', duration: 0.5, ease: 'power2.out' })
-      gsap.to(left.querySelector('.panel-bg'),  { scale: 1.05, duration: 0.5, ease: 'power2.out' })
-      gsap.to(right.querySelector('.panel-bg'), { scale: 1.0,  duration: 0.5, ease: 'power2.out' })
+      gsap.to(leftBgRef.current,  { scale: 1.05, duration: 0.5, ease: 'power2.out' })
+      gsap.to(rightBgRef.current, { scale: 1.0,  duration: 0.5, ease: 'power2.out' })
     }
     const expandRight = () => {
       gsap.to(right, { flexBasis: '68%', duration: 0.5, ease: 'power2.out' })
       gsap.to(left,  { flexBasis: '32%', duration: 0.5, ease: 'power2.out' })
-      gsap.to(right.querySelector('.panel-bg'), { scale: 1.05, duration: 0.5, ease: 'power2.out' })
-      gsap.to(left.querySelector('.panel-bg'),  { scale: 1.0,  duration: 0.5, ease: 'power2.out' })
+      gsap.to(rightBgRef.current, { scale: 1.05, duration: 0.5, ease: 'power2.out' })
+      gsap.to(leftBgRef.current,  { scale: 1.0,  duration: 0.5, ease: 'power2.out' })
     }
     const resetPanels = () => {
       gsap.to([left, right], { flexBasis: '50%', duration: 0.5, ease: 'power2.out' })
-      gsap.to([left.querySelector('.panel-bg'), right.querySelector('.panel-bg')], { scale: 1.0, duration: 0.5, ease: 'power2.out' })
+      gsap.to([leftBgRef.current, rightBgRef.current], { scale: 1.0, duration: 0.5, ease: 'power2.out' })
     }
 
     left.addEventListener('mouseenter', expandLeft)
@@ -75,6 +77,7 @@ export default function EntryPage() {
         style={{ flexBasis: '50%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}
       >
         <div
+          ref={leftBgRef}
           className="panel-bg"
           style={{
             position: 'absolute',
@@ -116,6 +119,7 @@ export default function EntryPage() {
         style={{ flexBasis: '50%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}
       >
         <div
+          ref={rightBgRef}
           className="panel-bg"
           style={{
             position: 'absolute',

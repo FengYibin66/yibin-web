@@ -4,7 +4,7 @@
   "private": true,
   "workspaces": ["client", "server"],
   "scripts": {
-    "dev": "concurrently \"pnpm --filter @yibin/portal-server dev\" \"pnpm --filter @yibin/portal-client dev\"",
+    "dev": "concurrently --kill-others \"pnpm --filter @yibin/portal-server dev\" \"pnpm --filter @yibin/portal-client dev\"",
     "build": "pnpm --filter @yibin/portal-client build && pnpm --filter @yibin/portal-server build",
     "start": "pnpm --filter @yibin/portal-server start",
     "lint": "pnpm -r lint"

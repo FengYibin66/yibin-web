@@ -10,9 +10,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
+    host: true,
+    allowedHosts: ['www.yibinfeng.com', 'localhost'],
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:3000', changeOrigin: true },
+      '/api': { target: 'http://localhost:3001', changeOrigin: true },
+      '/uploads': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
 })

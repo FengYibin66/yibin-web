@@ -25,16 +25,20 @@ export default function EntryPage() {
     gsap.fromTo(left,  { xPercent: -100, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.9, ease: 'power3.out' })
     gsap.fromTo(right, { xPercent:  100, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.9, ease: 'power3.out' })
 
+    // Dispatch resize on every GSAP tick so R3F re-computes the WebGL viewport
+    // in sync with the flexBasis CSS animation (ResizeObserver alone is too slow).
+    const dispatchResize = () => window.dispatchEvent(new Event('resize'))
+
     const expandLeft = () => {
-      gsap.to(left,  { flexBasis: '72%', duration: 0.6, ease: 'power2.out' })
+      gsap.to(left,  { flexBasis: '72%', duration: 0.6, ease: 'power2.out', onUpdate: dispatchResize })
       gsap.to(right, { flexBasis: '28%', duration: 0.6, ease: 'power2.out' })
     }
     const expandRight = () => {
       gsap.to(right, { flexBasis: '72%', duration: 0.6, ease: 'power2.out' })
-      gsap.to(left,  { flexBasis: '28%', duration: 0.6, ease: 'power2.out' })
+      gsap.to(left,  { flexBasis: '28%', duration: 0.6, ease: 'power2.out', onUpdate: dispatchResize })
     }
     const reset = () => {
-      gsap.to([left, right], { flexBasis: '50%', duration: 0.5, ease: 'power2.out' })
+      gsap.to([left, right], { flexBasis: '50%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
     }
 
     left.addEventListener('mouseenter', expandLeft)

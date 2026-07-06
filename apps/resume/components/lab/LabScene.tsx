@@ -25,13 +25,18 @@ function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
   return null
 }
 
-const DOORS = [
-  { z: -18 as const, side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as const },
-  { z: -32 as const, side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as const },
-  { z: -48 as const, side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as const },
-  { z: -62 as const, side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as const },
-  { z: -75 as const, side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as const },
+const DOORS_LOOP1 = [
+  { z: -18,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as const },
+  { z: -32,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as const },
+  { z: -48,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as const },
+  { z: -62,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as const },
+  { z: -75,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as const },
 ]
+
+// Second loop 100 units further — produces the "infinite corridor" feeling
+const DOORS_LOOP2 = DOORS_LOOP1.map(d => ({ ...d, z: d.z - 100 }))
+
+const ALL_DOORS = [...DOORS_LOOP1, ...DOORS_LOOP2]
 
 export function LabScene() {
   const [activeRoom, setActiveRoom] = useState<RoomId>(null)
@@ -89,9 +94,9 @@ export function LabScene() {
         <Suspense fallback={null}>
           <CameraController scrollEnabled={!activeRoom && !paperOpen} />
           <CorridorGeometry />
-          {DOORS.map((door) => (
+          {ALL_DOORS.map((door) => (
             <CorridorDoor
-              key={door.room}
+              key={`${door.room}-${door.z}`}
               position={[door.side === 'left' ? -3.5 : 3.5, 0, door.z]}
               side={door.side}
               type={door.type}

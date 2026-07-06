@@ -40,8 +40,8 @@ export function useCorridorCamera({
   const look        = useRef({ x: 0, y: 0 })
   const targetLook  = useRef({ x: 0, y: 0 })
 
-  // Scroll boundary: don't go past last door
-  const MIN_Z = -90
+  // Scroll boundary: two door loops, second ends at z≈-175
+  const MIN_Z = -190
   const MAX_Z = 12
 
   const scrollEnabledRef = useRef(scrollEnabled)

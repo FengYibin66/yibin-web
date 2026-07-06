@@ -11,8 +11,8 @@ import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
 
 // Camera controller inside Canvas context
-function CameraController() {
-  useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02 })
+function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
+  useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02, scrollEnabled })
   return null
 }
 
@@ -70,7 +70,7 @@ export function LabScene() {
         gl={{ antialias: true }}
       >
         <Suspense fallback={null}>
-          <CameraController />
+          <CameraController scrollEnabled={!activeRoom && !paperOpen} />
           <CorridorGeometry />
           {DOORS.map((door) => (
             <CorridorDoor
@@ -80,6 +80,7 @@ export function LabScene() {
               type={door.type}
               label={door.label}
               onEnter={() => handleEnterRoom(door.room)}
+              isReset={isInCorridor}
             />
           ))}
         </Suspense>

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
@@ -11,9 +11,10 @@ interface CorridorDoorProps {
   type: string
   label: string
   onEnter: () => void
+  isReset?: boolean  // when true, reset door to closed state
 }
 
-export function CorridorDoor({ position, side, type, label, onEnter }: CorridorDoorProps) {
+export function CorridorDoor({ position, side, type, label, onEnter, isReset = false }: CorridorDoorProps) {
   const doorTex   = useTexture(`/textures/corridor/doors/drzwi${type}.webp`)
   const handleTex = useTexture('/textures/corridor/doors/klamkadodrzwi.webp')
   const frameTex  = useTexture('/textures/corridor/doors/ramkasingledoors.webp')
@@ -25,6 +26,16 @@ export function CorridorDoor({ position, side, type, label, onEnter }: CorridorD
   const isOpenRef     = useRef(false)
 
   const { camera } = useThree()
+
+  useEffect(() => {
+    if (!isReset) return
+    // Reset door to closed position
+    const left = leftPanelRef.current
+    const right = rightPanelRef.current
+    if (left) { left.rotation.y = 0; gsap.killTweensOf(left.rotation) }
+    if (right) { right.rotation.y = 0; gsap.killTweensOf(right.rotation) }
+    isOpenRef.current = false
+  }, [isReset])
 
   const DOOR_WIDTH  = 1.2
   const DOOR_HEIGHT = 2.2

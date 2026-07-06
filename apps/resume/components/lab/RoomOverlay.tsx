@@ -13,11 +13,18 @@ interface RoomOverlayProps {
   onClose: () => void
 }
 
+function GalleryRedirect() {
+  useEffect(() => {
+    window.location.href = '/gallery'
+  }, [])
+  return null
+}
+
 const ROOM_COMPONENTS: Record<Exclude<RoomId, null>, React.ComponentType> = {
   about:        AboutSection,
   projects:     ProjectsSection,
   publications: PublicationsSection,
-  gallery:      () => { window.location.href = '/gallery'; return null },
+  gallery:      GalleryRedirect,
   contact:      ContactSection,
 }
 

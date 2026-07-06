@@ -13,8 +13,7 @@ export function TimelineItem({ item, index }: TimelineItemProps) {
   // Card content shared between even/odd slots
   const cardContent = (
     <div
-      className="rounded-xl p-5 border"
-      style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
+      className="glass-card rounded-xl p-5"
     >
       {/* Role */}
       <div

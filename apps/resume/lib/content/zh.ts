@@ -41,7 +41,7 @@ export const zh: SiteContent = {
         field: '计算机科学',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/NUS%20SOC.png',
+        logo: '/education/NUS SOC.png',
       },
       {
         school: 'Imperial College London · 全球排名第 2',
@@ -49,7 +49,7 @@ export const zh: SiteContent = {
         field: '普通结构工程',
         period: '2021 – 2022',
         note: 'Merit（优良）',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/imperial%20horizontal.png',
+        logo: '/education/imperial horizontal.png',
       },
       {
         school: '四川大学锦江学院',
@@ -57,7 +57,7 @@ export const zh: SiteContent = {
         field: '土木工程',
         period: '2017 – 2021',
         note: '专业排名第 1 / 148',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/SCUJJU.jpg',
+        logo: '/education/SCUJJU.jpg',
       },
       {
         school: 'University of Malaya (UM) · QS 排名第 59',
@@ -65,7 +65,7 @@ export const zh: SiteContent = {
         field: '土木工程',
         period: '2019 – 2020',
         note: '马来西亚·吉隆坡',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/UM.png',
+        logo: '/education/UM.png',
       },
     ],
   },
@@ -147,9 +147,9 @@ export const zh: SiteContent = {
           '监督紫外线与热固化工序，分析施工数据以确保合规性',
         ],
         images: [
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/under%20Euston%20Station.jpg',
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/lining%20work%20as%20Oldfield%20Lane.jpg',
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/geospatial%20data%20collection.jpg',
+          '/gallery/hs2/under Euston Station.jpg',
+          '/gallery/hs2/lining work as Oldfield Lane.jpg',
+          '/gallery/hs2/geospatial data collection.jpg',
         ],
       },
     ],

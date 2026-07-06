@@ -41,7 +41,7 @@ export const en: SiteContent = {
         field: 'Computer Science',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/NUS%20SOC.png',
+        logo: '/education/NUS SOC.png',
       },
       {
         school: 'Imperial College London · Global Rank #2',
@@ -49,7 +49,7 @@ export const en: SiteContent = {
         field: 'General Structural Engineering',
         period: '2021 – 2022',
         note: 'Merit',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/imperial%20horizontal.png',
+        logo: '/education/imperial horizontal.png',
       },
       {
         school: 'Sichuan University Jinjiang College',
@@ -57,7 +57,7 @@ export const en: SiteContent = {
         field: 'Civil Engineering',
         period: '2017 – 2021',
         note: 'Rank 1 / 148',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/SCUJJU.jpg',
+        logo: '/education/SCUJJU.jpg',
       },
       {
         school: 'University of Malaya (UM) · QS Rank #59',
@@ -65,7 +65,7 @@ export const en: SiteContent = {
         field: 'Civil Engineering',
         period: '2019 – 2020',
         note: 'Kuala Lumpur, Malaysia',
-        logo: 'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/education/UM.png',
+        logo: '/education/UM.png',
       },
     ],
   },
@@ -147,9 +147,9 @@ export const en: SiteContent = {
           'Supervised UV and thermal curing procedures; analyzed construction data to maintain compliance',
         ],
         images: [
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/under%20Euston%20Station.jpg',
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/lining%20work%20as%20Oldfield%20Lane.jpg',
-          'https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/pictures/pictures_for_work/mcallister_work/geospatial%20data%20collection.jpg',
+          '/gallery/hs2/under Euston Station.jpg',
+          '/gallery/hs2/lining work as Oldfield Lane.jpg',
+          '/gallery/hs2/geospatial data collection.jpg',
         ],
       },
     ],

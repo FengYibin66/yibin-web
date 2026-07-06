@@ -53,7 +53,6 @@ export default function EntryPage() {
       {/* LEFT — The Lab (hand-drawn corridor preview) */}
       <div
         ref={leftRef}
-        onClick={() => router.push('/lab')}
         style={{
           flexBasis: '50%',
           flexShrink: 0,
@@ -64,7 +63,7 @@ export default function EntryPage() {
         }}
       >
         <div style={{ position: 'absolute', inset: 0 }}>
-          <EntryPreviewScene />
+          <EntryPreviewScene onEnter={() => router.push('/lab')} />
         </div>
 
         <div style={{

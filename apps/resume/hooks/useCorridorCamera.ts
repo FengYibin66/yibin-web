@@ -16,7 +16,7 @@ const DOOR_POSITIONS = [
 interface UseCorridorCameraOptions {
   scrollSpeed?: number        // deltaY multiplier (default 0.02)
   smoothing?: number          // lerp factor per frame (default 0.035 — itomdev value)
-  parallaxIntensity?: number  // mouse parallax strength (default 0.3)
+  lookIntensity?: number      // mouse look horizontal range in world units (default 4.0)
   glanceIntensity?: number    // door auto-glance strength (default 0.15)
   scrollEnabled?: boolean
 }
@@ -24,7 +24,7 @@ interface UseCorridorCameraOptions {
 export function useCorridorCamera({
   scrollSpeed = 0.02,
   smoothing = 0.035,
-  parallaxIntensity = 0.3,
+  lookIntensity = 4.0,
   glanceIntensity = 0.15,
   scrollEnabled = true,
 }: UseCorridorCameraOptions = {}) {
@@ -36,9 +36,9 @@ export function useCorridorCamera({
   const glance    = useRef(0)    // current auto-glance offset
   const targetGlance = useRef(0)
 
-  // Mouse parallax
-  const parallax  = useRef({ x: 0, y: 0 })
-  const targetParallax = useRef({ x: 0, y: 0 })
+  // Mouse look (horizontal turn + subtle vertical)
+  const look        = useRef({ x: 0, y: 0 })
+  const targetLook  = useRef({ x: 0, y: 0 })
 
   // Scroll boundary: don't go past last door
   const MIN_Z = -90
@@ -69,13 +69,13 @@ export function useCorridorCamera({
     }
   }, [scrollSpeed])
 
-  // Mouse move for parallax
+  // Mouse move — maps cursor X to a wide horizontal look range
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    const nx = (e.clientX / window.innerWidth) * 2 - 1
+    const nx = (e.clientX / window.innerWidth) * 2 - 1   // -1 (left) to +1 (right)
     const ny = (e.clientY / window.innerHeight) * 2 - 1
-    targetParallax.current.x = nx * parallaxIntensity
-    targetParallax.current.y = -ny * parallaxIntensity * 0.5
-  }, [parallaxIntensity])
+    targetLook.current.x = nx * lookIntensity
+    targetLook.current.y = -ny * 0.4
+  }, [lookIntensity])
 
   // Touch for mobile scroll
   const touchStart = useRef({ y: 0 })
@@ -111,9 +111,9 @@ export function useCorridorCamera({
     // Smooth Z
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
 
-    // Smooth parallax
-    parallax.current.x = THREE.MathUtils.lerp(parallax.current.x, targetParallax.current.x, smoothing * 0.8)
-    parallax.current.y = THREE.MathUtils.lerp(parallax.current.y, targetParallax.current.y, smoothing * 0.8)
+    // Smooth look
+    look.current.x = THREE.MathUtils.lerp(look.current.x, targetLook.current.x, smoothing * 2)
+    look.current.y = THREE.MathUtils.lerp(look.current.y, targetLook.current.y, smoothing * 2)
 
     // Auto-glance: compute target glance based on proximity to doors
     let bestStrength = 0
@@ -139,13 +139,14 @@ export function useCorridorCamera({
     const releasing = Math.abs(targetGlance.current) < Math.abs(glance.current)
     glance.current = THREE.MathUtils.lerp(glance.current, targetGlance.current, releasing ? 0.08 : 0.03)
 
-    // Apply to camera
+    // Apply to camera — position stays centered, look target drives the turn
     camera.position.z = currentZ.current
-    camera.position.x = parallax.current.x
-    camera.position.y = 0.2 + parallax.current.y
+    camera.position.x = 0
+    camera.position.y = 0.2 + look.current.y * 0.1
 
-    const lookX = parallax.current.x * 0.3 + glance.current * 3
-    camera.lookAt(lookX, 0.13 + parallax.current.y, currentZ.current - 10)
+    // look.current.x is the primary horizontal aim; auto-glance adds on top
+    const lookX = look.current.x + glance.current * 3
+    camera.lookAt(lookX, 0.13 + look.current.y * 0.1, currentZ.current - 10)
   })
 
   return {

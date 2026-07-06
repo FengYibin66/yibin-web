@@ -1,4 +1,4 @@
-export default function EntryPage() {
+export default function LabPage() {
   return (
     <div
       style={{
@@ -11,7 +11,7 @@ export default function EntryPage() {
         fontFamily: 'sans-serif',
       }}
     >
-      Entry page coming soon
+      Lab coming soon
     </div>
   )
 }

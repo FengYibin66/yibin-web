@@ -543,3 +543,123 @@ For Yibin Feng's portfolio, the parallel insight is:
 - https://itomdev.com/gallery (project descriptions)
 - https://github.com/ITomPoland (developer's GitHub)
 - https://www.linkedin.com/in/tomasz-szmajda-259337305/ (professional profile)
+
+---
+
+## Case Study: itomdev.com — 源码深度解析 ⭐ 核心参考
+
+**Source**: https://itomdev.com | **Repo**: https://github.com/ITomPoland/portfolio-itom  
+**Date analyzed**: 2026-07-07（源码精读版）  
+**Priority**: 这是 resume.yibinfeng.com 下一阶段的核心参考，已完全解密
+
+---
+
+### 技术栈（来自 package.json，100% 准确）
+
+- **React 19** + **React Three Fiber v9** + **@react-three/drei v10** + **Three.js v0.182**
+- **GSAP 3.14**（仅用于局部动画，不用 ScrollTrigger scrub）
+- **SASS**（样式）
+- **Vite**（构建）
+
+---
+
+### 重大发现 1：走廊没有 .glb 文件，全是代码生成
+
+整个走廊由 `<planeGeometry>` 平面几何体拼成：
+
+```jsx
+// 地板
+<planeGeometry args={[4, 100]} rotation-x={-Math.PI/2} color="#f5f2eb" />
+
+// 左右墙
+<planeGeometry args={[100, 3.5]} rotation-y={Math.PI/2} />
+
+// 天花板
+<planeGeometry args={[100, 3]} color="#fefefe" />
+```
+
+- **不需要 Blender**，不需要 3D 建模技能
+- 所有视觉感来自**手绘风格 `.webp` 贴图**（door.webp、wall_texture.webp 等）
+- 每个物件有两个版本：`xxx.webp`（正常）和 `xxx_painted.webp`（手绘/水彩），通过 GLSL shader 切换
+
+---
+
+### 重大发现 2：相机不用 ScrollTrigger，用自定义 wheel 监听 + lerp
+
+文件：`src/hooks/useInfiniteCamera.js`
+
+```javascript
+// wheel 事件驱动目标 Z
+window.addEventListener('wheel', (e) => {
+  targetZ.current -= e.deltaY * 0.025  // scrollSpeed=0.025
+})
+
+// useFrame 每帧 lerp（关键！）
+currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, 0.06)
+// smoothing=0.06 → 非常慢的追赶，产生"重量感"
+
+camera.position.z = currentZ.current
+camera.position.x = parallax.current.x
+camera.position.y = 0.2 + parallax.current.y
+const lookX = parallax.x * 0.3 + glanceOffset * 3 + swipeGlance * 4
+camera.lookAt(lookX, 0.13 + parallaxY, currentZ.current - 10)
+```
+
+**这 6 行是整个沉浸感的来源。** `smoothing=0.06` 的极慢 lerp 制造了电影感的惯性重量。
+
+**自动瞥视门**：当相机 Z 接近 4 个门位置（z=-18,-32,-48,-62），相机自动向左/右偏转约 15 度，距离插值平滑——不需要任何用户操作，就好像"眼睛自然被吸引"。
+
+**鼠标视差**：归一化鼠标坐标 → `camera.position.x/y` 偏移 0.4 units，极其轻微但有深度感。
+
+---
+
+### 重大发现 3：painted 贴图切换是 GLSL Shader，不是换图片
+
+文件：`src/hooks/usePaintMaterial.js`
+
+不是替换 `<img src>`，而是自定义 Fragment Shader：
+
+```glsl
+// 用噪声驱动遮罩，从普通贴图"刷出"手绘版本
+float boundary = distFromPlane + combinedNoise;
+if (boundary < 0.0) { discard; }
+
+// 边缘发光——"wet paint"效果
+float glow = smoothstep(2.0, 0.0, boundary);
+gl_FragColor.rgb += vec3(glow*0.4, glow*0.5, glow*0.7);  // 青蓝色光晕
+```
+
+GSAP 驱动 `uPaintProgress: 0→1`，噪声遮罩从某个方向扩展，产生"手绘刷出来"的视觉效果。hover 触发，离开时反向播放。
+
+---
+
+### 重大发现 4：房间传送用纸张遮挡动画
+
+点击门 → `PaperTransition` 组件展开（纸张折叠动画）→ 相机 GSAP 飞入房间 → 纸张打开。这是页面路由的视觉层实现，比任何 CSS transition 都有质感。
+
+---
+
+### 复制难度重新评估
+
+| 组件 | 之前判断 | 实际难度 | 原因 |
+|------|----------|----------|------|
+| 走廊几何体 | 高（需 Blender）| **低** | 纯 PlaneGeometry 代码生成 |
+| 相机 scroll | 中 | **低** | 6 行 lerp 代码 |
+| painted shader | 高（GLSL）| **中** | 需要理解 fragment shader，但有参考 |
+| 纸张过渡 | 中 | **中** | GSAP 动画，有参考 |
+| 手绘贴图资产 | 高 | **高** | 需要美术创作，这是真正的门槛 |
+
+**结论：代码复杂度低于预期，真正的门槛是手绘风格美术资产。**
+
+---
+
+### 对 resume.yibinfeng.com 的直接应用
+
+| 效果 | 来源 | 应用方案 |
+|------|------|----------|
+| `lerp smoothing=0.06` | useInfiniteCamera.js | 直接用在当前 Three.js 节点图的相机移动上，立即有重量感 |
+| 相机瞥视 scroll 位置 | useInfiniteCamera.js | Hero→About 过渡时相机自动偏转，而非单调向前 |
+| painted shader 材质 | usePaintMaterial.js | Skills badges 或项目卡片 hover 时触发手绘显现效果 |
+| PlaneGeometry 走廊 | CorridorScene | Phase 3：用 AI 生成的插画替代手绘，构建"实验室/研究室"走廊 |
+
+**最快能做的一步**：把当前 `ThreeScene.ts` 里的相机 lerp factor 从 `0.05` 改为 `0.06`，scroll 改为 wheel 直驱 Z 轴——10 分钟，沉浸感提升巨大。

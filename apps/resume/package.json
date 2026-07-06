@@ -11,6 +11,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^9.6.1",
     "clsx": "^2",
     "framer-motion": "^11",
     "gsap": "^3.12",

@@ -15,6 +15,7 @@ import { BugEaster } from './BugEaster'
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 import { audioManager } from '@/lib/audio/audioManager'
 import { HeroText } from './HeroText'
+import { CorridorDecorations } from './CorridorDecorations'
 
 type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
 
@@ -105,6 +106,7 @@ export function LabScene() {
           <Cat position={[-2, -1.75 + 0.6, 2]} />
           <CorridorWindow />
           <BugEaster />
+          <CorridorDecorations />
         </Suspense>
       </Canvas>
 

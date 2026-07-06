@@ -96,25 +96,30 @@ function CeilingLamp({ z }: { z: number }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+// Decoration layout for one corridor loop segment
+function LoopDecorations({ offsetZ = 0 }: { offsetZ?: number }) {
+  return (
+    <group>
+      <WallPainting side="right" z={offsetZ - 10} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  />
+      <WallPainting side="left"  z={offsetZ - 25} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  />
+      <WallPainting side="right" z={offsetZ - 42} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} />
+      <WallPainting side="left"  z={offsetZ - 58} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  />
+      <WallPainting side="right" z={offsetZ - 70} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  />
+      <CorridorPlant side="left"  z={offsetZ - 8}  />
+      <CorridorPlant side="right" z={offsetZ - 55} />
+      <CeilingLamp z={offsetZ - 5}  />
+      <CeilingLamp z={offsetZ - 25} />
+      <CeilingLamp z={offsetZ - 50} />
+      <CeilingLamp z={offsetZ - 72} />
+    </group>
+  )
+}
+
 export function CorridorDecorations() {
   return (
     <group>
-      {/* Paintings — placed in gaps between doors */}
-      <WallPainting side="right" z={-10} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  />
-      <WallPainting side="left"  z={-25} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  />
-      <WallPainting side="right" z={-42} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} />
-      <WallPainting side="left"  z={-58} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  />
-      <WallPainting side="right" z={-70} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  />
-
-      {/* Plants */}
-      <CorridorPlant side="left"  z={-8}  />
-      <CorridorPlant side="right" z={-55} />
-
-      {/* Ceiling lamps */}
-      <CeilingLamp z={-5}  />
-      <CeilingLamp z={-25} />
-      <CeilingLamp z={-50} />
-      <CeilingLamp z={-72} />
+      <LoopDecorations offsetZ={0}    />  {/* Loop 1 */}
+      <LoopDecorations offsetZ={-100} />  {/* Loop 2 */}
     </group>
   )
 }

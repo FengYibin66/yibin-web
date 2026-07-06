@@ -4,13 +4,20 @@ import { useRef, useEffect, useCallback } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// Door Z positions and which side they're on (for auto-glance)
+// Door Z positions for auto-glance — both loops covered
 const DOOR_POSITIONS = [
-  { z: -18, side: 'left'  },  // About
-  { z: -32, side: 'right' },  // Projects
-  { z: -48, side: 'left'  },  // Publications
-  { z: -62, side: 'right' },  // Gallery
-  { z: -75, side: 'left'  },  // Contact
+  // Loop 1
+  { z:  -18, side: 'left'  },
+  { z:  -32, side: 'right' },
+  { z:  -48, side: 'left'  },
+  { z:  -62, side: 'right' },
+  { z:  -75, side: 'left'  },
+  // Loop 2 (offset -100)
+  { z: -118, side: 'left'  },
+  { z: -132, side: 'right' },
+  { z: -148, side: 'left'  },
+  { z: -162, side: 'right' },
+  { z: -175, side: 'left'  },
 ] as const
 
 interface UseCorridorCameraOptions {

@@ -16,6 +16,7 @@ import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 import { audioManager } from '@/lib/audio/audioManager'
 import { HeroText } from './HeroText'
 import { CorridorDecorations } from './CorridorDecorations'
+import { SegmentDoor } from './SegmentDoor'
 
 type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
 
@@ -112,6 +113,9 @@ export function LabScene() {
           <CorridorWindow />
           <BugEaster />
           <CorridorDecorations />
+          {/* Segment transition doors — auto-open on approach, mark loop boundaries */}
+          <SegmentDoor position={[0, 0, -85]} />
+          <SegmentDoor position={[0, 0, -185]} />
         </Suspense>
       </Canvas>
 

@@ -52,17 +52,17 @@ export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextPr
 
   // "YIBIN" — five letters spread symmetrically
   const letters = useMemo(() => [
-    { char: 'Y', baseX: -1.05, splitDir: -2.0 },
-    { char: 'I', baseX: -0.52, splitDir: -0.8 },
+    { char: 'Y', baseX: -0.75, splitDir: -1.4 },
+    { char: 'I', baseX: -0.37, splitDir: -0.6 },
     { char: 'B', baseX:  0.0,  splitDir:  0.0 },
-    { char: 'I', baseX:  0.52, splitDir:  0.8 },
-    { char: 'N', baseX:  1.05, splitDir:  2.0 },
+    { char: 'I', baseX:  0.37, splitDir:  0.6 },
+    { char: 'N', baseX:  0.75, splitDir:  1.4 },
   ], [])
 
   const taglineWords = useMemo(() => [
-    { text: '<',           baseX: -0.85, splitDir: -1.5 },
-    { text: 'AI Engineer', baseX: -0.22, splitDir: -0.7 },
-    { text: '/>',          baseX:  0.62, splitDir:  1.5 },
+    { text: '<',           baseX: -0.65, splitDir: -1.1 },
+    { text: 'AI Engineer', baseX: -0.15, splitDir: -0.5 },
+    { text: '/>',          baseX:  0.46, splitDir:  1.1 },
   ], [])
 
   useFrame((state) => {
@@ -110,7 +110,7 @@ export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextPr
           key={`${l.char}-${i}`}
           ref={(el: THREE.Object3D | null) => { letterRefs.current[i] = el }}
           position={[l.baseX, 0.2, 0]}
-          fontSize={0.9}
+          fontSize={0.65}
           font={RUBIK_SCRIBBLE_URL}
           color="#2a1f0e"
           outlineWidth={0.01}
@@ -138,10 +138,10 @@ export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextPr
         </Text>
       ))}
 
-      <SmallStar position={[-1.3, 0.6, 0]} scale={0.06} />
-      <SmallStar position={[ 1.3, 0.5, 0]} scale={0.05} />
-      <SmallStar position={[-1.1, -0.6, 0]} scale={0.04} />
-      <SmallStar position={[ 1.1, -0.55, 0]} scale={0.035} />
+      <SmallStar position={[-1.0, 0.5, 0]} scale={0.05} />
+      <SmallStar position={[ 1.0, 0.45, 0]} scale={0.045} />
+      <SmallStar position={[-0.85, -0.5, 0]} scale={0.035} />
+      <SmallStar position={[ 0.85, -0.48, 0]} scale={0.03} />
     </group>
   )
 }

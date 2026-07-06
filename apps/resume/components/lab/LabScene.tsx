@@ -106,7 +106,7 @@ export function LabScene() {
               isReset={isInCorridor}
             />
           ))}
-          <HeroText visible={isInCorridor} position={[0, 0.3, -2]} />
+          <HeroText visible={isInCorridor} position={[0, 0.3, -4]} />
           <Avatar />
           <Doodles offsetZ={0} />
           <Cat position={[-2, -1.75 + 0.6, 2]} />

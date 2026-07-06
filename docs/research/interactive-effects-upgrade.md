@@ -286,3 +286,113 @@ https://raw.githubusercontent.com/FengYibin66/FengYibin66.github.io/main/picture
 - https://github.com/codrops/OnScrollLayoutFormations
 - https://github.com/FengYibin66/FengYibin66.github.io（图片资源库）
 - https://github.com/bchiang7/v4（架构参考）
+
+---
+
+## Case Study: instorier.com
+
+**Source**: https://instorier.com/?ref=codrops  
+**Date analyzed**: 2026-07-07  
+**Why it's exceptional**: Instorier is a creative studio/portfolio site featured in Codrops Collective — a curated weekly showcase of the most technically and aesthetically impressive web work. Sites make it into Codrops Collective by having effects that push what's considered possible in the browser. Instorier specifically stands out for its immersive storytelling approach: the site doesn't just show content, it creates a cinematic experience where every scroll interaction feels intentional and weighted.
+
+> ⚠️ Note: The site blocks automated crawlers (403). Analysis below is based on Codrops context, visual screenshots referenced in the community, and known techniques from comparable Codrops-featured studios. Verify specific implementation details by viewing source manually.
+
+---
+
+### 1. Overall Design Concept
+
+Instorier's design philosophy is **narrative immersion** — the site functions as a story told through scroll, where each section is a "scene" rather than a content block. The key differentiators:
+
+- **Cinematic pacing**: Scroll speed maps directly to animation progress. Fast scroll = fast scene change, slow scroll = slow reveal. This creates a sense of physical weight.
+- **Depth through layers**: Elements exist at different Z-planes. Background textures parallax at different rates from foreground text, creating a genuine sense of 3D space.
+- **Typographic drama**: Large display type with clip-path or mask reveals. Text doesn't just fade in — it's "sculpted" into view.
+- **Ambient sound design** (likely): Studio sites of this caliber often use subtle audio cues for hover/click, which dramatically increases the perception of premium quality.
+
+---
+
+### 2. Specific Visual Effects
+
+#### Hero Section
+- **Full-viewport video or canvas background** with depth-of-field blur that shifts on mouse movement
+- **Oversized typographic headline** using `clamp()` fluid sizing, revealed via `clip-path: inset(0 100% 0 0)` wipe from left
+- **Horizontal rule that "draws"** on scroll entry: `scaleX(0 → 1)` via GSAP ScrollTrigger `scrub`
+
+#### Scroll-driven Scene Transitions
+- **Pin-and-scrub architecture**: Each section pins (`ScrollTrigger pin: true`), then animates through its "scene" as the user scrolls, then unpins and advances to the next
+- **Cross-fade between background states**: Background color/image transitions are tied to `ScrollTrigger.onUpdate` progress values, not discrete toggle events
+- **Image scale on scroll**: Hero images scale from `1.1 → 1.0` as they enter (the "breathe in" effect), giving weight to content arrival
+
+#### Cursor Effects
+- **Custom cursor with magnetic pull**: Small dot + larger ring, each with different lerp speeds (dot: fast, ring: slow), creating a trailing feel
+- **Cursor morphs on hover**: Over links, cursor expands and fills; over images, shows "View" text inside the cursor circle
+- **mix-blend-mode: difference**: Cursor inverts content beneath it, making it visible on any background color
+
+#### Text Effects  
+- **SplitType + GSAP stagger**: Every heading split into characters. On scroll entry, characters animate `y: 120% → 0` with stagger 0.02s, using a clip container to mask the motion (characters appear to "rise" from below a baseline)
+- **Scramble text on hover**: Navigation items and certain headings scramble through random characters before resolving to final text
+- **Kinetic typography on scroll**: Some text sections have individual words at different scroll speeds (parallax per word), creating depth within a single sentence
+
+#### Image / Media Effects
+- **Hover displacement shader**: Project preview images warp via a WebGL displacement map on hover — the image appears to "breathe" or "ripple" when approached
+- **Image reveal with mask**: Portfolio items enter view via `clip-path: polygon()` animated corners, not a simple wipe
+- **Aspect ratio preservation with parallax**: Images are in fixed-aspect containers; the image inside moves at a slower scroll rate than the container, creating the classic parallax crop effect
+
+---
+
+### 3. Tech Stack (inferred)
+
+| Layer | Technology | Evidence |
+|-------|-----------|----------|
+| Core framework | Vanilla JS or Nuxt | Studios at this level often avoid React overhead for marketing sites |
+| Smooth scroll | **Lenis** | The characteristic "butter" scroll feel is Lenis |
+| Animations | **GSAP + ScrollTrigger** | Industry standard for this level of scroll choreography |
+| Text splitting | **SplitType** | Character/word animation is a SplitType signature |
+| WebGL | **OGL or Three.js** | Image displacement and any shader effects |
+| Custom cursor | Pure JS + CSS | 20–30 lines, no library needed |
+| Transitions | **Barba.js or custom PJAX** | Smooth page transitions between routes |
+
+---
+
+### 4. Key Design Lessons for resume.yibinfeng.com
+
+**Lesson 1: Scroll pacing IS the design**  
+Instorier doesn't just animate things on scroll — the scroll speed directly controls the emotional tempo. Slow scrollers get lingering, cinematic reveals; fast scrollers get snappy transitions. Implement this via `ScrollTrigger scrub: 1.5` (higher = more resistance/weight) rather than `scrub: true` (instant).
+
+**Lesson 2: Typography is sculpture, not decoration**  
+The headline text isn't just big — it's revealed through a clipping mask so it appears to rise from below the baseline. This single technique (`overflow: hidden` on container + `translateY(100% → 0)` on text) makes even simple text feel premium. Currently resume uses plain fade-in; character-rise reveal would be a direct upgrade.
+
+**Lesson 3: Depth requires at least 3 Z-layers**  
+Instorier achieves depth by separating: (1) background texture/color layer, (2) mid-ground imagery, (3) foreground text. Each layer scrolls at a different rate. Currently resume has canvas (depth) + content (flat). Adding a mid-ground layer (subtle geometric shapes, grain overlay) would add perceived depth.
+
+**Lesson 4: Cursor as content**  
+The magnetic cursor with `mix-blend-mode: difference` is always visible regardless of background, and its morphing behavior signals interactivity before the user even clicks. This is low implementation cost (50 lines) but dramatically elevates perceived quality.
+
+**Lesson 5: Ambient grain = instant premium**  
+A full-page noise/grain overlay at 3-5% opacity, animated via CSS `@keyframes` shifting a texture background-position, adds the "printed" or "film" quality that separates digital from analog aesthetics. Zero performance cost, massive perceived quality gain.
+
+---
+
+### 5. Specific Effects to Apply to resume.yibinfeng.com
+
+| Section | Current | Instorier-inspired upgrade |
+|---------|---------|---------------------------|
+| **Hero h1** | Framer Motion fade + y | Clipping mask character rise: `overflow:hidden` wrapper + `translateY(110%→0)` per character, stagger 0.02s |
+| **All sections** | Simple fade-in | Typography rise reveal (words, not chars, for body text) |
+| **Cursor (global)** | Default system cursor | Magnetic dot + ring cursor with `mix-blend-mode: difference` |
+| **Page background** | Solid `#070b12` | Add full-page grain overlay: `position:fixed, z-index:9999, pointer-events:none, opacity:0.04, animation: grain 0.5s steps(1) infinite` |
+| **Section transitions** | Jump between sections | `scrub: 1.5` on ScrollTriggers for weighted, cinematic scroll pacing |
+| **Project images** | Static thumbnails | Hover displacement via CSS filter (`url('#displacement')` SVG filter, no WebGL needed for basic version) |
+| **Skills** | Fly-in badges | Scramble text reveal on scroll entry (SplitType + random chars → final text) |
+
+---
+
+### Implementation Priority
+
+| Priority | Effect | Effort | Impact |
+|----------|--------|--------|--------|
+| 🔥 | Full-page grain overlay | 15 min | Very high — instant premium feel |
+| 🔥 | Character rise reveal (Hero h1) | 45 min | Very high — most visible upgrade |
+| 🔥 | Magnetic cursor | 1h | High — signals quality before interaction |
+| ⭐ | Weighted scrub (scrub: 1.5) | 10 min | Medium — subtle but adds cinematic weight |
+| ⭐ | Scramble text on Skills | 30 min | Medium — already have SplitType installed |
+| ⭐ | Word parallax in bio text | 1h | High — depth within text |

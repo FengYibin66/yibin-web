@@ -7,6 +7,11 @@ import { CorridorDoor } from './CorridorDoor'
 import { RoomOverlay } from './RoomOverlay'
 import { PaperTransition } from './PaperTransition'
 import { AudioToggle } from './AudioToggle'
+import { Avatar } from './Avatar'
+import { Doodles } from './Doodles'
+import { Cat } from './Cat'
+import { CorridorWindow } from './CorridorWindow'
+import { BugEaster } from './BugEaster'
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 import { audioManager } from '@/lib/audio/audioManager'
 
@@ -93,6 +98,11 @@ export function LabScene() {
               isReset={isInCorridor}
             />
           ))}
+          <Avatar />
+          <Doodles offsetZ={0} />
+          <Cat position={[-2, -1.75 + 0.6, 2]} />
+          <CorridorWindow />
+          <BugEaster />
         </Suspense>
       </Canvas>
 

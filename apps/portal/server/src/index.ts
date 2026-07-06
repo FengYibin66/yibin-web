@@ -48,6 +48,12 @@ console.log(`Server running on http://localhost:${port}`)
 
 const server = serve({ fetch: app.fetch, port })
 
-// Graceful shutdown so tsx watch can cleanly reclaim the port on restart
-process.on('SIGTERM', () => server.close())
-process.on('SIGINT', () => server.close())
+// Graceful shutdown: close server and forcibly release the port so
+// tsx watch can immediately rebind on restart without EADDRINUSE.
+const shutdown = () => {
+  server.close(() => process.exit(0))
+  // Safety: if close() hangs (e.g. keep-alive connections), force exit after 500ms
+  setTimeout(() => process.exit(0), 500).unref()
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)

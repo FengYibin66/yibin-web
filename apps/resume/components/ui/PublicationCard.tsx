@@ -12,10 +12,17 @@ export function PublicationCard({ item, featured = false }: PublicationCardProps
   return (
     <div
       className={cn(
-        'rounded-xl p-5 border',
+        'glass-card rounded-xl p-5',
         featured ? 'ring-2 ring-[#00d4ff]/40' : 'ring-1 ring-[#6366f1]/20',
       )}
-      style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
+      style={featured ? {
+        boxShadow: [
+          'inset 0 1px 0 rgba(255,255,255,0.08)',
+          '0 8px 32px rgba(0,0,0,0.45)',
+          '0 1px 2px rgba(0,0,0,0.6)',
+          '0 0 40px rgba(99,102,241,0.1)',
+        ].join(', ')
+      } : undefined}
     >
       {featured && item.image && (
         <div className="relative h-44 overflow-hidden rounded-t-lg -mx-5 -mt-5 mb-4">

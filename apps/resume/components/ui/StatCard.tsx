@@ -8,8 +8,7 @@ interface StatCardProps {
 export function StatCard({ value, label }: StatCardProps) {
   return (
     <div
-      className="rounded-xl p-6 text-center border"
-      style={{ background: 'var(--bg-surface)', borderColor: 'var(--bg-border)' }}
+      className="glass-card rounded-xl p-6 text-center"
     >
       <div
         className="font-display text-2xl font-bold"

@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { registerScrollAnimations } from '@/lib/animations/scrollAnimations'
 
 export default function SmoothScrollProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
@@ -33,29 +36,37 @@ export default function SmoothScrollProvider({ children }: { children: ReactNode
       })
     })
 
-    // Register animations once the page is fully loaded (DOM + images settled).
-    // Using 'load' guarantees all elements exist and have final dimensions,
-    // so ScrollTrigger.refresh() computes accurate trigger positions.
-    const onLoad = () => {
-      registerScrollAnimations()
-      ScrollTrigger.refresh()
-    }
+    // Only register section scroll animations on /classic — those selectors
+    // (#about, #skills, etc.) don't exist on /, /lab, or /gallery, which
+    // would otherwise cause GSAP "target not found" warnings.
+    if (pathname === '/classic') {
+      const onLoad = () => {
+        registerScrollAnimations()
+        ScrollTrigger.refresh()
+      }
 
-    if (document.readyState === 'complete') {
-      // Already loaded (e.g. client-side navigation)
-      onLoad()
-    } else {
-      window.addEventListener('load', onLoad, { once: true })
+      if (document.readyState === 'complete') {
+        onLoad()
+      } else {
+        window.addEventListener('load', onLoad, { once: true })
+      }
+
+      return () => {
+        window.removeEventListener('load', onLoad)
+        ScrollTrigger.getAll().forEach(t => t.kill())
+        lenis.off('scroll', ScrollTrigger.update)
+        lenis.destroy()
+        gsap.ticker.remove(tickerFn)
+      }
     }
 
     return () => {
-      window.removeEventListener('load', onLoad)
       ScrollTrigger.getAll().forEach(t => t.kill())
       lenis.off('scroll', ScrollTrigger.update)
       lenis.destroy()
       gsap.ticker.remove(tickerFn)
     }
-  }, [])
+  }, [pathname])
 
   return <>{children}</>
 }

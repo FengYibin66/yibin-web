@@ -396,3 +396,150 @@ A full-page noise/grain overlay at 3-5% opacity, animated via CSS `@keyframes` s
 | ⭐ | Weighted scrub (scrub: 1.5) | 10 min | Medium — subtle but adds cinematic weight |
 | ⭐ | Scramble text on Skills | 30 min | Medium — already have SplitType installed |
 | ⭐ | Word parallax in bio text | 1h | High — depth within text |
+
+---
+
+## Case Study: itomdev.com ⭐ PRIMARY INSPIRATION
+
+**Source**: https://itomdev.com  
+**Date analyzed**: 2026-07-07  
+**Why it's exceptional**: itomdev.com is not a portfolio website — it is a **navigable 3D world**. The entire site exists inside a hand-crafted WebGL corridor. Every "page" is a door in that corridor. The user doesn't scroll through sections; they explore a space. This is the highest-ambition form of developer portfolio: the medium *is* the message — an AI/3D engineer proves their skill simply by loading the site.  
+**Priority**: This is the #1 design reference for resume.yibinfeng.com
+
+---
+
+### Section A: Overall Experience
+
+**Core concept:** A fully interactive 3D corridor rendered in the browser via React Three Fiber + Three.js. The corridor is hand-modeled in Blender with custom textures (not generic assets). Navigation links correspond to physical doors along the corridor — Home ("The Corridor"), Gallery & Projects, About Me ("The Studio"), Contact. Moving between pages is a spatial experience, not a URL change.
+
+**First impression:** The user arrives inside a dimly lit, architecturally styled corridor. There is no hero section, no "Hello I'm X" text block. The space itself communicates: *this developer builds things nobody else builds*. The skill demonstration is ambient — it's happening before the user reads a single word.
+
+**Scrolling paradigm:** Not traditional vertical scroll. Navigation is camera movement through the 3D scene. GSAP orchestrates camera transitions. Individual projects may use scroll-linked Z-axis camera travel (the "Young Multi Concept" project explicitly uses scroll-based 3D storytelling). The result is that scroll = walk, not scroll = read.
+
+**What makes it premium:**
+1. The 3D world is **hand-authored**, not generated or library-defaulted — custom Blender geometry, custom textures
+2. Target is **60fps** — performance is a design value, not an afterthought
+3. Navigation has **spatial memory** — you remember where doors are, reinforcing the metaphor
+4. No section dividers, no cards, no grids — the presentation layer disappears entirely
+
+---
+
+### Section B: Technical Effects
+
+#### 1. WebGL Corridor (Core Engine)
+- **What user sees:** A 3D rendered corridor with physically-based lighting, custom-textured walls, framed artwork, doorways
+- **Technique:** React Three Fiber (`@react-three/fiber`) + `@react-three/drei` for helpers; GLTF models exported from Blender; texture atlasing to minimize draw calls; Draco/meshopt compression for load size
+- **Library:** React Three Fiber, Three.js, @react-three/drei
+- **Complexity:** Very High — requires Blender modeling skills + R3F expertise
+
+#### 2. Scroll-to-Camera-Move
+- **What user sees:** Scrolling down moves the camera forward through the corridor
+- **Technique:** GSAP ScrollTrigger `scrub: true` driving `camera.position.z` or a `CatmullRomCurve3` path; camera looks toward a target that also shifts on scroll
+- **Library:** GSAP ScrollTrigger + Three.js camera controls
+- **Complexity:** Medium-High once the 3D scene exists
+
+#### 3. Physics-Based UI Animations
+- **What user sees:** Buttons, labels, and UI elements respond with spring/elastic behavior on interaction — overshoot, settle, react to cursor
+- **Technique:** GSAP `elastic.out()` easing for spring feel; GSAP `quickTo()` for high-frequency mouse-position-driven transforms (magnetic pull); `power4.out` for heavy scroll reveals
+- **Library:** GSAP
+- **Complexity:** Low-Medium — GSAP is already installed
+
+#### 4. Seamless Room-to-Room Transitions
+- **What user sees:** When clicking a door, the camera glides through it into the next "room" (page) — no flash, no reload, the world continues
+- **Technique:** Next.js App Router + custom `<Transition>` component using Framer Motion `AnimatePresence`; the 3D scene likely persists via React state above the router; camera animates to target position before route change commits
+- **Library:** Framer Motion `AnimatePresence`, GSAP timeline, Next.js routing
+- **Complexity:** High — requires architectural planning for persistent WebGL context across routes
+
+#### 5. Custom Cursor
+- **What user sees:** No system cursor; replaced by a custom dot + ring that reacts to interactive elements — ring expands on hover, changes blend mode, magnetic pull toward clickable items
+- **Technique:** `pointer-events: none` div following `mousemove`; `mix-blend-mode: difference` for automatic contrast on any background; GSAP `quickTo` for smooth lag-follow; scale tweens on `mouseenter`/`mouseleave`
+- **Library:** GSAP quickTo, pure CSS
+- **Complexity:** Low — standalone, ~50 lines
+
+#### 6. Micro-Interaction System (TimberKitty project)
+- **What user sees:** Every interactive element has a tactile response — buttons slightly squash on press, elements tilt toward cursor, success states animate with satisfaction
+- **Technique:** CSS `transform: scale()` on `:active`; GSAP timeline for multi-step micro-animations; `cubic-bezier` easing tuned per element type
+- **Library:** GSAP
+- **Complexity:** Low per interaction — catalog of patterns, not a single technique
+
+#### 7. 3D Project Gallery Room
+- **What user sees:** Projects presented on virtual "gallery walls" inside a 3D room — like a museum installation
+- **Technique:** `PlaneGeometry` meshes with project screenshot textures; `RayCaster` for hover detection; cursor change + material emissive boost on hover; clicking loads project detail
+- **Library:** Three.js / React Three Fiber
+- **Complexity:** Medium (given existing 3D scene infrastructure)
+
+#### 8. Film Grain + Atmosphere
+- **What user sees:** Subtle texture over everything — like vintage film or physical paper — making the digital feel tactile
+- **Technique:** Full-viewport `<canvas>` or `<svg>` with `feTurbulence` filter, `position: fixed`, `pointer-events: none`, `opacity: 0.04–0.06`, CSS `animation` cycling through noise seeds every 0.05s via `steps(1)`
+- **Library:** Pure CSS + SVG filters
+- **Complexity:** Very Low — 20 lines
+
+---
+
+### Section C: Color & Typography
+
+From content analysis (exact hex values require browser DevTools):
+
+**Color palette** (inferred from "carefully hand-drawn" dark corridor aesthetic):
+- Background: near-black with warm brown undertone (not pure `#000000` — likely `#0a0806` or `#0d0b09`)
+- Walls/corridor: warm dark greys with subtle ochre/amber in the texture — `#1a1612` range
+- Accent lighting: warm amber/gold point lights within the corridor — `#c8903a` / `#e8a040` 
+- UI labels: cream/off-white — `#f0ead8` not pure white
+- Interactive highlights: warm white glow on hover — no cyan, consistent warm temperature throughout
+
+**Typography** (inferred from premium dev portfolio conventions):
+- Display / names: likely a geometric sans (PP Neue Montreal, Clash Display, or Space Grotesk) or a refined serif (Canela, Editorial New) — the corridor context suggests editorial weight
+- Body / labels: neutral grotesk (Inter, Helvetica Neue) at small sizes
+- Note: if the corridor has framed text on walls, those likely use a serif for legibility within the 3D context
+
+**Layout:**
+- Essentially no traditional layout grid — the 3D viewport IS the layout
+- UI elements float as overlays with significant negative space
+- Navigation labels appear as directional signage within the 3D space itself
+
+---
+
+### Section D: What to Steal for resume.yibinfeng.com
+
+The full 3D corridor concept is a **Phase 3 goal** (requires Blender + significant R3F work). But several specific techniques are directly extractable:
+
+#### Immediate (< 2 hours each, no new dependencies)
+
+| Priority | Effect | Apply To | Technique |
+|----------|--------|----------|-----------|
+| 🔥🔥🔥 | **Full-page film grain** | `body::after` (global) | SVG `feTurbulence` + `position:fixed` + CSS animation steps — 20 lines, zero deps |
+| 🔥🔥🔥 | **Custom cursor** (dot + ring) | Global | `pointer-events:none` div + GSAP `quickTo` + `mix-blend-mode:difference` — 50 lines, GSAP already installed |
+| 🔥🔥 | **Physics-based button hover** | GlowButton, Contact CTAs | `elastic.out(1, 0.4)` on mouseLeave — already have magnetic button base, just upgrade the easing |
+| 🔥🔥 | **Weighted scroll (scrub: 1.5)** | All ScrollTrigger animations | Change `scrub: 1` → `scrub: 1.5` — literally one character per trigger |
+
+#### Medium-term (2–6 hours each)
+
+| Priority | Effect | Apply To | Technique |
+|----------|--------|----------|-----------|
+| ⭐⭐⭐ | **Camera-linked Hero depth** | HeroSection | Three.js camera Z-lerp tied to scroll — already have ThreeScene.ts, add scroll-linked camera forward motion |
+| ⭐⭐⭐ | **Word-by-word parallax** | Hero tagline, About bio | SplitType words + GSAP ScrollTrigger per-word `y` offset — already have SplitType |
+| ⭐⭐ | **Persistent WebGL across nav** | Resume → Gallery route | Move HeroCanvas above router so scene doesn't remount on page transitions |
+
+#### Long-term (20+ hours — Phase 3)
+
+| Priority | Effect | Description |
+|----------|--------|-------------|
+| 🏆 | **3D Environment as navigation** | Replace flat sections with spatial rooms — Projects room, Publications room. Requires Blender assets + full R3F scene redesign. The ultimate expression of "AI engineer who builds extraordinary things" |
+
+---
+
+### Key Design Philosophy from itomdev.com
+
+> "The medium is the message." — the site does not describe the developer's 3D skills; it *demonstrates* them by existing.
+
+For Yibin Feng's portfolio, the parallel insight is:
+> A portfolio about **multi-agent AI systems** should itself feel like it was built by someone who thinks in systems — every element intentional, every transition considered, nothing accidental. The Three.js node graph in the Hero is already doing this. Extending it with film grain, custom cursor, and weighted scroll completes the signal.
+
+---
+
+### Sources
+
+- https://itomdev.com (primary — content analysis)
+- https://itomdev.com/gallery (project descriptions)
+- https://github.com/ITomPoland (developer's GitHub)
+- https://www.linkedin.com/in/tomasz-szmajda-259337305/ (professional profile)

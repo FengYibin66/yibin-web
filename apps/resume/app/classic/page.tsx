@@ -38,6 +38,20 @@ export default function ClassicPage() {
   return (
     <>
       <Navbar brandHref="/" />
+      <a
+        href="/"
+        style={{
+          position: 'fixed', top: '20px', left: '20px', zIndex: 100,
+          fontFamily: 'var(--font-mono)', fontSize: '12px',
+          color: 'var(--text-secondary)', textDecoration: 'none',
+          letterSpacing: '0.08em', opacity: 0.7,
+          transition: 'opacity 0.2s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+      >
+        ← Home
+      </a>
       <main>
         <HeroSection />
         <AboutSection />

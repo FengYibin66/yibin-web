@@ -64,13 +64,13 @@ export function Avatar() {
     }
 
     dodgeX.current = THREE.MathUtils.lerp(dodgeX.current, targetDodgeX.current, 0.08)
-    meshRef.current.position.x = 0.8 + dodgeX.current
+    meshRef.current.position.x = dodgeX.current
   })
 
   return (
     <mesh
       ref={meshRef}
-      position={[0.8, FLOOR_Y + 1.1, AVATAR_Z]}
+      position={[0, FLOOR_Y + 1.1, AVATAR_Z]}
     >
       <planeGeometry args={[1.4, 2.0]} />
       <meshBasicMaterial

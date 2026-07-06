@@ -5,8 +5,9 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { ClassicPanel } from '@/components/entry/ClassicPanel'
+import type { EntryPreviewSceneProps } from '@/components/entry/EntryPreviewScene'
 
-const EntryPreviewScene = dynamic(
+const EntryPreviewScene = dynamic<EntryPreviewSceneProps>(
   () => import('@/components/entry/EntryPreviewScene').then(m => ({ default: m.EntryPreviewScene })),
   { ssr: false }
 )

@@ -14,6 +14,7 @@ import { CorridorWindow } from './CorridorWindow'
 import { BugEaster } from './BugEaster'
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 import { audioManager } from '@/lib/audio/audioManager'
+import { HeroText } from './HeroText'
 
 type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
 
@@ -98,6 +99,7 @@ export function LabScene() {
               isReset={isInCorridor}
             />
           ))}
+          <HeroText visible={isInCorridor} position={[0, 0.3, -2]} />
           <Avatar />
           <Doodles offsetZ={0} />
           <Cat position={[-2, -1.75 + 0.6, 2]} />
@@ -106,25 +108,19 @@ export function LabScene() {
         </Suspense>
       </Canvas>
 
-      {/* Hero text overlay in corridor */}
+      {/* Scroll hint — text stays HTML, name is now in 3D HeroText */}
       {isInCorridor && (
         <div style={{
           position: 'absolute',
-          top: '50%',
+          bottom: '32px',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
           textAlign: 'center',
           pointerEvents: 'none',
           zIndex: 10,
         }}>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.4em', color: 'rgba(200,169,110,0.6)', marginBottom: '8px' }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: 'rgba(42,31,14,0.4)', margin: 0 }}>
             SCROLL TO EXPLORE
-          </p>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 700, color: '#f5f0e8', margin: 0 }}>
-            Yibin Feng
-          </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'rgba(245,240,232,0.5)', marginTop: '8px', letterSpacing: '0.15em' }}>
-            AI Engineer · Researcher · Builder
           </p>
         </div>
       )}

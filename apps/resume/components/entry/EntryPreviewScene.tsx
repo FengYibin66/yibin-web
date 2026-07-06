@@ -87,7 +87,9 @@ function EntryCamera({ flying }: { flying: boolean }) {
   return null
 }
 
-export function EntryPreviewScene({ onEnter }: { onEnter: () => void }) {
+export interface EntryPreviewSceneProps { onEnter: () => void }
+
+export function EntryPreviewScene({ onEnter }: EntryPreviewSceneProps) {
   const [flying, setFlying] = useState(false)
 
   return (

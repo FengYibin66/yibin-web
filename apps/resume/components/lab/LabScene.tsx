@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { CorridorGeometry } from './CorridorGeometry'
 import { CorridorDoor } from './CorridorDoor'
 import { RoomOverlay } from './RoomOverlay'
 import { PaperTransition } from './PaperTransition'
+import { AudioToggle } from './AudioToggle'
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
+import { audioManager } from '@/lib/audio/audioManager'
 
 type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
 
@@ -30,7 +32,14 @@ export function LabScene() {
   const [pendingRoom, setPendingRoom] = useState<RoomId>(null)
   const [isInCorridor, setIsInCorridor] = useState(true)
 
+  useEffect(() => {
+    audioManager.init()
+    audioManager.playBg()
+    return () => audioManager.stopBg()
+  }, [])
+
   const handleEnterRoom = useCallback((room: RoomId) => {
+    audioManager.stopBg()
     setPendingRoom(room)
     setPaperOpen(true)   // close paper over corridor
   }, [])
@@ -50,6 +59,7 @@ export function LabScene() {
   const handlePaperClosedOnExit = useCallback(() => {
     setActiveRoom(null)
     setPaperOpen(false)  // reveal corridor
+    audioManager.playBg()
   }, [])
 
   // Stable callback — avoids new reference each render (which would restart GSAP tween)
@@ -135,6 +145,9 @@ export function LabScene() {
         onClosed={onPaperClosed}
         onOpened={() => setIsInCorridor(true)}
       />
+
+      {/* Audio toggle — always visible */}
+      <AudioToggle />
     </div>
   )
 }

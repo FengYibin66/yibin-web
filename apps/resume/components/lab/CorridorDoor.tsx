@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { audioManager } from '@/lib/audio/audioManager'
 
 // itomdev wall geometry constants
 const WALL_X_OUTER   = 3.5
@@ -96,6 +97,7 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
   const handleClick = useCallback(() => {
     if (isOpenRef.current) return
     isOpenRef.current = true
+    audioManager.play('door_open')
     const left  = leftPanelRef.current
     const right = rightPanelRef.current
     if (!left || !right) return
@@ -107,7 +109,7 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
 
   return (
     // position.x is ±WALL_X_OUTER (3.5); rotation.y set dynamically in useFrame
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} position={position} onPointerEnter={() => audioManager.play('door_hover')}>
       {/* Door frame */}
       <mesh>
         <planeGeometry args={[DOOR_WIDTH + 0.25, DOOR_HEIGHT + 0.25]} />

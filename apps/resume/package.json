@@ -18,8 +18,8 @@
     "gsap": "^3.12",
     "lenis": "^1.1",
     "next": "^14",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^19",
+    "react-dom": "^19",
     "split-type": "^0.3",
     "tailwind-merge": "^2",
     "three": "^0.168"
@@ -27,8 +27,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "@types/three": "^0.168.x",
     "eslint": "^9",
     "eslint-config-next": "14.2.x",

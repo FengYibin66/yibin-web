@@ -23,15 +23,28 @@ export function ProjectCard({ item }: ProjectCardProps) {
       card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg)`
     }
 
+    const handleEnter = () => {
+      card.style.boxShadow = [
+        'inset 0 1px 0 rgba(255,255,255,0.08)',
+        '0 8px 32px rgba(0,0,0,0.45)',
+        '0 1px 2px rgba(0,0,0,0.6)',
+        '0 0 0 1px rgba(0,212,255,0.15)',
+        '0 0 20px rgba(0,212,255,0.08)',
+      ].join(', ')
+    }
+
     const handleLeave = () => {
       card.style.transform = 'none'
+      card.style.boxShadow = ''
     }
 
     card.addEventListener('mousemove', handleMove)
+    card.addEventListener('mouseenter', handleEnter)
     card.addEventListener('mouseleave', handleLeave)
 
     return () => {
       card.removeEventListener('mousemove', handleMove)
+      card.removeEventListener('mouseenter', handleEnter)
       card.removeEventListener('mouseleave', handleLeave)
     }
   }, [])
@@ -41,11 +54,9 @@ export function ProjectCard({ item }: ProjectCardProps) {
   const cardContent = (
     <div
       ref={cardRef}
-      className="rounded-xl p-5 border cursor-pointer h-full"
+      className="glass-card rounded-xl p-5 cursor-pointer h-full"
       style={{
-        background: 'var(--bg-surface)',
-        borderColor: 'var(--bg-border)',
-        transition: 'transform 0.1s ease, border-color 0.2s',
+        transition: 'transform 0.1s ease, background 0.2s ease, border-top-color 0.2s ease, box-shadow 0.2s ease',
       }}
     >
       {/* Gradient top bar */}

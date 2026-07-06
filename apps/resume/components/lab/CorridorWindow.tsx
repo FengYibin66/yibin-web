@@ -12,25 +12,27 @@ export function CorridorWindow() {
 
   const handlePointerEnter = () => {
     if (!avatarRef.current) return
-    gsap.to(avatarRef.current.position, { x: 3.0, duration: 0.5, ease: 'back.out(1.7)', overwrite: true })
+    // After rotation=[0,-π/2,0], local +Z points into the corridor; avatar slides in along Z
+    gsap.to(avatarRef.current.position, { z: 0.3, duration: 0.5, ease: 'back.out(1.7)', overwrite: true })
     gsap.to(avatarRef.current.rotation, { z: 0.1, duration: 0.5, ease: 'power2.out', overwrite: true })
   }
 
   const handlePointerLeave = () => {
     if (!avatarRef.current) return
-    gsap.to(avatarRef.current.position, { x: 4.5, duration: 0.4, ease: 'power2.in', overwrite: true })
+    gsap.to(avatarRef.current.position, { z: 1.8, duration: 0.4, ease: 'power2.in', overwrite: true })
     gsap.to(avatarRef.current.rotation, { z: 0, duration: 0.4, ease: 'power2.in', overwrite: true })
   }
 
   return (
-    <group position={[3.2, 0.3, -30]}>
-      {/* Avatar — starts hidden beyond the right wall */}
-      <mesh ref={avatarRef} position={[4.5, 0, 0.04]}>
+    // position.x = 3.49 (flush with right wall), rotation.y = -π/2 so face points inward (-X)
+    <group position={[3.49, 0.3, -30]} rotation={[0, -Math.PI / 2, 0]}>
+      {/* Avatar — starts hidden outside wall (local +Z = into corridor) */}
+      <mesh ref={avatarRef} position={[0, 0, 1.8]}>
         <planeGeometry args={[1.5, 1.5]} />
         <meshBasicMaterial map={avatarTex} transparent alphaTest={0.01} depthWrite={false} />
       </mesh>
 
-      {/* Window frame — hover trigger */}
+      {/* Window frame — hover trigger, sits on wall face (z=0) */}
       <mesh onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}>
         <planeGeometry args={[1.5, 1.5]} />
         <meshBasicMaterial map={windowTex} transparent alphaTest={0.05} depthWrite={false} />

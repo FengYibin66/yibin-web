@@ -16,8 +16,10 @@ const MAX_TILT        = Math.atan2(WALL_DX, DOOR_Z_SPAN) + 0.1          // ≈0.
 const TILT_START      = 15
 const TILT_PEAK       = 3
 
-const DOOR_WIDTH  = 1.2
-const DOOR_HEIGHT = 2.2
+const DOOR_WIDTH    = 1.2
+const DOOR_HEIGHT   = 2.2
+const FLOOR_Y       = -CORRIDOR_HEIGHT / 2                               // -1.75
+const DOOR_CENTER_Y = FLOOR_Y + DOOR_HEIGHT / 2                         // -0.65 — aligns door bottom to floor
 // Wall fill on each side of the door opening
 const SIDE_WALL_W = (WALL_LENGTH - DOOR_WIDTH) / 2                      // ≈1.594
 
@@ -155,30 +157,29 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
           <meshBasicMaterial map={wallTex} color="#e0ddd4" />
         </mesh>
 
-        {/* Door frame */}
-        <mesh position={[wallOffsetX, 0, 0.01]}>
+        {/* Door frame — centred at DOOR_CENTER_Y so bottom touches floor */}
+        <mesh position={[wallOffsetX, DOOR_CENTER_Y, 0.01]}>
           <planeGeometry args={[DOOR_WIDTH + 0.25, DOOR_HEIGHT + 0.25]} />
           <meshBasicMaterial map={frameTex} transparent alphaTest={0.1} />
         </mesh>
 
-        {/* Bug-3: left hinge group — origin at left edge of opening */}
+        {/* Left hinge group — origin at left edge of opening, y at door centre */}
         <group
           ref={leftPanelRef}
-          position={[wallOffsetX - DOOR_WIDTH / 2, 0, 0.02]}
+          position={[wallOffsetX - DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
           onPointerEnter={handlePointerEnter}
           onClick={handleClick}
         >
-          {/* mesh offset right by half-width so it hangs from the hinge */}
           <mesh position={[DOOR_WIDTH / 2, 0, 0]}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
             <meshBasicMaterial map={doorTex} />
           </mesh>
         </group>
 
-        {/* Bug-3: right hinge group — origin at right edge of opening */}
+        {/* Right hinge group — origin at right edge of opening, y at door centre */}
         <group
           ref={rightPanelRef}
-          position={[wallOffsetX + DOOR_WIDTH / 2, 0, 0.02]}
+          position={[wallOffsetX + DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
           onClick={handleClick}
         >
           <mesh position={[-DOOR_WIDTH / 2, 0, 0]}>
@@ -188,19 +189,19 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
         </group>
 
         {/* Door handle */}
-        <mesh position={[wallOffsetX + DOOR_WIDTH * 0.1, -0.1, 0.07]}>
+        <mesh position={[wallOffsetX + DOOR_WIDTH * 0.1, DOOR_CENTER_Y - 0.1, 0.07]}>
           <planeGeometry args={[0.08, 0.22]} />
           <meshBasicMaterial map={handleTex} transparent alphaTest={0.1} />
         </mesh>
 
         {/* Proximity glow */}
-        <mesh ref={glowRef} position={[wallOffsetX, 0, 0]}>
+        <mesh ref={glowRef} position={[wallOffsetX, DOOR_CENTER_Y, 0]}>
           <planeGeometry args={[DOOR_WIDTH + 1, DOOR_HEIGHT + 1]} />
           <meshBasicMaterial color="#f5e6a3" transparent opacity={0} depthWrite={false} />
         </mesh>
 
-        {/* Bug-4: label in a group whose scale.x is inverse-compensated in useFrame */}
-        <group ref={textGroupRef} position={[wallOffsetX, DOOR_HEIGHT / 2 + 0.3, 0.05]}>
+        {/* Label — y above door top, scale.x compensated in useFrame */}
+        <group ref={textGroupRef} position={[wallOffsetX, DOOR_CENTER_Y + DOOR_HEIGHT / 2 + 0.3, 0.05]}>
           <Text
             fontSize={0.16}
             color="#8b7355"

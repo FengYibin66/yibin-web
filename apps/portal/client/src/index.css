@@ -16,10 +16,35 @@
   --font-display: "Space Grotesk", system-ui, sans-serif;
 }
 
+/* Design tokens — dark (default) */
+:root {
+  --bg-base: #070b12;
+  --bg-surface: #0d1220;
+  --bg-border: #1e2740;
+  --accent-primary: #00d4ff;
+  --accent-secondary: #6366f1;
+  --text-primary: #f0f4ff;
+  --text-secondary: #8b9bbc;
+  --text-muted: #4a5568;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-border: #e2e8f0;
+  --accent-primary: #0ea5e9;
+  --accent-secondary: #6366f1;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+}
+
 html {
   scroll-behavior: smooth;
-  background-color: #070b12;
-  color: #f0f4ff;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 ::selection {

@@ -5,14 +5,18 @@ import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
 import { LocaleToggle } from '@/components/ui'
 
-export function Navbar() {
+interface NavbarProps {
+  /** Where the brand name links to. Defaults to "/" (entry page). */
+  brandHref?: string
+}
+
+export function Navbar({ brandHref = '/' }: NavbarProps) {
   const { locale } = useLocale()
   const c = content[locale].nav
   const [scrolled, setScrolled] = useState(false)
-  // Always init true (dark) — matches SSR default and hydration output.
-  // The inline script in layout.tsx <head> already set data-theme before paint
-  // (no FOUC), so the useEffect sync below only causes a React state update,
-  // not a visible flash.
+  // Always init true (dark) — matches SSR default and avoids hydration mismatch.
+  // The inline script in layout.tsx <head> sets data-theme before paint (no FOUC),
+  // so the useEffect sync only triggers a React state update, not a visible flash.
   const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
@@ -47,17 +51,14 @@ export function Navbar() {
       }
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Brand */}
         <a
-          href="#"
-          onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          href={brandHref}
           className="font-display font-bold text-lg transition-opacity hover:opacity-80"
           style={{ color: 'var(--text-primary)' }}
         >
           {c.brand}
         </a>
 
-        {/* Nav links — hidden on mobile */}
         <div className="hidden md:flex items-center gap-6">
           {c.links.map((link) => (
             <a
@@ -78,7 +79,6 @@ export function Navbar() {
           </a>
         </div>
 
-        {/* Right controls */}
         <div className="flex items-center gap-3">
           <LocaleToggle />
           <button

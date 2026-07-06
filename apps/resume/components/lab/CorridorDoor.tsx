@@ -69,7 +69,7 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
     gsap.to(right.rotation, { y: Math.PI * 0.45, duration: 0.7, ease: 'power2.inOut',
       onComplete: () => onEnter()
     })
-  }, [wallRotY, onEnter])
+  }, [onEnter])
 
   return (
     <group position={position} rotation={[0, wallRotY, 0]}>

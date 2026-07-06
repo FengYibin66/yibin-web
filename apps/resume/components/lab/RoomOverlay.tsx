@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { AboutSection } from '@/components/sections/AboutSection'
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
 import { PublicationsSection } from '@/components/sections/PublicationsSection'
@@ -14,9 +15,10 @@ interface RoomOverlayProps {
 }
 
 function GalleryRedirect() {
+  const router = useRouter()
   useEffect(() => {
-    window.location.href = '/gallery'
-  }, [])
+    router.push('/gallery')
+  }, [router])
   return null
 }
 

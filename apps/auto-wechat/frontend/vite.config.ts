@@ -10,8 +10,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 5174,
     host: true,
+    allowedHosts: ['mpauto.yibinfeng.com', 'localhost'],
     proxy: {
       // 本地 dev：相对路径 /api/...（含 PUBLIC_API_BASE_URL 留空时的媒体 URL）转发到 Go API
       '/api': {

@@ -43,13 +43,24 @@
 
 ## 5. 页面结构（单页，无子路由）
 
+### Navbar（固定顶部）
+- 左侧：站点名 `Yibin Feng`（点击平滑滚动回顶部）
+- 右侧：语言切换按钮（`EN` / `中文`）、主题切换图标（`☀️` / `🌙`）、`Admin` 文字链接
+- 滚动时背景加半透明模糊（`backdrop-blur`），未滚动时透明
+- 主题切换和语言切换持久化到 localStorage
+
 ### Section 1 — Hero
-- 头像（圆形或六边形裁剪）
+- 头像（圆形裁剪）
 - 姓名：`Yibin Feng / 冯一镔`
-- 一句话定位（静态文字，不需要打字机效果）
+- 一句话定位（静态文字）
   - EN: *"AI Engineer · Researcher · Builder"*
   - ZH: *"AI 工程师 · 研究员 · 构建者"*
 - 三个快速链接 icon：GitHub、LinkedIn、Email
+- **下滑引导**（Hero 底部居中）：
+  - 文字：`See My Projects` / `查看我的项目`
+  - 两个 `ChevronDown` 箭头叠放，第二个延迟 0.3s，交替呼吸淡入淡出，营造向下流动感
+  - 点击后平滑滚动到 Projects 区域
+  - 页面滚动超过 60px 后整体淡出隐藏
 
 ### Section 2 — Projects
 - 标题：`Projects` / `我的项目`
@@ -60,17 +71,17 @@
   - 技术栈 tag（最多 4 个）
   - 状态 badge：`Live` / `In Development`
   - 跳转链接按钮
+- **整张卡片可点击**，点击跳转到 `project.url`（`target="_blank"`）；底部"访问"按钮保留作视觉提示
 
 **初始项目列表**：
 
 | 项目 | 描述 | 技术 | 链接 |
 |------|------|------|------|
 | Resume Site | Interactive 3D personal portfolio | Next.js, Three.js, Tailwind | resume.yibinfeng.com |
-| WeChat Platform | AI-driven content automation | Go, Vue 3, Python, FastAPI | yibinfeng.com |
+| WeChat Platform | AI-driven content automation | Go, Vue 3, Python, FastAPI | mpauto.yibinfeng.com |
 
 ### Section 3 — Footer
-- 版权信息
-- 语言切换：`EN` / `中文`
+- 版权信息（语言切换、主题切换、Admin 均已移至 Navbar）
 
 ---
 
@@ -79,13 +90,21 @@
 继承 Resume 的设计 token，但减少复杂性：
 
 ```
-配色（与 resume 完全一致）:
+暗色主题（默认）:
   背景: #070B12
   卡片: #0D1220
   边框: #1E2740
   主强调: #00D4FF (cyan)
   次强调: #6366F1 (indigo)
   文字: #F0F4FF / #8B9BBC
+
+浅色主题:
+  背景: #F8FAFC
+  卡片: #FFFFFF
+  边框: #E2E8F0
+  主强调: #0EA5E9 (sky-500)
+  次强调: #6366F1 (indigo)
+  文字: #0F172A / #64748B
 
 字体（与 resume 完全一致）:
   标题: Space Grotesk
@@ -129,8 +148,14 @@ apps/portal/
 └── server/        # Hono API server（Node.js，读写 SQLite）
 
 部署：一个 Docker 容器，server 同时 serve 静态文件 + API
-端口：3000
+生产端口：3000（Docker 容器内）
+开发端口：server 3001，client Vite 5173（Vite proxy 透传 /api 到 3001）
 ```
+
+**开发环境说明：**
+- server `dev` 脚本使用 `tsx watch --env-file=../.env src/index.ts`（Node 20+ 原生加载 `.env`）
+- Vite dev server 配置 `host: true` + `allowedHosts: ['www.yibinfeng.com', 'localhost']`，配合 Caddy 反代使用真域名
+- CORS 支持逗号分隔多 origin：`CLIENT_ORIGIN=http://www.yibinfeng.com,http://localhost:5173`
 
 ### 数据模型（SQLite via Drizzle ORM）
 
@@ -284,20 +309,22 @@ volumes:
 ## 10. 验收标准
 
 **公开页面**
-- [ ] `pnpm dev` 启动，`/en` 和 `/zh` 都可以正常访问，内容从 SQLite 读取
-- [ ] `/` 自动重定向到 `/en`
+- [ ] `pnpm dev:portal` 启动（或 `pnpm dev:all`），`http://www.yibinfeng.com` 可正常访问，内容从 SQLite 读取
+- [ ] `/#/` 默认展示英文，`/#/zh` 展示中文
 - [ ] 语言切换不刷新页面
-- [ ] 所有项目卡片链接可点击，截图正常显示
+- [ ] 所有项目卡片整体可点击，跳转到对应项目 URL
+- [ ] Hero 底部下滑引导箭头可见，点击后平滑滚动到 Projects，滚动后箭头隐藏
+- [ ] Footer 主题切换按钮可切换暗色/浅色，刷新后保持
 - [ ] Lighthouse Performance ≥ 90
 - [ ] 移动端（375px）布局无溢出
 
 **Admin 后台**
-- [ ] `/admin` 未登录时重定向到 `/admin/login`
+- [ ] `/#/admin` 未登录时重定向到 `/#/admin/login`
 - [ ] 正确密码登录后可进入 Dashboard
 - [ ] 可修改 Profile（头像、姓名、Bio、联系方式），保存后主页实时反映
 - [ ] 可添加/编辑/删除项目卡片（含截图上传），保存后主页实时反映
 - [ ] 错误密码登录失败有提示
 
 **部署**
-- [ ] Docker 容器构建成功，`docker run` 后 `localhost:3000` 可访问
+- [ ] Docker 容器构建成功，`docker run -p 3000:3000` 后 `localhost:3000` 可访问
 - [ ] SQLite 数据文件挂载到宿主机目录，容器重建后数据不丢失

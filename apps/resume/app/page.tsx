@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 
@@ -9,7 +10,6 @@ export default function EntryPage() {
   const rightRef = useRef<HTMLDivElement>(null)
   const leftBgRef = useRef<HTMLDivElement>(null)
   const rightBgRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -60,7 +60,6 @@ export default function EntryPage() {
 
   return (
     <div
-      ref={containerRef}
       style={{
         display: 'flex',
         width: '100vw',

@@ -7,11 +7,15 @@
   "scripts": {
     "dev:portal": "pnpm --filter @yibin/portal dev",
     "dev:resume": "pnpm --filter @yibin/resume dev",
-    "dev:wechat": "pnpm --filter @yibin/auto-wechat frontend:dev",
+    "dev:wechat": "pnpm --filter wechat-ai-frontend dev",
+    "dev:all": "concurrently --names \"portal,resume,wechat\" --prefix-colors \"cyan,green,yellow\" \"pnpm dev:portal\" \"pnpm dev:resume\" \"pnpm dev:wechat\"",
     "build:portal": "pnpm --filter @yibin/portal build",
     "build:resume": "pnpm --filter @yibin/resume build",
     "lint": "pnpm -r lint",
     "setup": "pnpm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
   },
   "engines": {
     "node": ">=20.0.0",

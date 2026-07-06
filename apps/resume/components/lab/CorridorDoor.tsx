@@ -54,8 +54,8 @@ export function CorridorDoor({ position, side, type, label, onEnter }: CorridorD
     if (!left || !right) return
 
     // Open door panels outward
-    gsap.to(left.rotation,  { y: wallRotY - Math.PI * 0.45, duration: 0.7, ease: 'power2.inOut' })
-    gsap.to(right.rotation, { y: wallRotY + Math.PI * 0.45, duration: 0.7, ease: 'power2.inOut',
+    gsap.to(left.rotation,  { y: -Math.PI * 0.45, duration: 0.7, ease: 'power2.inOut' })
+    gsap.to(right.rotation, { y: Math.PI * 0.45, duration: 0.7, ease: 'power2.inOut',
       onComplete: () => onEnter()
     })
   }, [wallRotY, onEnter])
@@ -72,7 +72,6 @@ export function CorridorDoor({ position, side, type, label, onEnter }: CorridorD
       <mesh
         ref={leftPanelRef}
         position={[-DOOR_WIDTH / 4, 0, 0.01]}
-        rotation={[0, wallRotY, 0]}
         onClick={handleClick}
       >
         <planeGeometry args={[DOOR_WIDTH / 2, DOOR_HEIGHT]} />
@@ -83,7 +82,6 @@ export function CorridorDoor({ position, side, type, label, onEnter }: CorridorD
       <mesh
         ref={rightPanelRef}
         position={[DOOR_WIDTH / 4, 0, 0.01]}
-        rotation={[0, wallRotY, 0]}
         onClick={handleClick}
       >
         <planeGeometry args={[DOOR_WIDTH / 2, DOOR_HEIGHT]} />

@@ -22,12 +22,13 @@ const ROOM_COMPONENTS: Record<Exclude<RoomId, null>, React.ComponentType> = {
 }
 
 export function RoomOverlay({ room, onClose }: RoomOverlayProps) {
-  // Close on Escape
+  // Close on Escape — only active when a room is open
   useEffect(() => {
+    if (!room) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [onClose, room])
 
   if (!room) return null
 

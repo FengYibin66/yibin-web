@@ -28,6 +28,7 @@ export function LabScene() {
   const [activeRoom, setActiveRoom] = useState<RoomId>(null)
   const [paperOpen, setPaperOpen] = useState(false)
   const [pendingRoom, setPendingRoom] = useState<RoomId>(null)
+  const [isInCorridor, setIsInCorridor] = useState(true)
 
   const handleEnterRoom = useCallback((room: RoomId) => {
     setPendingRoom(room)
@@ -36,6 +37,7 @@ export function LabScene() {
 
   const handlePaperClosed = useCallback(() => {
     // Paper is fully closed — switch to room content
+    setIsInCorridor(false)
     setActiveRoom(pendingRoom)
     setPaperOpen(false)  // start opening paper to reveal room
   }, [pendingRoom])
@@ -50,8 +52,14 @@ export function LabScene() {
     setPaperOpen(false)  // reveal corridor
   }, [])
 
-  // Determine which paper closed callback to use
-  const onPaperClosed = activeRoom ? handlePaperClosedOnExit : handlePaperClosed
+  // Stable callback — avoids new reference each render (which would restart GSAP tween)
+  const onPaperClosed = useCallback(() => {
+    if (activeRoom) {
+      handlePaperClosedOnExit()
+    } else {
+      handlePaperClosed()
+    }
+  }, [activeRoom, handlePaperClosed, handlePaperClosedOnExit])
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1208' }}>
@@ -78,7 +86,7 @@ export function LabScene() {
       </Canvas>
 
       {/* Hero text overlay in corridor */}
-      {!activeRoom && (
+      {isInCorridor && (
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -101,7 +109,7 @@ export function LabScene() {
       )}
 
       {/* Back to entry link */}
-      {!activeRoom && (
+      {isInCorridor && (
         <a
           href="/"
           style={{
@@ -124,6 +132,7 @@ export function LabScene() {
       <PaperTransition
         isOpen={paperOpen}
         onClosed={onPaperClosed}
+        onOpened={() => setIsInCorridor(true)}
       />
     </div>
   )

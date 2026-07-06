@@ -20,6 +20,7 @@ export function PaperTransition({ isOpen, onClosed, onOpened }: PaperTransitionP
       // Paper closes (covers screen)
       gsap.to(el, {
         scaleY: 1,
+        transformOrigin: 'bottom center',
         duration: 0.4,
         ease: 'power2.inOut',
         onComplete: onClosed,

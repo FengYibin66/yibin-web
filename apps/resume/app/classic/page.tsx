@@ -7,6 +7,7 @@ import {
   ProjectsSection,
   PublicationsSection,
   ContactSection,
+  GalleryDoorSection,
 } from '@/components/sections'
 
 export default function ClassicPage() {
@@ -21,6 +22,7 @@ export default function ClassicPage() {
         <ProjectsSection />
         <PublicationsSection />
         <ContactSection />
+        <GalleryDoorSection />
       </main>
       <Footer />
     </>

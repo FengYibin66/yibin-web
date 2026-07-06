@@ -2,7 +2,7 @@
 
 import { useState, useCallback, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { CorridorGeometry } from './CorridorGeometry'
+import { CorridorGeometry, CorridorAlcoves } from './CorridorGeometry'
 import { CorridorDoor } from './CorridorDoor'
 import { RoomOverlay } from './RoomOverlay'
 import { PaperTransition } from './PaperTransition'
@@ -27,11 +27,11 @@ function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
 }
 
 const DOORS_LOOP1 = [
-  { z: -18,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as const },
-  { z: -32,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as const },
-  { z: -48,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as const },
-  { z: -62,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as const },
-  { z: -75,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as const },
+  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as const },
+  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as const },
+  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as const },
+  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as const },
+  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as const },
 ]
 
 // Second loop 100 units further — produces the "infinite corridor" feeling
@@ -85,7 +85,7 @@ export function LabScene() {
   }, [activeRoom, handlePaperClosed, handlePaperClosedOnExit])
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#1a1208' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#f0ece4' }}>
       {/* 3D Corridor Canvas */}
       <Canvas
         camera={{ position: [0, 0.2, 10], fov: 60, near: 0.1, far: 200 }}
@@ -113,9 +113,11 @@ export function LabScene() {
           <CorridorWindow />
           <BugEaster />
           <CorridorDecorations />
+          {/* Alcove return walls at each door — breaks up flat side walls, adds depth */}
+          <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} />
           {/* Segment transition doors — auto-open on approach, mark loop boundaries */}
-          <SegmentDoor position={[0, 0, -85]} />
-          <SegmentDoor position={[0, 0, -185]} />
+          <SegmentDoor position={[0, 0, -65]} />
+          <SegmentDoor position={[0, 0, -165]} />
         </Suspense>
       </Canvas>
 

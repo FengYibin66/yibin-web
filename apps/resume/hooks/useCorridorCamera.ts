@@ -7,17 +7,17 @@ import * as THREE from 'three'
 // Door Z positions for auto-glance — both loops covered
 const DOOR_POSITIONS = [
   // Loop 1
-  { z:  -18, side: 'left'  },
-  { z:  -32, side: 'right' },
-  { z:  -48, side: 'left'  },
-  { z:  -62, side: 'right' },
-  { z:  -75, side: 'left'  },
+  { z:   -8, side: 'left'  },
+  { z:  -20, side: 'right' },
+  { z:  -32, side: 'left'  },
+  { z:  -44, side: 'right' },
+  { z:  -56, side: 'left'  },
   // Loop 2 (offset -100)
-  { z: -118, side: 'left'  },
-  { z: -132, side: 'right' },
-  { z: -148, side: 'left'  },
-  { z: -162, side: 'right' },
-  { z: -175, side: 'left'  },
+  { z: -108, side: 'left'  },
+  { z: -120, side: 'right' },
+  { z: -132, side: 'left'  },
+  { z: -144, side: 'right' },
+  { z: -156, side: 'left'  },
 ] as const
 
 interface UseCorridorCameraOptions {

@@ -20,9 +20,9 @@ const TILT_START      = 15
 const TILT_PEAK       = 3
 
 const DOOR_WIDTH    = 1.2
-const DOOR_HEIGHT   = 2.2
+const DOOR_HEIGHT   = 2.5
 const FLOOR_Y       = -CORRIDOR_HEIGHT / 2                           // -1.75
-const DOOR_CENTER_Y = FLOOR_Y + DOOR_HEIGHT / 2                      // -0.65
+const DOOR_CENTER_Y = FLOOR_Y + DOOR_HEIGHT / 2                      // -0.5
 const SIDE_WALL_W   = (WALL_LENGTH - DOOR_WIDTH) / 2                 // ≈1.594
 
 // Baseboard strip along bottom of wall fill

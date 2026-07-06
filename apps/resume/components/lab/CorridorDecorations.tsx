@@ -98,19 +98,27 @@ function CeilingLamp({ z }: { z: number }) {
 
 // Decoration layout for one corridor loop segment
 function LoopDecorations({ offsetZ = 0 }: { offsetZ?: number }) {
+  // Door positions: -8, -20, -32, -44, -56 — place decorations in gaps between doors
   return (
     <group>
-      <WallPainting side="right" z={offsetZ - 10} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  />
-      <WallPainting side="left"  z={offsetZ - 25} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  />
-      <WallPainting side="right" z={offsetZ - 42} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} />
-      <WallPainting side="left"  z={offsetZ - 58} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  />
-      <WallPainting side="right" z={offsetZ - 70} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  />
-      <CorridorPlant side="left"  z={offsetZ - 8}  />
-      <CorridorPlant side="right" z={offsetZ - 55} />
-      <CeilingLamp z={offsetZ - 5}  />
-      <CeilingLamp z={offsetZ - 25} />
-      <CeilingLamp z={offsetZ - 50} />
-      <CeilingLamp z={offsetZ - 72} />
+      {/* Between door 1 (z=-8) and door 2 (z=-20): midpoint -14 */}
+      <WallPainting side="right" z={offsetZ - 14} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  />
+      {/* Between door 2 (z=-20) and door 3 (z=-32): midpoint -26 */}
+      <WallPainting side="left"  z={offsetZ - 26} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  />
+      {/* Between door 3 (z=-32) and door 4 (z=-44): midpoint -38 */}
+      <WallPainting side="right" z={offsetZ - 38} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} />
+      {/* Between door 4 (z=-44) and door 5 (z=-56): midpoint -50 */}
+      <WallPainting side="left"  z={offsetZ - 50} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  />
+      {/* After last door */}
+      <WallPainting side="right" z={offsetZ - 62} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  />
+      {/* Plants near corridor start and end */}
+      <CorridorPlant side="left"  z={offsetZ - 4}  />
+      <CorridorPlant side="right" z={offsetZ - 60} />
+      {/* Ceiling lamps aligned with doors */}
+      <CeilingLamp z={offsetZ - 8}  />
+      <CeilingLamp z={offsetZ - 20} />
+      <CeilingLamp z={offsetZ - 44} />
+      <CeilingLamp z={offsetZ - 56} />
     </group>
   )
 }

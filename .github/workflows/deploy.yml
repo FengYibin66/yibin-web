@@ -1,0 +1,179 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      # ──────────────────────────────────────────────────────────────
+      # 1. Check out code
+      # ──────────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ──────────────────────────────────────────────────────────────
+      # 2. Setup Node.js
+      # ──────────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ──────────────────────────────────────────────────────────────
+      # 3. Setup pnpm
+      # ──────────────────────────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.22.0
+
+      # ──────────────────────────────────────────────────────────────
+      # 4. Install dependencies
+      # ──────────────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ──────────────────────────────────────────────────────────────
+      # 5. Build Portal (Client + Server)
+      # ──────────────────────────────────────────────────────────────
+      - name: Build Portal
+        run: pnpm --filter @yibin/portal build
+
+      # ──────────────────────────────────────────────────────────────
+      # 6. Build Resume
+      # ──────────────────────────────────────────────────────────────
+      - name: Build Resume
+        run: pnpm --filter @yibin/resume build
+
+      # ──────────────────────────────────────────────────────────────
+      # 7. Build Auto-Wechat Frontend
+      # ──────────────────────────────────────────────────────────────
+      - name: Build Auto-Wechat Frontend
+        run: cd apps/auto-wechat/frontend && pnpm run build
+
+      # ──────────────────────────────────────────────────────────────
+      # 8. Set up Docker Buildx
+      # ──────────────────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ──────────────────────────────────────────────────────────────
+      # 9. Login to Docker Hub (or Docker Registry)
+      # ──────────────────────────────────────────────────────────────
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        # If using a private registry, replace with:
+        # registry: ${{ secrets.DOCKER_REGISTRY }}
+        # username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+        # password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+      # ──────────────────────────────────────────────────────────────
+      # 10. Build and push Docker images
+      # ──────────────────────────────────────────────────────────────
+      - name: Build and push portal-server
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          dockerfile: docker/Dockerfile.portal-server
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/yibin-portal-server:latest
+            ${{ secrets.DOCKER_USERNAME }}/yibin-portal-server:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/yibin-portal-server:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/yibin-portal-server:buildcache,mode=max
+
+      - name: Build and push resume
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          dockerfile: docker/Dockerfile.resume
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/yibin-resume:latest
+            ${{ secrets.DOCKER_USERNAME }}/yibin-resume:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/yibin-resume:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/yibin-resume:buildcache,mode=max
+
+      # ──────────────────────────────────────────────────────────────
+      # 11. Deploy to CVM via SSH
+      # ──────────────────────────────────────────────────────────────
+      - name: Deploy to CVM
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          CVM_IP: ${{ secrets.CVM_IP }}
+          CVM_USER: ${{ secrets.CVM_USER }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          # Create temp SSH key file
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Add CVM to known_hosts (skip host key checking or add manually)
+          ssh-keyscan -H $CVM_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # SSH to CVM and pull latest images + restart containers
+          ssh -i ~/.ssh/deploy_key $CVM_USER@$CVM_IP bash -s << 'DEPLOY_SCRIPT'
+            set -e
+            cd /data
+
+            # Update docker-compose.prod.yml (optional: version management)
+            # If using git, pull latest:
+            # git pull origin main
+
+            # Pull latest images
+            docker compose -f docker-compose.prod.yml pull
+
+            # Restart services with new images
+            docker compose -f docker-compose.prod.yml up -d --no-build
+
+            # Cleanup old images (optional)
+            docker image prune -f
+
+            echo "✅ Deployment successful"
+          DEPLOY_SCRIPT
+
+          # Cleanup local SSH key
+          rm ~/.ssh/deploy_key
+
+      # ──────────────────────────────────────────────────────────────
+      # 12. Verify deployment (optional health check)
+      # ──────────────────────────────────────────────────────────────
+      - name: Health Check
+        env:
+          CVM_IP: ${{ secrets.CVM_IP }}
+        run: |
+          sleep 10  # Wait for containers to start
+
+          # Check Portal health
+          curl -f http://$CVM_IP/health || true
+
+          # Check Auto-Wechat health
+          curl -f http://$CVM_IP/api/v1/health || true
+
+          echo "✅ Health checks completed"
+
+      # ──────────────────────────────────────────────────────────────
+      # 13. Notify on success/failure (optional)
+      # ──────────────────────────────────────────────────────────────
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} = 'success' ]; then
+            echo "✅ Deployment to production successful!"
+            # Optional: Send Slack/Feishu notification
+            # curl -X POST ${{ secrets.SLACK_WEBHOOK }} ...
+          else
+            echo "❌ Deployment failed!"
+            # Optional: Send alert
+          fi

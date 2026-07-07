@@ -1,0 +1,231 @@
+version: '3.9'
+
+services:
+  # ──────────────────────────────────────────────────────────────
+  # Nginx 反向代理（所有三个应用 + SSL）
+  # ──────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - ./apps/portal/client/dist:/usr/share/nginx/html/portal:ro
+      - ./apps/resume/out:/usr/share/nginx/html/resume:ro
+      - ./apps/auto-wechat/frontend/dist:/usr/share/nginx/html/wechat:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      portal-server:
+        condition: service_healthy
+      auto-wechat-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - yibin-net
+    mem_limit: 256m
+    cpus: "0.5"
+
+  # ──────────────────────────────────────────────────────────────
+  # Portal 后端（Hono Node.js）
+  # ──────────────────────────────────────────────────────────────
+  portal-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.portal-server
+    container_name: portal-server-prod
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    env_file:
+      - .env.production
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - yibin-net
+    mem_limit: 256m
+    cpus: "0.5"
+    depends_on:
+      - mysql
+
+  # ──────────────────────────────────────────────────────────────
+  # Resume 前端（Next.js SSG → Nginx）
+  # ──────────────────────────────────────────────────────────────
+  # Note: Resume is built statically and served by Nginx
+  # No separate container needed if using pure static export
+
+  # ──────────────────────────────────────────────────────────────
+  # Auto-Wechat API（Go）
+  # ──────────────────────────────────────────────────────────────
+  auto-wechat-api:
+    build:
+      context: ./apps/auto-wechat/backend
+      target: api
+    container_name: auto-wechat-api-prod
+    expose:
+      - "8080"
+    environment:
+      PORT: "8080"
+      ENV: production
+    env_file:
+      - .env.production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+    networks:
+      - yibin-net
+    mem_limit: 512m
+    cpus: "1"
+    volumes:
+      - media_data:/app/media
+
+  # ──────────────────────────────────────────────────────────────
+  # Auto-Wechat Worker（Go asynq worker）
+  # ──────────────────────────────────────────────────────────────
+  auto-wechat-worker:
+    build:
+      context: ./apps/auto-wechat/backend
+      target: worker
+    container_name: auto-wechat-worker-prod
+    command: ["/app/worker"]
+    environment:
+      ENV: production
+    env_file:
+      - .env.production
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+    networks:
+      - yibin-net
+    mem_limit: 512m
+    cpus: "1"
+    volumes:
+      - media_data:/app/media
+
+  # ──────────────────────────────────────────────────────────────
+  # LLM Service（Python FastAPI）
+  # ──────────────────────────────────────────────────────────────
+  llm-service:
+    build:
+      context: ./apps/auto-wechat/llm-service
+    container_name: llm-service-prod
+    expose:
+      - "8090"
+    environment:
+      PORT: "8090"
+    env_file:
+      - .env.production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - yibin-net
+    mem_limit: 512m
+    cpus: "1"
+
+  # ──────────────────────────────────────────────────────────────
+  # MySQL 数据库
+  # ──────────────────────────────────────────────────────────────
+  mysql:
+    image: docker.io/library/mysql:8.4
+    container_name: mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+      MYSQL_DATABASE: wechat_ai
+      MYSQL_USER: wechat
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+    expose:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uwechat", "-p${MYSQL_PASSWORD:-change_me}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+      - --mysql-native-password=ON
+    networks:
+      - yibin-net
+    mem_limit: 512m
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./apps/auto-wechat/docker/mysql-init:/docker-entrypoint-initdb.d:ro
+
+  # ──────────────────────────────────────────────────────────────
+  # Redis 缓存 + 任务队列
+  # ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis-prod
+    expose:
+      - "6379"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - "allkeys-lru"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - yibin-net
+    mem_limit: 256m
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  media_data:
+    driver: local
+  certbot-webroot:
+    driver: local
+
+networks:
+  yibin-net:
+    driver: bridge

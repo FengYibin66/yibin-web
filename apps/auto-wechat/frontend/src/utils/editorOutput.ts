@@ -31,7 +31,7 @@ function parseOutline(raw: unknown): OutlineEntry[] {
   }
 
   return raw
-    .map((entry) => {
+    .map((entry): OutlineEntry | null => {
       if (!entry || typeof entry !== 'object') {
         return null
       }
@@ -42,7 +42,7 @@ function parseOutline(raw: unknown): OutlineEntry[] {
       }
       const bullets = readStringArray(record.bullets)
       const tag = readString(record.tag)
-      return { heading, bullets, tag: tag || undefined }
+      return { heading, bullets, tag: tag ? tag : undefined }
     })
     .filter((entry): entry is OutlineEntry => entry !== null)
 }

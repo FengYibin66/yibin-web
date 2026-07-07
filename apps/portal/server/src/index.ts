@@ -17,7 +17,7 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').sp
 app.use(
   '/api/*',
   cors({
-    origin: (origin) => (allowedOrigins.includes(origin ?? '') ? origin : false),
+    origin: (origin) => (allowedOrigins.includes(origin ?? '') ? origin : undefined),
     credentials: true,
   })
 )

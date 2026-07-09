@@ -66,6 +66,7 @@ services:
       - mysql
     volumes:
       - portal_data:/data
+      # MVP local uploads — Phase 2: COS+CDN, drop this volume (docs/specs/portal-media.md)
       - portal_uploads:/app/uploads
 
   # ──────────────────────────────────────────────────────────────

@@ -210,6 +210,9 @@ API 路由（Hono server）:
   POST /api/auth/logout
 ```
 
+> **媒体（MVP）**：当前 `avatarPath` / `screenshotPath` 为本地 `/uploads/*`，Nginx `^~ /uploads/` 反代。  
+> **待升级**：COS + CDN，见 [portal-media.md](./portal-media.md)。
+
 ### 文件结构
 
 ```

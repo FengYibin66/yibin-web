@@ -1,4 +1,5 @@
-import { Hono } from 'hono'
+# Portal uploads — MVP: local volume + /uploads/* (see docs/specs/portal-media.md).
+# TODO(phase-2): COS + CDN; replace with MediaStore + avatarUrl, remove this route.
 import { writeFile, mkdir } from 'fs/promises'
 import { resolve, extname } from 'path'
 import { requireAuth } from '../auth.js'

@@ -12,10 +12,8 @@ WORKDIR /build
 # Install pnpm
 RUN npm install -g pnpm@10.22.0
 
-# Copy monorepo files
+# Copy monorepo files (no packages/ workspace in this repo)
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY packages ./packages
-COPY apps/portal/client ./apps/portal/client
 COPY apps/portal/server ./apps/portal/server
 
 # Install dependencies

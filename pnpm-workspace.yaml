@@ -3,4 +3,3 @@ packages:
   - 'apps/portal/client'
   - 'apps/portal/server'
   - 'apps/auto-wechat/frontend'
-  - 'packages/*'

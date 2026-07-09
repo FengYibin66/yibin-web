@@ -17,24 +17,30 @@
 ### Deploy
 
 ```bash
-# 1. SSH into CVM
-ssh user@your_cvm_ip
+# 1. SSH into CVM (OrcaTerm or ssh ubuntu@your_cvm_ip)
+cd ~/yibin-web
+git pull
 
-# 2. Clone project
-mkdir -p /data && cd /data
-git clone https://github.com/FengYibin66/yibin-web.git
-cd yibin-web
-
-# 3. Configure environment
+# 2. Environment (once)
 cp config/env.shared.example .env.shared.local
-nano .env.shared.local  # Fill in all secrets
-./scripts/env-build.sh production
+nano .env.shared.local  # Fill secrets — never commit
 ./scripts/env-build.sh production --check
 
-# 4. Start services
-docker compose -f docker-compose.prod.yml up -d --build
+# 3. SSL (once — stop system nginx first if port 80 busy)
+sudo systemctl stop nginx
+sudo certbot certonly --standalone -d www.yibinfeng.com -d resume.yibinfeng.com -d mpauto.yibinfeng.com --agree-tos -m your@email.com
+sudo systemctl disable nginx
 
-# 5. Verify
+# 4. Node 20 + pnpm (once on CVM)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+corepack enable && corepack prepare pnpm@10.22.0 --activate
+cp config/npmrc.cvm.example .npmrc   # optional, China mirror
+
+# 5. Normative deploy (build static assets + Docker)
+./scripts/deploy-prod.sh
+
+# 6. Verify
 docker compose -f docker-compose.prod.yml ps
 curl https://www.yibinfeng.com/api/health
 ```
@@ -71,7 +77,10 @@ Tencent Cloud CVM (Beijing · Lighthouse)
 | `docker/nginx-prod.conf` | HTTPS routing & caching |
 | `.github/workflows/deploy.yml` | GitHub Actions CI/CD |
 | `config/env.*.example` | Environment templates |
-| `scripts/env-build.sh` | Generate .env.production |
+| `scripts/env-build.sh` | Generate `.env.production` |
+| `scripts/build-prod-assets.sh` | Build portal/resume/wechat static assets |
+| `scripts/deploy-prod.sh` | **Normative** CVM deploy (env → build → compose) |
+| `pnpm-lock.yaml` | **Committed** — required for `--frozen-lockfile` |
 
 ---
 
@@ -117,10 +126,15 @@ nano .env.shared.local  # Fill in: MYSQL_ROOT_PASSWORD, DASHSCOPE_API_KEY, etc.
 
 See [config/README.md](./config/README.md) for all required variables.
 
-### Step 4: Start Services
+### Step 4: Build & Start (normative)
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+corepack enable && corepack prepare pnpm@10.22.0 --activate
+cp config/npmrc.cvm.example .npmrc   # optional on CVM (China)
+
+./scripts/deploy-prod.sh
+# Or manually: ./scripts/build-prod-assets.sh && docker compose -f docker-compose.prod.yml up -d --build
+
 docker compose -f docker-compose.prod.yml ps  # Verify all 7 services "Up"
 ```
 

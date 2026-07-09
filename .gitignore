@@ -1,5 +1,4 @@
-# pnpm
-pnpm-lock.yaml
+# pnpm (lockfile MUST be committed — see docs/specs/platform.md)
 node_modules/
 .pnpm-store/
 

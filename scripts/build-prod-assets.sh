@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
+# Spec: docs/specs/platform.md §3
 # Build static frontends for docker-compose.prod.yml nginx volume mounts.
-# Run on CVM (or Mac) before: docker compose -f docker-compose.prod.yml up -d --build
 #
-# Requires: node 20+, pnpm 10.22+
+# Requires: Node 20+, pnpm 10.22+ (corepack prepare pnpm@10.22.0 --activate)
+# Requires: pnpm-lock.yaml committed in repo (--frozen-lockfile)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-command -v pnpm >/dev/null 2>&1 || { echo "Install pnpm first: npm install -g pnpm@10.22.0" >&2; exit 1; }
+if [[ ! -f pnpm-lock.yaml ]]; then
+  echo "Missing pnpm-lock.yaml — run 'pnpm install' on dev machine and commit the lockfile." >&2
+  exit 1
+fi
 
-echo "📦 pnpm install..."
+command -v pnpm >/dev/null 2>&1 || {
+  echo "Enable corepack: corepack enable && corepack prepare pnpm@10.22.0 --activate" >&2
+  exit 1
+}
+
+echo "📦 pnpm install --frozen-lockfile..."
 pnpm install --frozen-lockfile
 
 echo "🔨 Portal (client + server TS)..."

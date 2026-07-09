@@ -116,21 +116,17 @@ validate_merged() {
 }
 
 if $CHECK_ONLY; then
-  if [[ -f "$OUTPUT" && -z "${ENV_SHARED_LOCAL:-}" && -z "${ENV_EXTRA:-}" ]]; then
-    MERGED="$(grep -v '^#' "$OUTPUT" | grep '=' || true)"
-  else
-    MERGE_FILES=("$SHARED_EXAMPLE" "$SHARED_LOCAL" "$ENV_EXAMPLE")
-    if [[ -n "$ENV_EXTRA" && -f "$ENV_EXTRA" ]]; then
-      MERGE_FILES+=("$ENV_EXTRA")
-    fi
-    MERGED="$(merge_env_files "${MERGE_FILES[@]}")"
-    MYSQL_PASSWORD="$(printf '%s\n' "$MERGED" | awk -F= '/^MYSQL_PASSWORD=/{print substr($0,index($0,"=")+1); exit}')"
-    if [[ -n "$MYSQL_PASSWORD" ]]; then
-      MERGED="$(printf '%s\n' "$MERGED" | awk -v pw="$MYSQL_PASSWORD" '
-        /^DATABASE_URL=/ { sub(/mysql:\/\/wechat:[^@]*@/, "mysql://wechat:" pw "@") }
-        { print }
-      ')"
-    fi
+  MERGE_FILES=("$SHARED_EXAMPLE" "$SHARED_LOCAL" "$ENV_EXAMPLE")
+  if [[ -n "$ENV_EXTRA" && -f "$ENV_EXTRA" ]]; then
+    MERGE_FILES+=("$ENV_EXTRA")
+  fi
+  MERGED="$(merge_env_files "${MERGE_FILES[@]}")"
+  MYSQL_PASSWORD="$(printf '%s\n' "$MERGED" | awk -F= '/^MYSQL_PASSWORD=/{print substr($0,index($0,"=")+1); exit}')"
+  if [[ -n "$MYSQL_PASSWORD" ]]; then
+    MERGED="$(printf '%s\n' "$MERGED" | awk -v pw="$MYSQL_PASSWORD" '
+      /^DATABASE_URL=/ { sub(/mysql:\/\/wechat:[^@]*@/, "mysql://wechat:" pw "@") }
+      { print }
+    ')"
   fi
   if validate_merged; then
     echo "✅ $ENV_NAME env valid"

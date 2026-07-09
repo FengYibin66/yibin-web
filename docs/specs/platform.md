@@ -177,13 +177,17 @@ yibin-net：mysql, redis, llm-service（仅 internal）
 
 CVM **禁止**手改 `.env.production` 或使用已废弃的 `apps/auto-wechat/.env.development`。
 
-### 3.3 部署顺序
+### 3.3 部署顺序（Normative）
 
-1. SSH、Docker、clone（`/data` 或 `~/yibin-web`）
-2. `cp config/env.shared.example .env.shared.local` → 填密钥 → `./scripts/env-build.sh production`
-3. certbot 三域名证书
-4. `docker compose -f docker-compose.prod.yml up -d --build`
-5. 验收（§3.4）
+1. CVM：Docker、Node 20、clone（Gitee `~/yibin-web`）
+2. `cp config/env.shared.example .env.shared.local` → 填密钥 → `./scripts/env-build.sh production --check`
+3. 停系统 nginx → certbot 三域名 → `sudo systemctl disable nginx`
+4. CVM 国内镜像（可选）：`cp config/npmrc.cvm.example .npmrc`
+5. **一条命令部署**：`./scripts/deploy-prod.sh`  
+   （内部：`build-prod-assets.sh` 用 `pnpm-lock.yaml` + `--frozen-lockfile` 构建静态资源 → `docker compose up`）
+6. 验收（§3.4）
+
+**MUST**：`pnpm-lock.yaml` 进 Git；CVM `git pull` 后不得手改 lockfile。
 
 ### 3.4 验收
 

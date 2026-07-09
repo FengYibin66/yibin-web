@@ -4,6 +4,9 @@
 
 set -e
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
 echo "🔍 Complete local production deployment verification"
 echo ""
 
@@ -42,64 +45,16 @@ pnpm --filter @yibin/resume build > /dev/null 2>&1 && check "Resume built" || ex
 cd apps/auto-wechat/frontend && pnpm run build > /dev/null 2>&1 && cd - > /dev/null && check "Auto-Wechat frontend built" || exit 1
 
 # ──────────────────────────────────────────────────────────────
-# 3. Create local .env.production
+# 3. Build environment (.env.production)
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "⚙️  3. Creating local configuration..."
+echo "⚙️  3. Building environment configuration..."
 
-cat > .env.production << 'ENV_EOF'
-NODE_ENV=production
-ENV=production
-MYSQL_ROOT_PASSWORD=root_local
-MYSQL_PASSWORD=wechat_local
-DATABASE_URL=mysql://wechat:wechat_local@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
-REDIS_URL=redis://redis:6379/0
-PORT=3001
-ADMIN_PASSWORD=admin_local
-CLIENT_ORIGIN=http://localhost:3000,http://localhost
-PORTAL_DATABASE_URL=
-API_PORT=8080
-ADMIN_API_KEY=admin_api_key_local
-LOG_LEVEL=debug
-SESSION_COOKIE_NAME=session_id
-SESSION_TTL=24h
-SESSION_SECURE=false
-SESSION_SAME_SITE=Lax
-SECRET_KEY=secret_key_local_32chars_minimum_
-STUB_PIPELINE=true
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost
-PUBLIC_API_BASE_URL=http://localhost:8080
-WECHAT_READ_SOURCE_URL=https://fengyibin66.github.io/
-LLM_SERVICE_URL=http://llm-service:8090
-LLM_INVOKE_TIMEOUT=10m
-LLM_REQUEST_TIMEOUT_SECONDS=600
-DASHSCOPE_API_KEY=mock_key_local
-LLM_MODEL_FAST=qwen-plus
-LLM_MODEL_SMART=qwen-max
-LLM_MODEL_LAYOUT=qwen-max
-LLM_MAX_OUTPUT_TOKENS_LAYOUT=32768
-IMAGE_MODEL=wanx2.1-t2i-turbo
-IMAGE_SIZE=1280*720
-TENCENT_SECRET_ID=mock_id_local
-TENCENT_SECRET_KEY=mock_key_local
-COS_BUCKET=mock_bucket_local
-COS_REGION=ap-hongkong
-COLLECT_DAYS=2
-COLLECT_MIN_ARTICLES=5
-WECHAT_APP_ID=mock_app_id
-WECHAT_APP_SECRET=mock_app_secret
-WECHAT_ORIGINAL_ID=mock_original_id
-WECHAT_ACCOUNT_TYPE=subscription
-WECHAT_ACCOUNT_SUBJECT=personal
-WECHAT_CERTIFIED=false
-WECHAT_IP_WHITELIST=
-WECHAT_CALLBACK_URL=http://localhost:8080/api/v1/wechat/callback
-WECOM_WEBHOOK_URL=
-SSL_CERT_PATH=/etc/letsencrypt/live/www.yibinfeng.com/fullchain.pem
-SSL_KEY_PATH=/etc/letsencrypt/live/www.yibinfeng.com/privkey.pem
-ENV_EOF
+ENV_SHARED_LOCAL="$ROOT/config/env.shared.verify.example" \
+ENV_EXTRA="$ROOT/config/env.production.localhost.example" \
+"$ROOT/scripts/env-build.sh" production
 
-check ".env.production created"
+check ".env.production built via scripts/env-build.sh"
 
 # ──────────────────────────────────────────────────────────────
 # 4. Build Docker images

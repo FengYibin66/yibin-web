@@ -13,6 +13,10 @@ build/
 .env
 .env.local
 .env.*.local
+.env.shared.local
+.env.development
+.env.production
+apps/portal/.env
 
 # IDE
 .vscode/
@@ -36,4 +40,3 @@ coverage/
 
 # Misc
 .turbo/
-.env.production

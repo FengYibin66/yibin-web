@@ -1,3 +1,7 @@
+# Legacy paths — do not create files here
+# Backend/Docker env: repo root .env.development / .env.production (see ../../config/README.md)
+# Frontend only: frontend/.env.development, frontend/.env.production
+
 .env
 .env.development
 .env.local

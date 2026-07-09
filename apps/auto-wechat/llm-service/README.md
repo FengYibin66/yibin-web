@@ -19,4 +19,4 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8090
 ```
 
-环境变量从项目根 `.env.development` 读取（`DASHSCOPE_API_KEY` 等）。
+环境变量从 **monorepo 根目录** `.env.development` / `.env.production` 读取（Docker `env_file` 注入）。见 `config/README.md`。

@@ -45,8 +45,9 @@
 
 ```bash
 git clone <repo> && cd auto_wechat_tech_content
-cp .env.example .env.production
-# 编辑 .env.production（或挂载 .env.development 仅 dev）
+cp config/env.shared.example .env.shared.local
+./scripts/env-build.sh production
+# 编辑 .env.shared.local 后重新 env-build；运行时读 .env.production
 
 docker compose -f docker-compose.yml up -d --build
 

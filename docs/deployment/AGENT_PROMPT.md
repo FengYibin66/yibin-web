@@ -1,5 +1,8 @@
 # 🚀 yibin_web 腾讯云 CVM 部署 Agent Prompt
 
+> **Spec 索引**: [docs/specs/README.md](./docs/specs/README.md)  
+> **平台 Spec**: [docs/specs/platform.md](./docs/specs/platform.md)
+
 ## 任务概述
 
 部署 yibin_web monorepo 到腾讯云 CVM（香港），启动完整的生产环境。所有配置文件和代码已经完成，现在需要在 CVM 上实施部署。
@@ -79,30 +82,15 @@ SECRET_KEY=                     # 随机 32 字符密钥（自己生成即可）
    ```
    - 确认项目克隆成功，能看到 docker-compose.prod.yml
 
-5. **创建 .env.production 配置文件**
+5. **配置环境变量**
    ```bash
-   cp .env.production.example .env.production
+   cp config/env.shared.example .env.shared.local
+   nano .env.shared.local   # 填入所有密钥（见前置条件）
+   ./scripts/env-build.sh production
+   ./scripts/env-build.sh production --check   # 确认无 CHANGE_ME
    ```
-
-6. **编辑环境变量**
-   - 用 nano 或 vim 编辑 `.env.production`
-   - **填入用户提供的所有敏感信息**（见前置条件）
-   - 特别需要填写的：
-     ```ini
-     MYSQL_ROOT_PASSWORD={用户提供}
-     MYSQL_PASSWORD={用户提供}
-     ADMIN_PASSWORD={用户提供}
-     DATABASE_URL=mysql://wechat:{MYSQL_PASSWORD}@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
-     DASHSCOPE_API_KEY={用户提供}
-     WECHAT_APP_ID={用户提供}
-     WECHAT_APP_SECRET={用户提供}
-     WECHAT_ORIGINAL_ID={用户提供}
-     TENCENT_SECRET_ID={用户提供}
-     TENCENT_SECRET_KEY={用户提供}
-     COS_BUCKET={用户提供}
-     SECRET_KEY={生成 32 字符随机密钥}
-     ```
-   - 验证 file 保存成功
+   - 生产 URL 已在 `config/env.production.example`，**无需 sed 改域名**
+   - `.env.production` 由脚本生成，不要手改
 
 ---
 
@@ -246,7 +234,7 @@ docker compose -f docker-compose.prod.yml down -v  # 删除所有卷（谨慎！
 - [ ] SSH 成功登录 CVM
 - [ ] Docker 和 Docker Compose 已安装
 - [ ] git clone 项目成功
-- [ ] .env.production 已填写所有敏感信息
+- [ ] `.env.shared.local` 已填写，`./scripts/env-build.sh production --check` 通过
 - [ ] SSL 证书已申请（certbot 显示 3 个有效证书）
 - [ ] `docker compose ps` 显示 7 个服务都 `Up`
 - [ ] `curl http://localhost:3001/health` 返回 200
@@ -280,15 +268,15 @@ CVM_USER                = SSH 用户名（ubuntu 或 root）
 1. **DNS 生效** — 确保三个域名的 A 记录已指向 CVM IP（DNS 可能需要 1-2 小时生效）
 2. **防火墙规则** — 腾讯云安全组需要开放 80、443 端口
 3. **SSL 证书** — Let's Encrypt 证书有效期 90 天，certbot 会自动续期
-4. **敏感信息** — .env.production 不要提交到 git（已在 .gitignore）
+4. **敏感信息** — `.env.shared.local` / `.env.production` 不要提交到 git（见 `config/README.md`）
 5. **监控日志** — 生产环境建议定期查看 `docker compose logs` 排查问题
 
 ---
 
 ## 参考文档
 
-- 完整部署指南：DEPLOYMENT.md（项目根目录）
-- docker-compose 配置：docker-compose.prod.yml
-- Nginx 配置：docker/nginx-prod.conf
-- 环境变量模板：.env.production.example
+- Spec 索引: [docs/specs/README.md](./docs/specs/README.md)
+- 平台 Spec: [docs/specs/platform.md](./docs/specs/platform.md)
+- 操作手册: [DEPLOYMENT.md](./DEPLOYMENT.md)
+- CI/CD: [.github/workflows/deploy.yml](./.github/workflows/deploy.yml)
 

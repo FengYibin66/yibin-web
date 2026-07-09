@@ -3,7 +3,7 @@
 **状态**: In Progress — 交互升级 + Gallery 页面开发中  
 **作者**: Yibin Feng  
 **日期**: 2026-07-06（最后更新 2026-07-07）  
-**关联**: portal-homepage.md, infra-dev-environment.md  
+**关联**: [portal-homepage.md](./portal-homepage.md), [platform.md](./platform.md), [lab-corridor-complete-spec.md](./lab-corridor-complete-spec.md)  
 **调研来源**: docs/research/resume-portfolio-tech-research.md, docs/research/interactive-effects-upgrade.md
 
 ---

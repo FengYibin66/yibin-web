@@ -3,7 +3,7 @@
 **状态**: Ready — Open Questions 全部确认，可以开始实现  
 **作者**: Yibin Feng  
 **日期**: 2026-07-05  
-**关联**: resume spec (TBD)
+**关联**: [resume-site.md](./resume-site.md), [platform.md](./platform.md)
 
 ---
 
@@ -152,10 +152,13 @@ apps/portal/
 开发端口：server 3001，client Vite 5173（Vite proxy 透传 /api 到 3001）
 ```
 
-**开发环境说明：**
-- server `dev` 脚本使用 `tsx watch --env-file=../.env src/index.ts`（Node 20+ 原生加载 `.env`）
-- Vite dev server 配置 `host: true` + `allowedHosts: ['www.yibinfeng.com', 'localhost']`，配合 Caddy 反代使用真域名
-- CORS 支持逗号分隔多 origin：`CLIENT_ORIGIN=http://www.yibinfeng.com,http://localhost:5173`
+**开发环境说明**（详见 [platform.md](./platform.md) §1–§2）：
+
+- 先执行根目录 `./scripts/env-build.sh development`
+- Server env 由脚本生成 **`apps/portal/.env`**（勿手改）
+- Server dev：`tsx watch --env-file=../.env` → 读取 `apps/portal/.env`
+- Vite：`host: true` + `allowedHosts: ['www.yibinfeng.com', 'localhost']`
+- CORS：`CLIENT_ORIGIN=http://www.yibinfeng.com,http://localhost:5173`（在 `config/env.development.example`）
 
 ### 数据模型（SQLite via Drizzle ORM）
 
@@ -300,7 +303,7 @@ volumes:
 ## 9. Open Questions（实现前必须确认）
 
 - [x] **头像图片**：使用 Yibin.jpg（CSCW 2025 展示现场照）
-- [x] **Admin 登录方式**：固定密码，存在服务器 `.env` 文件，httpOnly Cookie 会话
+- [x] **Admin 登录方式**：固定密码，存在 `apps/portal/.env`（由 env-build 从 `.env.shared.local` 生成），httpOnly Cookie 会话
 - [x] **项目卡片截图**：需要，admin 后台支持上传
 - [x] **子项目访问控制**：Portal 本身公开可访问；各子项目各自处理自己的权限（portal 卡片只负责链接过去）
 

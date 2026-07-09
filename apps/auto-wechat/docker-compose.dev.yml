@@ -1,13 +1,19 @@
+# Requires root .env.development — run from repo root:
+#   ./scripts/env-build.sh development
+# Or from this directory:
+#   docker compose --env-file ../../.env.development -f docker-compose.dev.yml up -d
+
 services:
   mysql:
     image: docker.m.daocloud.io/library/mysql:8.4
+    env_file:
+      - ../../.env.development
     environment:
-      MYSQL_ROOT_PASSWORD: root_change_me
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: wechat_ai
       MYSQL_USER: wechat
-      MYSQL_PASSWORD: change_me
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      # 宿主机 3306 常被本机 MySQL 占用；GUI/本机 Go 请连 3307
       - "3307:3306"
     volumes:
       - mysqldata:/var/lib/mysql
@@ -18,7 +24,7 @@ services:
       - --default-time-zone=+00:00
       - --mysql-native-password=ON
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uwechat", "-pchange_me"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uwechat", "-p${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 15
@@ -39,7 +45,7 @@ services:
     ports:
       - "8090:8090"
     env_file:
-      - .env.development
+      - ../../.env.development
     environment:
       PORT: "8090"
     volumes:
@@ -58,11 +64,8 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env.development
+      - ../../.env.development
     environment:
-      DATABASE_URL: mysql://wechat:change_me@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
-      REDIS_URL: redis://redis:6379/0
-      LLM_SERVICE_URL: http://llm-service:8090
       MIGRATIONS_PATH: /src/migrations
     volumes:
       - ./backend:/src
@@ -82,11 +85,7 @@ services:
       context: ./backend
       target: dev
     env_file:
-      - .env.development
-    environment:
-      DATABASE_URL: mysql://wechat:change_me@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
-      REDIS_URL: redis://redis:6379/0
-      LLM_SERVICE_URL: http://llm-service:8090
+      - ../../.env.development
     volumes:
       - ./backend:/src
       - go-mod-cache:/go/pkg/mod

@@ -5,7 +5,7 @@
 ## 开发
 
 ```bash
-cp .env.example .env.development
+后端 env 见根目录 [`config/README.md`](../../../config/README.md)。前端 env 仍用本目录 `.env.example`。
 # 后端需先运行 createadmin 创建管理员（密码存 admin_users 表），浏览器 Cookie 鉴权
 
 pnpm install

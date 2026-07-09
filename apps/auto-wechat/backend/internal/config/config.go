@@ -40,10 +40,18 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	// Monorepo: .env.development 常在项目根目录，backend/ 内执行 CLI 时需回退加载
-	_ = godotenv.Load(".env.development")
-	_ = godotenv.Load("../.env.development")
-	_ = godotenv.Load(".env")
+	// Monorepo root env files (development / production); paths for CLI from backend/
+	for _, path := range []string{
+		".env.production",
+		".env.development",
+		"../.env.production",
+		"../.env.development",
+		"../../.env.production",
+		"../../.env.development",
+		".env",
+	} {
+		_ = godotenv.Load(path)
+	}
 
 	port, err := strconv.Atoi(getEnv("API_PORT", "8080"))
 	if err != nil {

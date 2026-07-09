@@ -57,8 +57,10 @@ check "docker/nginx-prod.conf exists"
 [ -f ".github/workflows/deploy.yml" ]
 check ".github/workflows/deploy.yml exists"
 
-[ -f ".env.production.example" ]
-check ".env.production.example exists"
+[ -f "config/env.shared.example" ]
+check "config/env.shared.example exists"
+[ -f "config/env.production.example" ]
+check "config/env.production.example exists"
 
 [ -f "DEPLOYMENT.md" ]
 check "DEPLOYMENT.md exists"

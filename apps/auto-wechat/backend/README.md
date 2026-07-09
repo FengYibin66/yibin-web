@@ -20,7 +20,7 @@ backend/
 
 ```bash
 # 项目根目录
-cp .env.example .env.development
+环境变量见 monorepo 根目录 [`config/README.md`](../../config/README.md)。本地 Docker 需先在根目录执行 `./scripts/env-build.sh development`。
 
 # 终端 1 — API（自动 migrate）
 cd backend

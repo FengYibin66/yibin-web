@@ -33,8 +33,14 @@ AI 驱动的微信公众号自动化运营系统：一键 Pipeline（采集 → 
 
 **首次启动前**：安装 Docker Desktop，并按 [docs/07-docker-local-setup.md](./docs/07-docker-local-setup.md) 配置阿里云镜像加速。
 
+环境变量由 **monorepo 根目录** 统一管理（见 [`../../config/README.md`](../../config/README.md)）：
+
 ```bash
-cp .env.example .env.development
+# 在 yibin-web 根目录
+cp config/env.shared.example .env.shared.local   # 填密钥
+./scripts/env-build.sh development                 # → .env.development
+
+cd apps/auto-wechat
 make dev-up          # mysql, redis, api, worker, llm-service
 make health
 cd frontend && pnpm install && pnpm dev
@@ -52,15 +58,15 @@ Go 本地编译：`cd backend && GOPROXY=https://goproxy.cn,direct go run ./cmd/
 | 端口 | **`3307`**（映射到容器内 3306；避免与本机已安装的 MySQL 抢 3306） |
 | 数据库名 | `wechat_ai` |
 | 用户名 | `wechat` |
-| 密码 | `change_me` |
-| root 密码 | `root_change_me`（仅管理用） |
+| 密码 | 见根目录 `.env.shared.local` → `MYSQL_PASSWORD` |
+| root 密码 | 见 `.env.shared.local` → `MYSQL_ROOT_PASSWORD` |
 
-定义位置：`docker-compose.dev.yml` → `services.mysql.environment`（`MYSQL_USER` / `MYSQL_PASSWORD` 等）。
+定义位置：根目录 `config/env.shared.example` + `.env.shared.local`，由 `./scripts/env-build.sh development` 合并为 `.env.development`；`docker-compose.dev.yml` 从 `../../.env.development` 读取。
 
-应用连接串写在 **`.env.development`**（模板见 `.env.example`）：
+应用连接串在合并后的 **`.env.development`**（Docker 内使用主机名 `mysql:3306`）：
 
 ```bash
-DATABASE_URL=mysql://wechat:change_me@tcp(localhost:3307)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
+DATABASE_URL=mysql://wechat:<password>@tcp(mysql:3306)/wechat_ai?parseTime=true&loc=UTC&charset=utf8mb4
 ```
 
 - 容器内 api/worker 使用主机名 `mysql` 而非 `localhost`（compose 已覆盖）。
@@ -79,7 +85,7 @@ MySQL **8.4** 默认禁用 `mysql_native_password`。本项目 compose 使用 **
 2. **最常见**：本机已装 MySQL 占用 **3306**，Sequel Ace 连错实例。请用端口 **`3307`**（Docker 映射）。可执行 `lsof -i :3306` 看是否有本机 `mysqld`。
 3. **保留数据**：在容器内执行 `docker/mysql-init/01-native-password.sql` 中的 `ALTER USER`（或 `make mysql-fix-auth`，若有）。
 
-**改密码**：同时修改 `docker-compose.dev.yml` 中的 `MYSQL_PASSWORD` 与 `.env.development` 里 `DATABASE_URL` 的密码部分；若数据卷已初始化过，需 `docker compose -f docker-compose.dev.yml down -v` 后重新 `make dev-up`，或在 MySQL 内 `ALTER USER`。
+**改密码**：只改根目录 `.env.shared.local` 中的 `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD`，再运行 `./scripts/env-build.sh development`；若数据卷已初始化，需 `make dev-down` 后 `docker compose ... down -v` 重建。
 
 **从旧 PostgreSQL 切换**：执行 `docker compose -f docker-compose.dev.yml down -v` 清掉旧 `pgdata` 卷后再 `make dev-up`（会新建 `mysqldata` 空库）。
 
@@ -135,17 +141,22 @@ cp frontend/.env.production.example frontend/.env.production
 # 保持 VITE_API_BASE_URL=/api/v1
 ```
 
-服务器 `.env.development` 建议：`ENV=production`、`SESSION_SECURE=false`（HTTP 阶段），备案后 HTTPS 再改 `true` 并换 `docker/nginx-site.conf`。
+服务器 `.env.production` 由根目录 `./scripts/env-build.sh production` 生成（见 `config/README.md`）。
 
 若曾手动 `docker run --name frontend`，先执行一次：`sudo docker rm -f frontend`。
 
 ## 环境配置
 
-| 场景 | 文件 |
-|------|------|
-| 本地开发 | 复制 `.env.example` → `.env.development`；`PUBLIC_API_BASE_URL=http://localhost:8080` |
-| 生产服务器 | 复制 `.env.production.example` → `.env.development`；`PUBLIC_API_BASE_URL=https://你的域名` |
-| 手机微信预览 | 临时改 `PUBLIC_API_BASE_URL` 为 ngrok 地址（见 `.env.local.ngrok.example`） |
+平台 Spec：[docs/specs/platform.md](../../docs/specs/platform.md) · 产品文档：[docs/](./docs/)
+
+| 场景 | 命令 / 文件 |
+|------|-------------|
+| 密钥（dev + prod 共用） | 根目录 `.env.shared.local`（模板 `config/env.shared.example`） |
+| 本地 Docker | `./scripts/env-build.sh development` → `.env.development` |
+| CVM 生产 | `./scripts/env-build.sh production` → `.env.production` |
+| 手机微信预览 | `ENV_EXTRA=config/env.ngrok.example ./scripts/env-build.sh development`（见 `config/env.ngrok.example`） |
+
+详见 monorepo 根目录 [`config/README.md`](../../config/README.md)。
 
 前端：`frontend/.env.development`（本地）、`frontend/.env.production`（构建，模板见 `frontend/.env.production.example`）。
 

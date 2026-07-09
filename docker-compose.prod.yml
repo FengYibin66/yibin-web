@@ -1,5 +1,8 @@
 version: '3.9'
 
+# Production env: ./scripts/env-build.sh production → .env.production
+# See config/README.md
+
 services:
   # ──────────────────────────────────────────────────────────────
   # Nginx 反向代理（所有三个应用 + SSL）

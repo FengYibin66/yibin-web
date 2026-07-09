@@ -12,7 +12,7 @@
 |----|------|
 | 系统 | macOS（Apple Silicon / Intel 均可） |
 | Docker | **Docker Desktop** 已安装并处于 **Running** |
-| 项目配置 | 根目录已有 `.env.development`（见 `.env.example`） |
+| 项目配置 | 根目录 `.env.development`（`./scripts/env-build.sh development`） |
 
 验证 Docker 可用：
 

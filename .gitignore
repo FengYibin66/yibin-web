@@ -1,5 +1,7 @@
-# pnpm (lockfile MUST be committed — see docs/specs/platform.md)
+# pnpm (lockfile MUST be committed at repo root — see docs/specs/platform.md)
 node_modules/
+# Nested lockfiles from accidental local install — use root pnpm-lock.yaml only
+apps/**/pnpm-lock.yaml
 .pnpm-store/
 
 # Build outputs

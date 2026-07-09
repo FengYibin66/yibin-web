@@ -21,14 +21,30 @@ echo "==> 1/4 Validate environment"
 ./scripts/env-build.sh production --check
 
 echo "==> 2/4 Ensure pnpm version (packageManager in package.json)"
-if command -v corepack >/dev/null 2>&1; then
-  corepack enable
-  corepack prepare pnpm@10.22.0 --activate
-fi
-command -v pnpm >/dev/null 2>&1 || {
-  echo "Install Node 20 + enable corepack, or: npm install -g pnpm@10.22.0" >&2
-  exit 1
+ensure_pnpm() {
+  if command -v pnpm >/dev/null 2>&1; then
+    echo "pnpm $(pnpm -v)"
+    return 0
+  fi
+  if command -v corepack >/dev/null 2>&1; then
+    corepack enable 2>/dev/null || sudo corepack enable
+    corepack prepare pnpm@10.22.0 --activate 2>/dev/null || sudo corepack prepare pnpm@10.22.0 --activate
+  fi
+  if ! command -v pnpm >/dev/null 2>&1; then
+    sudo npm install -g pnpm@10.22.0
+  fi
+  command -v pnpm >/dev/null 2>&1 || {
+    echo "Install pnpm: sudo corepack enable && sudo corepack prepare pnpm@10.22.0 --activate" >&2
+    exit 1
+  }
+  echo "pnpm $(pnpm -v)"
 }
+ensure_pnpm
+
+if [[ ! -f .npmrc && -f config/npmrc.cvm.example ]]; then
+  cp config/npmrc.cvm.example .npmrc
+  echo "Using config/npmrc.cvm.example → .npmrc"
+fi
 
 echo "==> 3/4 Build static frontends (nginx volume mounts)"
 ./scripts/build-prod-assets.sh

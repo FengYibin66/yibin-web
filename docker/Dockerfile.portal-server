@@ -14,9 +14,10 @@ RUN npm install -g pnpm@10.22.0
 
 # Copy monorepo files (no packages/ workspace in this repo)
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY config/npmrc.cvm.example .npmrc
 COPY apps/portal/server ./apps/portal/server
 
-# Install dependencies
+# Install dependencies (CVM/国内：npmmirror，见 config/npmrc.cvm.example)
 RUN pnpm install --frozen-lockfile
 
 # Build Portal Server (TypeScript → dist/)
@@ -35,6 +36,7 @@ RUN npm install -g pnpm@10.22.0
 
 # Copy monorepo files from builder
 COPY --from=builder /build/pnpm-workspace.yaml /build/package.json /build/pnpm-lock.yaml ./
+COPY --from=builder /build/.npmrc ./.npmrc
 COPY --from=builder /build/apps/portal/server/dist ./dist
 COPY --from=builder /build/apps/portal/server/package.json ./
 

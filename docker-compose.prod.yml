@@ -8,7 +8,7 @@ services:
   # Nginx 反向代理（所有三个应用 + SSL）
   # ──────────────────────────────────────────────────────────────
   nginx:
-    image: nginx:alpine
+    image: docker.m.daocloud.io/library/nginx:alpine
     container_name: nginx-prod
     ports:
       - "80:80"
@@ -52,7 +52,7 @@ services:
     expose:
       - "3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -64,6 +64,9 @@ services:
     cpus: "0.5"
     depends_on:
       - mysql
+    volumes:
+      - portal_data:/data
+      - portal_uploads:/app/uploads
 
   # ──────────────────────────────────────────────────────────────
   # Resume 前端（Next.js SSG → Nginx）
@@ -149,7 +152,7 @@ services:
     env_file:
       - .env.production
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -164,7 +167,7 @@ services:
   # MySQL 数据库
   # ──────────────────────────────────────────────────────────────
   mysql:
-    image: docker.io/library/mysql:8.4
+    image: docker.m.daocloud.io/library/mysql:8.4
     container_name: mysql-prod
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
@@ -195,7 +198,7 @@ services:
   # Redis 缓存 + 任务队列
   # ──────────────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: docker.m.daocloud.io/library/redis:7-alpine
     container_name: redis-prod
     expose:
       - "6379"
@@ -225,6 +228,10 @@ volumes:
   redis_data:
     driver: local
   media_data:
+    driver: local
+  portal_data:
+    driver: local
+  portal_uploads:
     driver: local
   certbot-webroot:
     driver: local

@@ -71,7 +71,7 @@ func main() {
 	layoutTemplateRepo := mysql.NewLayoutTemplateRepository(db)
 	layoutTemplateService := application.NewLayoutTemplateService(layoutTemplateRepo)
 	llmClient := llmclient.NewClient(cfg.LLMServiceURL).WithTimeout(cfg.LLMInvokeTimeout)
-	coverFetcher := cover.NewFetcher()
+	coverFetcher := cover.NewFetcher(cfg.PublicAPIBaseURL)
 	imageAssetRepo := mysql.NewImageAssetRepository(db)
 	mediaStore, err := media.NewStore(cfg.MediaDir, cfg.PublicAPIBaseURL)
 	if err != nil {

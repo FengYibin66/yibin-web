@@ -28,6 +28,9 @@ app.route('/api/profile', profileRouter)
 app.route('/api/projects', projectsRouter)
 app.route('/api/uploads', uploadsRouter)
 
+app.get('/health', (c) => c.json({ status: 'ok' }))
+app.get('/api/health', (c) => c.json({ status: 'ok' }))
+
 // Serve uploaded files
 app.use(
   '/uploads/*',

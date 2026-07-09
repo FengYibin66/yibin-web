@@ -4,6 +4,11 @@
 
 set -e
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+# shellcheck source=verify-local-compose.sh
+source "$ROOT/scripts/verify-local-compose.sh"
+
 echo "🔍 Verifying yibin_web production deployment..."
 echo ""
 
@@ -110,13 +115,20 @@ check "Auto-Wechat frontend dist/ generated"
 # 5. Verify docker-compose configuration
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "🐳 5. Verifying docker-compose configuration..."
+echo "🐳 5. Building env + verifying docker-compose..."
 
-docker compose -f docker-compose.prod.yml config > /dev/null 2>&1
-check "docker-compose.prod.yml syntax valid"
+ENV_SHARED_LOCAL="$ROOT/config/env.shared.verify.example" \
+ENV_EXTRA="$ROOT/config/env.production.localhost.example" \
+"$ROOT/scripts/env-build.sh" production
+check "env-build production"
 
-# Check services count
-service_count=$(docker compose -f docker-compose.prod.yml config --services | wc -l)
+ensure_local_tls_certs
+check "local TLS certs ready"
+
+compose_local config > /dev/null 2>&1
+check "docker-compose.prod.yml + local overlay syntax valid"
+
+service_count=$(compose_local config --services | wc -l | tr -d ' ')
 [ "$service_count" -eq 7 ]
 check "All 7 services defined (nginx, portal-server, resume, auto-wechat-api, auto-wechat-worker, llm-service, mysql, redis)"
 
@@ -127,7 +139,7 @@ echo ""
 echo "🏗️  6. Building Docker images..."
 echo -e "${YELLOW}This may take a few minutes...${NC}"
 
-docker compose -f docker-compose.prod.yml build --progress=plain > /dev/null 2>&1
+compose_local build --progress=plain > /dev/null 2>&1
 check "Docker images built successfully"
 
 # ──────────────────────────────────────────────────────────────
@@ -136,11 +148,14 @@ check "Docker images built successfully"
 echo ""
 echo "🚀 7. Starting services..."
 
-docker compose -f docker-compose.prod.yml up -d > /dev/null 2>&1
+compose_local up -d > /dev/null 2>&1
 check "Docker Compose services started"
 
+compose_local up -d --force-recreate nginx > /dev/null 2>&1
+check "Nginx recreated with fresh static mounts"
+
 # Wait for services to be ready
-sleep 10
+sleep 15
 
 # ──────────────────────────────────────────────────────────────
 # 8. Verify service health
@@ -148,22 +163,28 @@ sleep 10
 echo ""
 echo "❤️  8. Checking service health..."
 
-# Check if services are running
-running_services=$(docker compose -f docker-compose.prod.yml ps -q | wc -l)
+running_services=$(compose_local ps -q | wc -l | tr -d ' ')
 [ "$running_services" -ge 7 ]
 check "All services running"
 
-# Check MySQL
-docker compose -f docker-compose.prod.yml exec -T mysql mysqladmin ping -h 127.0.0.1 > /dev/null 2>&1
+compose_local exec -T mysql mysqladmin ping -h 127.0.0.1 > /dev/null 2>&1
 check "MySQL health check"
 
-# Check Redis
-docker compose -f docker-compose.prod.yml exec -T redis redis-cli ping > /dev/null 2>&1
+compose_local exec -T redis redis-cli ping > /dev/null 2>&1
 check "Redis health check"
 
-# Check Portal Server (healthcheck endpoint)
-docker compose -f docker-compose.prod.yml exec -T portal-server curl -f http://localhost:3001/health > /dev/null 2>&1
-check "Portal Server health endpoint"
+compose_local exec -T portal-server node -e \
+  "require('http').get('http://localhost:3001/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))" \
+  > /dev/null 2>&1
+check "Portal Server /health"
+
+compose_local exec -T portal-server node -e \
+  "require('http').get('http://localhost:3001/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))" \
+  > /dev/null 2>&1
+check "Portal Server /api/health"
+
+curl -sf -H 'Host: www.yibinfeng.com' http://127.0.0.1/api/health > /dev/null 2>&1
+check "Nginx → Portal /api/health"
 
 # ──────────────────────────────────────────────────────────────
 # 9. Verify network connectivity
@@ -171,11 +192,11 @@ check "Portal Server health endpoint"
 echo ""
 echo "🌐 9. Verifying service connectivity..."
 
-docker compose -f docker-compose.prod.yml exec -T portal-server curl -s http://mysql:3306 > /dev/null 2>&1 || true
-check "Portal Server can reach MySQL"
+compose_local exec -T auto-wechat-api curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1
+check "Auto-Wechat API /api/v1/health"
 
-docker compose -f docker-compose.prod.yml exec -T auto-wechat-api curl -s http://redis:6379 > /dev/null 2>&1 || true
-check "Auto-Wechat API can reach Redis"
+curl -sf -H 'Host: mpauto.yibinfeng.com' http://127.0.0.1/api/v1/health > /dev/null 2>&1
+check "Nginx → Auto-Wechat /api/v1/health"
 
 # ──────────────────────────────────────────────────────────────
 # 10. Cleanup
@@ -183,7 +204,7 @@ check "Auto-Wechat API can reach Redis"
 echo ""
 echo "🧹 10. Cleaning up..."
 
-docker compose -f docker-compose.prod.yml down -v > /dev/null 2>&1
+compose_local down -v > /dev/null 2>&1
 check "Cleanup complete (containers and volumes removed)"
 
 # ──────────────────────────────────────────────────────────────

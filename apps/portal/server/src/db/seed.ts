@@ -7,6 +7,13 @@ const url = `file:${resolve(process.env.DB_PATH ?? '../data/portal.db')}`
 const client = createClient({ url })
 const db = drizzle(client)
 
+const existing = await db.select().from(project).limit(1)
+if (existing.length > 0) {
+  console.log('Seed skipped: projects already exist')
+  await client.close()
+  process.exit(0)
+}
+
 await db.insert(profile).values({
   id: 1,
   nameEn: 'Yibin Feng',

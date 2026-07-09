@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/worker ./cmd/worker
 
 FROM docker.m.daocloud.io/library/alpine:3.20 AS api
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates curl
 WORKDIR /app
 COPY --from=builder /bin/api /app/api
 COPY migrations /app/migrations

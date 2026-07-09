@@ -5,7 +5,7 @@
 # ──────────────────────────────────────────────────────────────
 # Stage 1: Builder
 # ──────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM docker.m.daocloud.io/library/node:20-alpine AS builder
 
 WORKDIR /build
 
@@ -27,7 +27,7 @@ RUN pnpm run build
 # ──────────────────────────────────────────────────────────────
 # Stage 2: Runtime (Nginx)
 # ──────────────────────────────────────────────────────────────
-FROM nginx:alpine
+FROM docker.m.daocloud.io/library/nginx:alpine
 
 # Copy built resume to Nginx
 COPY --from=builder /build/apps/resume/out /usr/share/nginx/html

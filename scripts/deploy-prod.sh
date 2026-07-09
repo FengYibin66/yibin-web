@@ -50,7 +50,7 @@ echo "==> 3/4 Build static frontends (nginx volume mounts)"
 ./scripts/build-prod-assets.sh
 
 echo "==> 4/4 Docker Compose up"
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 echo ""
 echo "✅ Deploy finished. Verify:"

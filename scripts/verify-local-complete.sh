@@ -6,6 +6,8 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=verify-local-compose.sh
+source "$ROOT/scripts/verify-local-compose.sh"
 
 echo "🔍 Complete local production deployment verification"
 echo ""
@@ -56,25 +58,30 @@ ENV_EXTRA="$ROOT/config/env.production.localhost.example" \
 
 check ".env.production built via scripts/env-build.sh"
 
+ensure_local_tls_certs
+check "local TLS certs ready"
+
 # ──────────────────────────────────────────────────────────────
 # 4. Build Docker images
 # ──────────────────────────────────────────────────────────────
 echo ""
 echo "🐳 4. Building Docker images..."
-docker compose -f docker-compose.prod.yml build --progress=plain > /dev/null 2>&1 && check "Docker images built" || exit 1
+compose_local build --progress=plain > /dev/null 2>&1 && check "Docker images built" || exit 1
 
 # ──────────────────────────────────────────────────────────────
 # 5. Start services
 # ──────────────────────────────────────────────────────────────
 echo ""
 echo "🚀 5. Starting services..."
-docker compose -f docker-compose.prod.yml up -d > /dev/null 2>&1 && check "Services started" || exit 1
+compose_local up -d > /dev/null 2>&1 && check "Services started" || exit 1
+# Re-mount static assets after pnpm build (Docker bind mount can go stale on macOS)
+compose_local up -d --force-recreate nginx > /dev/null 2>&1 && check "Nginx recreated with fresh static mounts" || exit 1
 
 # Wait for services to stabilize
 echo -e "${YELLOW}Waiting for services to stabilize...${NC}"
-for i in {1..30}; do
-  if docker compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
-    sleep 2
+for i in {1..60}; do
+  if compose_local ps 2>/dev/null | grep -q "healthy"; then
+    sleep 3
     break
   fi
   echo -n "."
@@ -88,14 +95,11 @@ echo ""
 echo ""
 echo "❤️  6. Verifying services..."
 
-# Check all services
-docker compose -f docker-compose.prod.yml ps | grep -q "Up" && check "Services running" || exit 1
+compose_local ps | grep -q "Up" && check "Services running" || exit 1
 
-# Check MySQL
-docker compose -f docker-compose.prod.yml exec -T mysql mysqladmin ping -h 127.0.0.1 > /dev/null 2>&1 && check "MySQL running" || exit 1
+compose_local exec -T mysql mysqladmin ping -h 127.0.0.1 > /dev/null 2>&1 && check "MySQL running" || exit 1
 
-# Check Redis
-docker compose -f docker-compose.prod.yml exec -T redis redis-cli ping > /dev/null 2>&1 && check "Redis running" || exit 1
+compose_local exec -T redis redis-cli ping > /dev/null 2>&1 && check "Redis running" || exit 1
 
 # ──────────────────────────────────────────────────────────────
 # 7. Web access tests (the REAL verification!)
@@ -103,31 +107,44 @@ docker compose -f docker-compose.prod.yml exec -T redis redis-cli ping > /dev/nu
 echo ""
 echo "🌐 7. Testing web access..."
 
-# Test Nginx (reverse proxy)
-echo -n "   Testing Nginx... "
-if curl -s http://localhost:80/ > /dev/null 2>&1 || curl -s http://localhost/ > /dev/null 2>&1; then
+echo -n "   Portal /api/health (via Nginx)... "
+if curl -sf -H 'Host: www.yibinfeng.com' http://127.0.0.1/api/health > /dev/null 2>&1; then
   echo -e "${GREEN}✅${NC}"
 else
   echo -e "${RED}❌${NC}"
-  echo "     Nginx not responding to HTTP"
+  exit 1
 fi
 
-# Test Portal Server directly
-echo -n "   Testing Portal Server (localhost:3001)... "
-if curl -s http://localhost:3001/health > /dev/null 2>&1; then
+echo -n "   Portal homepage (via Nginx)... "
+if curl -sf -H 'Host: www.yibinfeng.com' http://127.0.0.1/ > /dev/null 2>&1; then
   echo -e "${GREEN}✅${NC}"
 else
   echo -e "${RED}❌${NC}"
-  echo "     Portal Server not responding"
+  exit 1
 fi
 
-# Test Auto-Wechat API directly
-echo -n "   Testing Auto-Wechat API (localhost:8080)... "
-if curl -s http://localhost:8080/api/v1/health > /dev/null 2>&1; then
+echo -n "   Resume homepage (via Nginx)... "
+if curl -sf -H 'Host: resume.yibinfeng.com' http://127.0.0.1/ > /dev/null 2>&1; then
   echo -e "${GREEN}✅${NC}"
 else
   echo -e "${RED}❌${NC}"
-  echo "     Auto-Wechat API not responding"
+  exit 1
+fi
+
+echo -n "   Auto-Wechat /api/v1/health (via Nginx)... "
+if curl -sf -H 'Host: mpauto.yibinfeng.com' http://127.0.0.1/api/v1/health > /dev/null 2>&1; then
+  echo -e "${GREEN}✅${NC}"
+else
+  echo -e "${RED}❌${NC}"
+  exit 1
+fi
+
+echo -n "   Portal /api/projects (via Nginx)... "
+if curl -sf -H 'Host: www.yibinfeng.com' http://127.0.0.1/api/projects | grep -q '"nameEn"'; then
+  echo -e "${GREEN}✅${NC}"
+else
+  echo -e "${RED}❌${NC}"
+  exit 1
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -140,24 +157,25 @@ echo "════════════════════════�
 echo ""
 echo -e "${BLUE}Access locally:${NC}"
 echo ""
-echo "  Portal (直接访问):"
-echo "    http://localhost:3001"
-echo "    API: http://localhost:3001/api/health"
+echo "  Portal (SwitchHosts → 127.0.0.1):"
+echo "    http://www.yibinfeng.com"
+echo "    http://www.yibinfeng.com/api/health"
+echo "    http://www.yibinfeng.com/api/projects"
 echo ""
-echo "  Resume (通过 Nginx):"
-echo "    http://localhost/           (如果 Nginx 指向 resume)"
+echo "  Resume:"
+echo "    http://resume.yibinfeng.com"
 echo ""
-echo "  Auto-Wechat API (直接访问):"
-echo "    http://localhost:8080/api/v1/health"
+echo "  Auto-Wechat:"
+echo "    http://mpauto.yibinfeng.com"
+echo "    http://mpauto.yibinfeng.com/api/v1/health"
 echo ""
 echo -e "${BLUE}或使用 curl 测试:${NC}"
 echo ""
-echo "  curl http://localhost:3001/health"
-echo "  curl http://localhost:8080/api/v1/health"
-echo "  curl http://localhost/"
+echo "  curl -H 'Host: www.yibinfeng.com' http://127.0.0.1/api/health"
+echo "  curl -H 'Host: mpauto.yibinfeng.com' http://127.0.0.1/api/v1/health"
 echo ""
 echo -e "${BLUE}停止服务:${NC}"
-echo "  docker compose -f docker-compose.prod.yml down -v"
+echo "  docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.local-prod.yml down -v"
 echo ""
 echo "════════════════════════════════════════════════════════════"
 echo ""

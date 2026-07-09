@@ -4,7 +4,9 @@ node_modules/
 apps/**/pnpm-lock.yaml
 .pnpm-store/
 
-# Build outputs
+# Docker local dev certs (generated, not for production)
+docker/certs/
+
 dist/
 out/
 .next/

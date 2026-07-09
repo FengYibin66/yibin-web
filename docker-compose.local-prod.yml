@@ -1,0 +1,16 @@
+# Local overlay for docker-compose.prod.yml — HTTP/HTTPS with self-signed certs (no Let's Encrypt).
+# Usage:
+#   docker compose --env-file .env.production \
+#     -f docker-compose.prod.yml -f docker-compose.local-prod.yml up -d
+
+services:
+  nginx:
+    volumes:
+      - ./docker/nginx-local.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+      - ./apps/portal/client/dist:/usr/share/nginx/html/portal:ro
+      - ./apps/resume/out:/usr/share/nginx/html/resume:ro
+      - ./apps/auto-wechat/frontend/dist:/usr/share/nginx/html/wechat:ro
+    ports:
+      - "80:80"
+      - "443:443"

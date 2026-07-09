@@ -80,7 +80,7 @@ func main() {
 		}),
 		llmClient,
 		wechatClient,
-		cover.NewFetcher(),
+		cover.NewFetcher(cfg.PublicAPIBaseURL),
 		cfg.PublicAPIBaseURL,
 		cfg.WeChatReadSourceURL,
 		readSourcePresetRepo,

@@ -9,20 +9,21 @@ FROM node:20-alpine AS builder
 
 WORKDIR /build
 
-# Install pnpm
 RUN npm install -g pnpm@10.22.0
 
-# Copy monorepo files (no packages/ workspace in this repo)
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY config/npmrc.cvm.example .npmrc
 COPY apps/portal/server ./apps/portal/server
 
-# Install dependencies (CVM/国内：npmmirror，见 config/npmrc.cvm.example)
 RUN pnpm install --frozen-lockfile
 
-# Build Portal Server (TypeScript → dist/)
 WORKDIR /build/apps/portal/server
 RUN pnpm run build
+
+# Portable prod bundle (avoids lockfile mismatch in runtime stage)
+WORKDIR /build
+RUN pnpm --filter @yibin/portal-server deploy --prod /prod/portal-server \
+  && cp -r apps/portal/server/dist /prod/portal-server/dist
 
 # ──────────────────────────────────────────────────────────────
 # Stage 2: Runtime
@@ -31,24 +32,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install pnpm in runtime (for production dependencies)
-RUN npm install -g pnpm@10.22.0
+ENV NODE_ENV=production
 
-# Copy monorepo files from builder
-COPY --from=builder /build/pnpm-workspace.yaml /build/package.json /build/pnpm-lock.yaml ./
-COPY --from=builder /build/.npmrc ./.npmrc
-COPY --from=builder /build/apps/portal/server/dist ./dist
-COPY --from=builder /build/apps/portal/server/package.json ./
+COPY --from=builder /prod/portal-server ./
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# Expose port
 EXPOSE 3001
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
-# Start application
 CMD ["node", "dist/index.js"]

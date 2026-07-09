@@ -1,11 +1,11 @@
 # 🚀 yibin_web 腾讯云 CVM 部署 Agent Prompt
 
-> **Spec 索引**: [docs/specs/README.md](./docs/specs/README.md)  
-> **平台 Spec**: [docs/specs/platform.md](./docs/specs/platform.md)
+> **Spec 索引**: [docs/specs/README.md](../specs/README.md)  
+> **平台 Spec**: [docs/specs/platform.md](../specs/platform.md)
 
 ## 任务概述
 
-部署 yibin_web monorepo 到腾讯云 CVM（香港），启动完整的生产环境。所有配置文件和代码已经完成，现在需要在 CVM 上实施部署。
+部署 yibin_web monorepo 到腾讯云 CVM（北京 Lighthouse），启动完整的生产环境。所有配置文件和代码已经完成，现在需要在 CVM 上实施部署。
 
 **预期时间**: 20-30 分钟  
 **难度**: 中等（主要是 SSH 操作和等待）
@@ -275,8 +275,8 @@ CVM_USER                = SSH 用户名（ubuntu 或 root）
 
 ## 参考文档
 
-- Spec 索引: [docs/specs/README.md](./docs/specs/README.md)
-- 平台 Spec: [docs/specs/platform.md](./docs/specs/platform.md)
-- 操作手册: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- CI/CD: [.github/workflows/deploy.yml](./.github/workflows/deploy.yml)
+- Spec 索引: [docs/specs/README.md](../specs/README.md)
+- 平台 Spec: [docs/specs/platform.md](../specs/platform.md)
+- 操作手册: [DEPLOYMENT.md](../../DEPLOYMENT.md)
+- CI/CD: [.github/workflows/deploy.yml](../../.github/workflows/deploy.yml)
 

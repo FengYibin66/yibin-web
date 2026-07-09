@@ -11,7 +11,7 @@
 
 **Tech Stack:** TypeScript, React, Next.js, Hono, Go, Python, Docker Compose, MySQL, Redis
 
-**Deployment:** Docker Compose on Tencent Cloud CVM (Hong Kong region) with HTTPS + Nginx reverse proxy
+**Deployment:** Docker Compose on Tencent Cloud CVM (Beijing region) with HTTPS + Nginx reverse proxy
 
 ---
 

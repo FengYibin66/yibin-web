@@ -3,7 +3,7 @@
 **状态**: Ready — 已实现  
 **作者**: Yibin Feng  
 **日期**: 2026-07-09  
-**操作手册**: 本地见下文 §2；生产步骤见 [`DEPLOYMENT.md`](../../DEPLOYMENT.md)、[`AGENT_DEPLOYMENT_PROMPT.md`](../../AGENT_DEPLOYMENT_PROMPT.md)
+**操作手册**: 本地见下文 §2；生产步骤见 [`DEPLOYMENT.md`](../../DEPLOYMENT.md)、[`docs/deployment/AGENT_PROMPT.md`](../deployment/AGENT_PROMPT.md)
 
 Monorepo 含 Portal、Resume、Auto-Wechat 三个应用，共享 Docker 生产编排。本文是**环境变量、本地开发、生产部署**的唯一权威 Spec。
 

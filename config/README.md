@@ -20,7 +20,7 @@ cp config/env.shared.example .env.shared.local
 | `env.shared.example` | 敏感信息（密钥、密码）— 所有环境通用 |
 | `env.development.example` | 开发环境 URL 和开关（脚本自动合并） |
 | `env.production.example` | 生产环境 URL 和开关（脚本自动合并） |
-| `env.localhost.example` | 本地测试模板 |
+| `env.production.localhost.example` | 本地 prod compose localhost 覆盖 |
 
 ## 2. 前端配置
 

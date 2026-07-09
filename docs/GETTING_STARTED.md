@@ -42,6 +42,23 @@ Create a rule group named `yibin-local-dev` in SwitchHosts with:
 
 Enable it during development, disable when done (to access production sites).
 
+### 3. Environment Variables
+
+```bash
+cp config/env.shared.example .env.shared.local
+# Edit .env.shared.local — fill all CHANGE_ME values
+
+./scripts/env-build.sh development   # or: pnpm env:dev
+```
+
+Auto-Wechat frontend (Vite only, separate from backend env):
+
+```bash
+cp apps/auto-wechat/frontend/.env.example apps/auto-wechat/frontend/.env.development
+```
+
+See [config/README.md](../config/README.md) and [specs/platform.md](./specs/platform.md) §1.
+
 ---
 
 ## Starting Frontend Applications

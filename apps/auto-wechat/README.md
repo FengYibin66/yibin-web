@@ -9,7 +9,7 @@ AI 驱动的微信公众号自动化运营系统：一键 Pipeline（采集 → 
 | 主后端 | Go · Gin · asynq · MySQL |
 | LLM | Python · FastAPI · **LangChain** · 百炼 DashScope |
 | 前端 | **Vue 3** · Vite · TypeScript · Element Plus · Pinia |
-| 部署 | Docker Compose · 腾讯云香港 CVM |
+| 部署 | Docker Compose · 腾讯云北京 Lighthouse CVM |
 
 ## 架构要点
 

@@ -44,7 +44,7 @@ curl https://www.yibinfeng.com/api/health
 ## Architecture
 
 ```
-Tencent Cloud CVM (Hong Kong)
+Tencent Cloud CVM (Beijing · Lighthouse)
 ├─ Docker Network (yibin-net)
 │  ├─ Nginx (80/443, reverse proxy)
 │  ├─ portal-server:3001

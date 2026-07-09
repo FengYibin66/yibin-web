@@ -125,7 +125,7 @@ Your Machine
 ### Production (Tencent Cloud CVM)
 
 ```
-CVM (Hong Kong)
+CVM (Beijing · 49.233.142.172)
 ├── Nginx (reverse proxy, 80/443)
 │   ├── www.yibinfeng.com → portal-server:3001
 │   ├── resume.yibinfeng.com → nginx static (Resume)

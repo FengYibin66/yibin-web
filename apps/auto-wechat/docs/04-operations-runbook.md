@@ -133,7 +133,7 @@ Token 缓存 Redis key：`wechat:access_token`
 ```
 1. GET /api/v1/sources
 2. worker 日志 collect 步骤
-3. 香港 CVM 外网是否通
+3. 北京 CVM 外网是否通
 4. RSS URL 是否变更
 ```
 

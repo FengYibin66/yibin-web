@@ -22,7 +22,7 @@ RUN pnpm run build
 
 # Portable prod bundle (avoids lockfile mismatch in runtime stage)
 WORKDIR /build
-RUN pnpm --filter @yibin/portal-server deploy --prod /prod/portal-server \
+RUN pnpm --filter @yibin/portal-server deploy --prod --legacy /prod/portal-server \
   && cp -r apps/portal/server/dist /prod/portal-server/dist
 
 # ──────────────────────────────────────────────────────────────

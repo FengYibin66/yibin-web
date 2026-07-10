@@ -5,6 +5,8 @@
 
 services:
   nginx:
+    extra_hosts:
+      - "partner-api:host-gateway"
     volumes:
       - ./docker/nginx-local.conf:/etc/nginx/nginx.conf:ro
       - ./docker/certs:/etc/nginx/certs:ro

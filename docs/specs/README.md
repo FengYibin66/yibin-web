@@ -12,6 +12,7 @@
 | **[platform.md](./platform.md)** | 环境变量、本地开发、生产部署（平台级，必读） |
 | [portal-homepage.md](./portal-homepage.md) | Portal 主页（www.yibinfeng.com） |
 | [portal-media.md](./portal-media.md) | Portal 媒体（头像/上传）— **MVP 本地，待升 COS+CDN** |
+| [partner-api.md](./partner-api.md) | Partner 小程序 API — **Phase T www 分流** |
 | [resume-site.md](./resume-site.md) | 交互式简历站 |
 | [lab-corridor-complete-spec.md](./lab-corridor-complete-spec.md) | Resume `/lab` 走廊实现清单 |
 

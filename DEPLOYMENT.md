@@ -28,7 +28,7 @@ nano .env.shared.local  # Fill secrets — never commit
 
 # 3. SSL (once — stop system nginx first if port 80 busy)
 sudo systemctl stop nginx
-sudo certbot certonly --standalone -d www.yibinfeng.com -d resume.yibinfeng.com -d mpauto.yibinfeng.com --agree-tos -m your@email.com
+sudo certbot certonly --standalone -d www.yibinfeng.com -d resume.yibinfeng.com -d mpauto.yibinfeng.com -d partner.yibinfeng.com --agree-tos -m your@email.com
 sudo systemctl disable nginx
 
 # 4. Node 20 + pnpm (once on CVM)
@@ -104,6 +104,7 @@ sudo certbot certonly --standalone \
   -d www.yibinfeng.com \
   -d resume.yibinfeng.com \
   -d mpauto.yibinfeng.com \
+  -d partner.yibinfeng.com \
   --agree-tos \
   --email your-email@example.com
 
@@ -147,12 +148,84 @@ sleep 30  # Let services stabilize
 curl -i https://www.yibinfeng.com/api/health
 curl -i https://resume.yibinfeng.com/
 curl -i https://mpauto.yibinfeng.com/api/v1/health
+curl -i https://partner.yibinfeng.com/   # Partner API (502 ok if service not up yet)
 
 # Browser access
 # https://www.yibinfeng.com
 # https://resume.yibinfeng.com
 # https://mpauto.yibinfeng.com
+# https://partner.yibinfeng.com
 ```
+
+---
+
+## Add `partner.yibinfeng.com` (二级域名)
+
+Nginx 配置已在仓库内；上线只需 **DNS + 证书扩展 + 部署**。
+
+### Step A: 腾讯云 DNS（域名控制台）
+
+登录 [腾讯云 DNS](https://console.cloud.tencent.com/cns) → 选择 `yibinfeng.com` → **添加记录**：
+
+| 主机记录 | 记录类型 | 记录值 | TTL |
+|----------|----------|--------|-----|
+| `partner` | A | `49.233.142.172`（你的 CVM 公网 IP） | 600 |
+
+保存后本机验证（需等待 1–10 分钟生效）：
+
+```bash
+dig +short partner.yibinfeng.com
+# 期望：49.233.142.172
+```
+
+### Step B: CVM 扩展 SSL 证书
+
+已有三域名证书时，用 `--expand` 追加 `partner`（**须先停占用 80 端口的容器**）：
+
+```bash
+cd ~/yibin-web
+docker compose --env-file .env.production -f docker-compose.prod.yml stop nginx
+
+sudo certbot certonly --standalone --expand \
+  -d www.yibinfeng.com \
+  -d resume.yibinfeng.com \
+  -d mpauto.yibinfeng.com \
+  -d partner.yibinfeng.com \
+  --agree-tos \
+  -m your@email.com
+
+sudo certbot certificates
+# 应看到 Certificate Name: www.yibinfeng.com，Domains 含 partner.yibinfeng.com
+```
+
+### Step C: 拉代码并重启
+
+```bash
+git pull
+./scripts/deploy-prod.sh
+# 或仅重建 nginx：docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx
+```
+
+### Step D: 验收
+
+```bash
+curl -I https://partner.yibinfeng.com/
+# 期望：HTTP/2 200 或 502（Partner 未启动时 502 正常，证书须无报错）
+
+openssl s_client -connect partner.yibinfeng.com:443 -servername partner.yibinfeng.com </dev/null 2>/dev/null | openssl x509 -noout -subject -dates
+```
+
+Partner 服务在宿主机 `:8080` 运行后：
+
+```bash
+curl -sf https://partner.yibinfeng.com/api/v1/health   # 按 Partner 实际 health 路径调整
+```
+
+### Step E: 微信小程序（Partner 方，域名批下来后）
+
+微信公众平台 → 开发 → 开发管理 → 开发设置 → **服务器域名** → request 合法域名 → 添加 `https://partner.yibinfeng.com`（仅域名，不带路径）。
+
+批下来后小程序改 baseURL，再按 [docs/specs/partner-api.md](./docs/specs/partner-api.md) 删除 www 上的 Partner catch-all。
 
 ---
 

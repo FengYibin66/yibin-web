@@ -20,6 +20,9 @@ services:
       - ./apps/auto-wechat/frontend/dist:/usr/share/nginx/html/wechat:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - certbot-webroot:/var/www/certbot:ro
+    # Partner on host :8080 — resolved as partner-api via host-gateway (docs/specs/partner-api.md)
+    extra_hosts:
+      - "partner-api:host-gateway"
     depends_on:
       portal-server:
         condition: service_healthy

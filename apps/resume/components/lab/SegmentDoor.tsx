@@ -78,12 +78,6 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
 
   return (
     <group position={position}>
-      {/* Opaque background wall — blocks view through transparent door area */}
-      <mesh position={[0, 0, -0.15]}>
-        <planeGeometry args={[7, 3.5]} />
-        <meshBasicMaterial color="#e8e4dc" />
-      </mesh>
-
       {/* === Left wall decoration: Idea Process === */}
       <mesh
         position={[leftWallCenterX, wallCenterY, 0.07]}

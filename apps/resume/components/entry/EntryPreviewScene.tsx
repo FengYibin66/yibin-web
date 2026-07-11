@@ -170,11 +170,16 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
   const handleClick = useCallback(() => {
     if (isOpenRef.current) return
     isOpenRef.current = true
+    // Signal parent to expand the left panel to full-screen before camera flies in
+    window.dispatchEvent(new CustomEvent('entry-expand'))
     if (leftHandleRef.current)  gsap.to(leftHandleRef.current.rotation,  { z:  0.4, duration: 0.15, ease: 'power2.out' })
     if (rightHandleRef.current) gsap.to(rightHandleRef.current.rotation, { z: -0.4, duration: 0.15, ease: 'power2.out' })
     gsap.to(leftRef.current!.rotation,  { y: -Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
     gsap.to(rightRef.current!.rotation, { y:  Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
-    gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: () => { onEntered() } })
+    // Delay camera fly-in by 400ms so the panel can expand first
+    setTimeout(() => {
+      gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: () => { onEntered() } })
+    }, 400)
   }, [camera, onEntered])
 
   // ─── Window hover ────────────────────────────────────────────────────────────

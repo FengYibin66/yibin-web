@@ -43,15 +43,22 @@ export default function EntryPage() {
       gsap.to([left, right], { flexBasis: '50%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
     }
 
+    const expandFull = () => {
+      gsap.to(left,  { flexBasis: '100%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
+      gsap.to(right, { flexBasis: '0%',   duration: 0.5, ease: 'power2.out' })
+    }
+
     left.addEventListener('mouseenter', expandLeft)
     right.addEventListener('mouseenter', expandRight)
     left.addEventListener('mouseleave', reset)
     right.addEventListener('mouseleave', reset)
+    window.addEventListener('entry-expand', expandFull)
     return () => {
       left.removeEventListener('mouseenter', expandLeft)
       right.removeEventListener('mouseenter', expandRight)
       left.removeEventListener('mouseleave', reset)
       right.removeEventListener('mouseleave', reset)
+      window.removeEventListener('entry-expand', expandFull)
     }
   }, [])
 

@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { CorridorGeometry, CorridorAlcoves } from './CorridorGeometry'
+import { CorridorGeometry } from './CorridorGeometry'
 import { DoorSection } from './DoorSection'
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
@@ -105,8 +105,8 @@ function LabCanvas() {
           <CorridorWindow />
           <BugEaster />
           <CorridorDecorations />
-          {/* Alcove return walls at each door — breaks up flat side walls, adds depth */}
-          <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} />
+          {/* Alcove return walls removed — causes visual artifacts */}
+          {/* <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} /> */}
           {/* Segment transition doors — auto-open on approach, mark loop boundaries */}
           <SegmentDoor position={[0, 0, -65]} />
           <SegmentDoor position={[0, 0, -165]} />

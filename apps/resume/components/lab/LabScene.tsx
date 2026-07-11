@@ -47,8 +47,6 @@ function LabCanvas() {
   const { playBgm, stopBgm } = useAudio()
 
   const [activeRoom, setActiveRoom] = useState<RoomId | null>(null)
-  const [paperOpen, setPaperOpen] = useState(false)
-  const [pendingRoom, setPendingRoom] = useState<RoomId | null>(null)
   const [isInCorridor, setIsInCorridor] = useState(true)
 
   useEffect(() => {
@@ -56,38 +54,15 @@ function LabCanvas() {
     return () => stopBgm()
   }, [playBgm, stopBgm])
 
-  // Phase 3 will replace CorridorDoor with DoorSection wired to SceneContext.
-  // For Phase 1 we just need compilation — onEnter is a no-op placeholder.
+  // Phase 3 will replace these with SceneContext-driven door handling.
+  // Phase 2: kept as no-ops so compilation passes.
   const handleEnterRoom = useCallback((_room: RoomId) => {
-    // intentionally no-op in Phase 1
+    // intentionally no-op — Phase 3 will wire to SceneContext.teleportTo
   }, [])
-
-  const handlePaperClosed = useCallback(() => {
-    setIsInCorridor(false)
-    setActiveRoom(pendingRoom)
-    setPaperOpen(false)
-  }, [pendingRoom])
 
   const handleCloseRoom = useCallback(() => {
-    setPendingRoom(null)
-    setPaperOpen(true)
+    // intentionally no-op — Phase 3 will wire to SceneContext
   }, [])
-
-  const handlePaperClosedOnExit = useCallback(() => {
-    setActiveRoom(null)
-    setPaperOpen(false)
-    playBgm('corridor_bg')
-    setIsInCorridor(true)
-  }, [playBgm])
-
-  // Stable callback — avoids new reference each render (which would restart GSAP tween)
-  const onPaperClosed = useCallback(() => {
-    if (activeRoom) {
-      handlePaperClosedOnExit()
-    } else {
-      handlePaperClosed()
-    }
-  }, [activeRoom, handlePaperClosed, handlePaperClosedOnExit])
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#f0ece4' }}>
@@ -99,7 +74,7 @@ function LabCanvas() {
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
-          <CameraController scrollEnabled={!activeRoom && !paperOpen} />
+          <CameraController scrollEnabled={!activeRoom} />
           <CorridorGeometry />
           {ALL_DOORS.map((door) => (
             <CorridorDoor
@@ -164,12 +139,8 @@ function LabCanvas() {
         onClose={handleCloseRoom}
       />
 
-      {/* Paper transition */}
-      <PaperTransition
-        isOpen={paperOpen}
-        onClosed={onPaperClosed}
-        onOpened={() => setIsInCorridor(true)}
-      />
+      {/* Paper transition — reads SceneContext.teleportPhase directly, no props */}
+      <PaperTransition />
 
       {/* Audio toggle — always visible */}
       <AudioToggle />

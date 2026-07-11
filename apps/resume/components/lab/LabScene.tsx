@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useCallback, Suspense, useEffect } from 'react'
+import { useRef, useCallback, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { CorridorGeometry, CorridorAlcoves } from './CorridorGeometry'
-import { CorridorDoor } from './CorridorDoor'
-import { RoomOverlay } from './RoomOverlay'
+import { DoorSection } from './DoorSection'
 import { PaperTransition } from './PaperTransition'
 import { AudioToggle } from './AudioToggle'
 import { Avatar } from './Avatar'
@@ -18,26 +17,37 @@ import { CorridorDecorations } from './CorridorDecorations'
 import { SegmentDoor } from './SegmentDoor'
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
-import { SceneProvider } from '@/context/SceneContext'
+import { SceneProvider, useScene } from '@/context/SceneContext'
 import { AchievementsProvider } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 
 const DOORS_LOOP1 = [
-  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as RoomId },
-  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as RoomId },
-  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as RoomId },
-  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as RoomId },
-  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as RoomId },
+  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as RoomId, seg: 0 },
+  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as RoomId, seg: 0 },
+  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as RoomId, seg: 0 },
+  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as RoomId, seg: 0 },
+  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as RoomId, seg: 0 },
 ]
 
 // Second loop 100 units further — produces the "infinite corridor" feeling
-const DOORS_LOOP2 = DOORS_LOOP1.map(d => ({ ...d, z: d.z - 100 }))
+const DOORS_LOOP2 = DOORS_LOOP1.map(d => ({ ...d, z: d.z - 100, seg: 1 }))
 
 const ALL_DOORS = [...DOORS_LOOP1, ...DOORS_LOOP2]
 
-// Camera controller inside Canvas context
-function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
-  useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02, scrollEnabled })
+// Camera controller inside Canvas context — exposes setCameraOverride via ref callback
+function CameraController({
+  onSetOverride,
+}: {
+  onSetOverride: (fn: (active: boolean) => void) => void
+}) {
+  const { setCameraOverride } = useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02 })
+
+  // Expose the function to parent once on mount
+  useEffect(() => {
+    onSetOverride(setCameraOverride)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return null
 }
 
@@ -45,24 +55,23 @@ function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
 function LabCanvas() {
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
+  const { isInRoom } = useScene()
 
-  const [activeRoom, setActiveRoom] = useState<RoomId | null>(null)
-  const [isInCorridor, setIsInCorridor] = useState(true)
+  // setCameraOverride is set by CameraController after mount
+  const setCameraOverrideRef = useRef<(active: boolean) => void>(() => {})
+
+  const handleSetOverride = useCallback((fn: (active: boolean) => void) => {
+    setCameraOverrideRef.current = fn
+  }, [])
+
+  const setCameraOverride = useCallback((active: boolean) => {
+    setCameraOverrideRef.current(active)
+  }, [])
 
   useEffect(() => {
     playBgm('corridor_bg')
     return () => stopBgm()
   }, [playBgm, stopBgm])
-
-  // Phase 3 will replace these with SceneContext-driven door handling.
-  // Phase 2: kept as no-ops so compilation passes.
-  const handleEnterRoom = useCallback((_room: RoomId) => {
-    // intentionally no-op — Phase 3 will wire to SceneContext.teleportTo
-  }, [])
-
-  const handleCloseRoom = useCallback(() => {
-    // intentionally no-op — Phase 3 will wire to SceneContext
-  }, [])
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#f0ece4' }}>
@@ -74,20 +83,21 @@ function LabCanvas() {
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
-          <CameraController scrollEnabled={!activeRoom} />
+          <CameraController onSetOverride={handleSetOverride} />
           <CorridorGeometry />
           {ALL_DOORS.map((door) => (
-            <CorridorDoor
+            <DoorSection
               key={`${door.room}-${door.z}`}
               position={[door.side === 'left' ? -3.5 : 3.5, 0, door.z]}
               side={door.side}
               type={door.type}
               label={door.label}
-              onEnter={() => handleEnterRoom(door.room)}
-              isReset={isInCorridor}
+              roomId={door.room}
+              segmentIndex={door.seg}
+              setCameraOverride={setCameraOverride}
             />
           ))}
-          <HeroText visible={isInCorridor} position={[0, 0.3, -4]} />
+          <HeroText visible={!isInRoom} position={[0, 0.3, -4]} />
           <Avatar />
           <Doodles offsetZ={0} />
           <Cat position={[-2, -1.75 + 0.6, 2]} />
@@ -102,8 +112,8 @@ function LabCanvas() {
         </Suspense>
       </Canvas>
 
-      {/* Scroll hint — text stays HTML, name is now in 3D HeroText */}
-      {isInCorridor && (
+      {/* Scroll hint */}
+      {!isInRoom && (
         <div style={{
           position: 'absolute',
           bottom: '32px',
@@ -120,7 +130,7 @@ function LabCanvas() {
       )}
 
       {/* Back to entry link */}
-      {isInCorridor && (
+      {!isInRoom && (
         <a
           href="/"
           style={{
@@ -132,12 +142,6 @@ function LabCanvas() {
           ← Exit Lab
         </a>
       )}
-
-      {/* Room overlay */}
-      <RoomOverlay
-        room={activeRoom}
-        onClose={handleCloseRoom}
-      />
 
       {/* Paper transition — reads SceneContext.teleportPhase directly, no props */}
       <PaperTransition />

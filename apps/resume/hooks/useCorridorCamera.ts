@@ -54,6 +54,12 @@ export function useCorridorCamera({
   const scrollEnabledRef = useRef(scrollEnabled)
   useEffect(() => { scrollEnabledRef.current = scrollEnabled }, [scrollEnabled])
 
+  // Camera override — DoorSection sets this to true during fly-in/out animation
+  const cameraOverrideRef = useRef(false)
+  const setCameraOverride = useCallback((active: boolean) => {
+    cameraOverrideRef.current = active
+  }, [])
+
   // Wheel handler
   const handleWheel = useCallback((e: WheelEvent) => {
     if (!scrollEnabledRef.current) return
@@ -114,6 +120,7 @@ export function useCorridorCamera({
   // Per-frame camera update
   useFrame(() => {
     if (!scrollEnabledRef.current) return
+    if (cameraOverrideRef.current) return
 
     // Smooth Z
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
@@ -158,5 +165,6 @@ export function useCorridorCamera({
 
   return {
     getCameraZ: () => currentZ.current,
+    setCameraOverride,
   }
 }

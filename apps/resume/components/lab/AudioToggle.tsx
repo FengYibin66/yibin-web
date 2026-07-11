@@ -1,24 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { audioManager } from '@/lib/audio/audioManager'
+import { useAudio } from '@/context/AudioContext'
 
+// Phase 4 will replace this with a richer component.
+// For now it just toggles mute via the AudioContext.
 export function AudioToggle() {
-  const [muted, setMuted] = useState(false)
-
-  useEffect(() => {
-    audioManager.init()
-    setMuted(audioManager.isMuted())
-  }, [])
-
-  const toggle = () => {
-    const nowMuted = audioManager.toggleMute()
-    setMuted(nowMuted)
-  }
+  const { isMuted, toggleMute } = useAudio()
 
   return (
     <button
-      onClick={toggle}
+      onClick={toggleMute}
       style={{
         position: 'fixed',
         top: '20px',
@@ -38,9 +29,9 @@ export function AudioToggle() {
         alignItems: 'center',
         justifyContent: 'center',
       }}
-      aria-label={muted ? 'Unmute' : 'Mute'}
+      aria-label={isMuted ? 'Unmute' : 'Mute'}
     >
-      {muted ? '🔇' : '🔊'}
+      {isMuted ? '🔇' : '🔊'}
     </button>
   )
 }

@@ -13,25 +13,21 @@ import { Cat } from './Cat'
 import { CorridorWindow } from './CorridorWindow'
 import { BugEaster } from './BugEaster'
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
-import { audioManager } from '@/lib/audio/audioManager'
 import { HeroText } from './HeroText'
 import { CorridorDecorations } from './CorridorDecorations'
 import { SegmentDoor } from './SegmentDoor'
-
-type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | null
-
-// Camera controller inside Canvas context
-function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
-  useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02, scrollEnabled })
-  return null
-}
+import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
+import { AudioProvider, useAudio } from '@/context/AudioContext'
+import { SceneProvider } from '@/context/SceneContext'
+import { AchievementsProvider } from '@/context/AchievementsContext'
+import type { RoomId } from '@/context/SceneContext'
 
 const DOORS_LOOP1 = [
-  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as const },
-  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as const },
-  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as const },
-  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as const },
-  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as const },
+  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as RoomId },
+  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as RoomId },
+  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as RoomId },
+  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as RoomId },
+  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as RoomId },
 ]
 
 // Second loop 100 units further — produces the "infinite corridor" feeling
@@ -39,41 +35,50 @@ const DOORS_LOOP2 = DOORS_LOOP1.map(d => ({ ...d, z: d.z - 100 }))
 
 const ALL_DOORS = [...DOORS_LOOP1, ...DOORS_LOOP2]
 
-export function LabScene() {
-  const [activeRoom, setActiveRoom] = useState<RoomId>(null)
+// Camera controller inside Canvas context
+function CameraController({ scrollEnabled }: { scrollEnabled: boolean }) {
+  useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02, scrollEnabled })
+  return null
+}
+
+// Inner component — can access all Contexts (AudioProvider, SceneProvider, etc.)
+function LabCanvas() {
+  const { settings } = usePerformance()
+  const { playBgm, stopBgm } = useAudio()
+
+  const [activeRoom, setActiveRoom] = useState<RoomId | null>(null)
   const [paperOpen, setPaperOpen] = useState(false)
-  const [pendingRoom, setPendingRoom] = useState<RoomId>(null)
+  const [pendingRoom, setPendingRoom] = useState<RoomId | null>(null)
   const [isInCorridor, setIsInCorridor] = useState(true)
 
   useEffect(() => {
-    audioManager.init()
-    audioManager.playBg()
-    return () => audioManager.stopBg()
-  }, [])
+    playBgm('corridor_bg')
+    return () => stopBgm()
+  }, [playBgm, stopBgm])
 
-  const handleEnterRoom = useCallback((room: RoomId) => {
-    audioManager.stopBg()
-    setPendingRoom(room)
-    setPaperOpen(true)   // close paper over corridor
+  // Phase 3 will replace CorridorDoor with DoorSection wired to SceneContext.
+  // For Phase 1 we just need compilation — onEnter is a no-op placeholder.
+  const handleEnterRoom = useCallback((_room: RoomId) => {
+    // intentionally no-op in Phase 1
   }, [])
 
   const handlePaperClosed = useCallback(() => {
-    // Paper is fully closed — switch to room content
     setIsInCorridor(false)
     setActiveRoom(pendingRoom)
-    setPaperOpen(false)  // start opening paper to reveal room
+    setPaperOpen(false)
   }, [pendingRoom])
 
   const handleCloseRoom = useCallback(() => {
     setPendingRoom(null)
-    setPaperOpen(true)   // close paper over room
+    setPaperOpen(true)
   }, [])
 
   const handlePaperClosedOnExit = useCallback(() => {
     setActiveRoom(null)
-    setPaperOpen(false)  // reveal corridor
-    audioManager.playBg()
-  }, [])
+    setPaperOpen(false)
+    playBgm('corridor_bg')
+    setIsInCorridor(true)
+  }, [playBgm])
 
   // Stable callback — avoids new reference each render (which would restart GSAP tween)
   const onPaperClosed = useCallback(() => {
@@ -90,7 +95,8 @@ export function LabScene() {
       <Canvas
         camera={{ position: [0, 0.2, 10], fov: 60, near: 0.1, far: 200 }}
         style={{ position: 'absolute', inset: 0 }}
-        gl={{ antialias: true }}
+        gl={{ antialias: settings.antialias }}
+        dpr={settings.dpr}
       >
         <Suspense fallback={null}>
           <CameraController scrollEnabled={!activeRoom && !paperOpen} />
@@ -168,5 +174,19 @@ export function LabScene() {
       {/* Audio toggle — always visible */}
       <AudioToggle />
     </div>
+  )
+}
+
+export function LabScene() {
+  return (
+    <PerformanceProvider>
+      <AudioProvider>
+        <SceneProvider>
+          <AchievementsProvider>
+            <LabCanvas />
+          </AchievementsProvider>
+        </SceneProvider>
+      </AudioProvider>
+    </PerformanceProvider>
   )
 }

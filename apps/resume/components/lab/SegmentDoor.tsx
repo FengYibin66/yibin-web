@@ -5,7 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
-import { audioManager } from '@/lib/audio/audioManager'
+import { useAudio } from '@/context/AudioContext'
 
 const DOOR_HEIGHT   = 2.4
 const DOOR_WIDTH    = DOOR_HEIGHT * 0.391
@@ -21,6 +21,8 @@ interface SegmentDoorProps {
 }
 
 export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: SegmentDoorProps) {
+  const { play } = useAudio()
+
   const leftTex   = useTexture('/textures/corridor/doors/doorrleft.webp')
   const rightTex  = useTexture('/textures/corridor/doors/dorright.webp')
   const frameTex  = useTexture('/textures/corridor/doors/ramkasingledoors.webp')
@@ -43,7 +45,7 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
     if (distZ < OPEN_DIST && distX < 1.5 && !isOpenRef.current) {
       isOpenRef.current    = true
       isClosingRef.current = false
-      audioManager.play('door_open')
+      play('door_open')
       gsap.to(left.rotation,  { y: -Math.PI * 0.55, duration: 0.9, ease: 'power2.out', delay: 0.1 })
       gsap.to(right.rotation, { y:  Math.PI * 0.55, duration: 0.9, ease: 'power2.out', delay: 0.1 })
     }

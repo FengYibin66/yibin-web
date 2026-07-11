@@ -78,6 +78,20 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
 
   return (
     <group position={position}>
+      {/* === Solid walls (box geometry) — block view when door is closed === */}
+      <mesh position={[leftWallCenterX, wallCenterY, 0]}>
+        <boxGeometry args={[sideWallW, CORRIDOR_HEIGHT, 0.12]} />
+        <meshBasicMaterial color="#e0ddd4" />
+      </mesh>
+      <mesh position={[rightWallCenterX, wallCenterY, 0]}>
+        <boxGeometry args={[sideWallW, CORRIDOR_HEIGHT, 0.12]} />
+        <meshBasicMaterial color="#e0ddd4" />
+      </mesh>
+      <mesh position={[0, topWallCenterY, 0]}>
+        <boxGeometry args={[doorOpeningW, topWallHeight, 0.12]} />
+        <meshBasicMaterial color="#e0ddd4" />
+      </mesh>
+
       {/* === Left wall decoration: Idea Process === */}
       <mesh
         position={[leftWallCenterX, wallCenterY, 0.07]}

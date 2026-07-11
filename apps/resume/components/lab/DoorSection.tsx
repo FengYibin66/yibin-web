@@ -447,10 +447,12 @@ export function DoorSection({
     play('door_hover')
     // Micro-open door panels on hover
     if (leftPanelRef.current) {
-      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? -0.15 : 0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
+      // leftPanel pivot is at left hinge — positive Y rotates right side forward (outward)
+      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? 0.15 : -0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
     if (rightPanelRef.current) {
-      gsap.to(rightPanelRef.current.rotation, { y: side === 'left' ? 0.15 : -0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
+      // rightPanel pivot is at right hinge — negative Y rotates left side forward (outward)
+      gsap.to(rightPanelRef.current.rotation, { y: side === 'left' ? -0.15 : 0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })

@@ -229,7 +229,7 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
 
       {/* Brick wall background */}
       <mesh position={[0, 0.5, 0]}>
-        <planeGeometry args={[14, 8]} />
+        <planeGeometry args={[28, 16]} />
         <meshBasicMaterial map={brickTex} />
       </mesh>
 

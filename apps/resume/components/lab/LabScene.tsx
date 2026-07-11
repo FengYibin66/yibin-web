@@ -5,7 +5,8 @@ import { Canvas } from '@react-three/fiber'
 import { CorridorGeometry, CorridorAlcoves } from './CorridorGeometry'
 import { DoorSection } from './DoorSection'
 import { PaperTransition } from './PaperTransition'
-import { AudioToggle } from './AudioToggle'
+import { TeleportRoom } from './TeleportRoom'
+import { NavigationUI } from '@/components/ui/NavigationUI'
 import { Avatar } from './Avatar'
 import { Doodles } from './Doodles'
 import { Cat } from './Cat'
@@ -109,6 +110,7 @@ function LabCanvas() {
           {/* Segment transition doors — auto-open on approach, mark loop boundaries */}
           <SegmentDoor position={[0, 0, -65]} />
           <SegmentDoor position={[0, 0, -165]} />
+          <TeleportRoom />
         </Suspense>
       </Canvas>
 
@@ -146,8 +148,8 @@ function LabCanvas() {
       {/* Paper transition — reads SceneContext.teleportPhase directly, no props */}
       <PaperTransition />
 
-      {/* Audio toggle — always visible */}
-      <AudioToggle />
+      {/* Navigation UI — map, back button, audio toggle */}
+      <NavigationUI />
     </div>
   )
 }

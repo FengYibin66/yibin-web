@@ -43,6 +43,8 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
   const doorPaintedTex  = useTexture('/textures/corridor/doors/drzwiabout_painted.webp')
   const handleSketchTex = useTexture('/textures/corridor/doors/klamkadodrzwi.webp')
   const handlePaintedTex= useTexture('/textures/corridor/doors/klamkadodrzwi_painted.webp')
+  const bugTex          = useTexture('/textures/entrance/bug_sketch.webp')
+  const inkTex          = useTexture('/textures/corridor/ink_splash.webp')
 
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping
   floorTex.repeat.set(6, 6)
@@ -77,9 +79,26 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
   const [duckQuote, setDuckQuote]     = useState('')
   const [duckSpeaking, setDuckSpeaking] = useState(false)
 
+  // ─── Entrance bug easter egg ─────────────────────────────────────────────────
+  const bugRef        = useRef<THREE.Mesh>(null)
+  const inkRef        = useRef<THREE.Mesh>(null)
+  const bugClickPos   = useRef({ x: 0, y: 0 })
+  const [bugClicked, setBugClicked]   = useState(false)
+  const [bugClipProg, setBugClipProg] = useState(0)
+
   useFrame((state) => {
     if (!mouseRef.current) return
     mouseRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 1.2) * 0.12
+
+    // Bug wandering
+    if (!bugClicked && bugRef.current) {
+      const t = state.clock.elapsedTime
+      const xOff = Math.sin(t * 0.8) * 0.3 + Math.sin(t * 1.5) * 0.1
+      const yOff = Math.cos(t * 0.6) * 0.2 + Math.cos(t * 1.1) * 0.1
+      bugRef.current.position.x = 2.5 + xOff
+      bugRef.current.position.y = (FLOOR_Y + 2.8) + yOff
+      bugRef.current.rotation.z = Math.sin(t * 5) * 0.1 + Math.atan2(yOff, xOff) * 0.2
+    }
   })
 
   // ─── Hover handlers — micro-open + RevealMaterial ───────────────────────────
@@ -114,6 +133,31 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
       if (rHandlePaintedRef.current) rHandlePaintedRef.current.visible = false
     })
   }, [])
+
+  // ─── Bug click: ink splash + "BUG FIXED!" reveal ────────────────────────────
+  const handleBugClick = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation()
+    if (bugClicked) return
+    if (bugRef.current) {
+      bugClickPos.current = { x: bugRef.current.position.x, y: bugRef.current.position.y }
+    }
+    setBugClicked(true)
+
+    if (inkRef.current) {
+      inkRef.current.position.x = bugClickPos.current.x
+      inkRef.current.position.y = bugClickPos.current.y
+      inkRef.current.scale.set(0, 0, 1)
+      gsap.to(inkRef.current.scale, { x: 0.8, y: 0.8, z: 1, duration: 0.4, ease: 'back.out(1.7)' })
+    }
+
+    const proxy = { progress: 0 }
+    gsap.to(proxy, {
+      progress: 1,
+      duration: 0.8,
+      ease: 'power1.inOut',
+      onUpdate() { setBugClipProg(proxy.progress) },
+    })
+  }, [bugClicked])
 
   // ─── Click: full open + camera fly-in ───────────────────────────────────────
   const handleClick = useCallback(() => {
@@ -276,6 +320,33 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
           </mesh>
         </group>
       </group>
+
+      {/* Entrance bug easter egg — wanders above window, click to fix */}
+      {!bugClicked && (
+        <mesh ref={bugRef} position={[2.5, FLOOR_Y + 2.8, 0.16]} onClick={handleBugClick}>
+          <planeGeometry args={[0.4, 0.4]} />
+          <meshBasicMaterial map={bugTex} transparent alphaTest={0.01} depthWrite={false} />
+        </mesh>
+      )}
+      {/* Ink splash — always mounted to preload, scaled to 0 until triggered */}
+      <mesh ref={inkRef} position={[2.5, FLOOR_Y + 2.8, 0.17]} scale={[0, 0, 1]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial map={inkTex} transparent alphaTest={0.01} depthWrite={false} />
+      </mesh>
+      {/* "BUG FIXED!" revealed left-to-right */}
+      {bugClicked && (
+        <Text
+          position={[bugClickPos.current.x, bugClickPos.current.y, 0.35]}
+          fontSize={0.25}
+          color="#1a1a1a"
+          font="/fonts/CabinSketch-Bold.ttf"
+          anchorX="center"
+          anchorY="middle"
+          clipRect={[-1, -0.5, -1 + bugClipProg * 2.5, 0.5]}
+        >
+          BUG FIXED!
+        </Text>
+      )}
 
       {/* Right door — hinge at x=+DOOR_WIDTH, opens inward */}
       <group ref={rightRef} position={[DOOR_WIDTH, DOOR_CENTER_Y, 0.13]} onClick={handleClick}>

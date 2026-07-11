@@ -93,6 +93,7 @@ export function LabScene() {
         gl={{ antialias: true }}
       >
         <Suspense fallback={null}>
+          <fog attach="fog" args={['#f0ece4', 40, 180]} />
           <CameraController scrollEnabled={!activeRoom && !paperOpen} />
           <CorridorGeometry />
           {ALL_DOORS.map((door) => (
@@ -111,7 +112,8 @@ export function LabScene() {
           <Doodles offsetZ={0} />
           <Cat position={[-2, -1.75 + 0.6, 2]} />
           <CorridorWindow />
-          <BugEaster />
+          <BugEaster />                              {/* LOOP1: z=-70 (default) */}
+          <BugEaster position={[0, 0, -170]} />   {/* LOOP2 */}
           <CorridorDecorations />
           {/* Alcove return walls at each door — breaks up flat side walls, adds depth */}
           <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} />

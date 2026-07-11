@@ -8,7 +8,11 @@ import gsap from 'gsap'
 
 const CEILING_Y = 1.75  // CORRIDOR_HEIGHT(3.5) / 2
 
-export function BugEaster() {
+interface BugEasterProps {
+  position?: [number, number, number]
+}
+
+export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
   const bugRef = useRef<THREE.Mesh>(null)
   const inkRef = useRef<THREE.Mesh>(null)
   const [clicked, setClicked] = useState(false)
@@ -50,7 +54,7 @@ export function BugEaster() {
   }
 
   return (
-    <group position={[0, 0, -70]}>
+    <group position={position}>
       {!clicked && (
         <mesh ref={bugRef} position={[2, CEILING_Y - 0.5, 0.2]} onClick={handleBugClick}>
           <planeGeometry args={[0.3, 0.3]} />

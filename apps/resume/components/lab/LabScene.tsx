@@ -84,6 +84,7 @@ function LabCanvas() {
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
+          <fog attach="fog" args={['#f0ece4', 40, 180]} />
           <CameraController onSetOverride={handleSetOverride} />
           <CorridorGeometry />
           {ALL_DOORS.map((door) => (
@@ -103,7 +104,8 @@ function LabCanvas() {
           <Doodles offsetZ={0} />
           <Cat position={[-2, -1.75 + 0.6, 2]} />
           <CorridorWindow />
-          <BugEaster />
+          <BugEaster />                              {/* LOOP1: z=-70 (default) */}
+          <BugEaster position={[0, 0, -170]} />   {/* LOOP2 */}
           <CorridorDecorations />
           {/* Alcove return walls removed — causes visual artifacts */}
           {/* <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} /> */}

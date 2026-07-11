@@ -103,13 +103,11 @@ export function DoorSection({
 
   // ─── Refs ────────────────────────────────────────────────────────────────────
   const innerGroupRef    = useRef<THREE.Group>(null)
-  const leftPanelRef     = useRef<THREE.Group>(null)
-  const rightPanelRef    = useRef<THREE.Group>(null)
+  const doorRef          = useRef<THREE.Group>(null)
   const textGroupRef     = useRef<THREE.Group>(null)
   const arrowGroupRef    = useRef<THREE.Group>(null)
   const glowRef          = useRef<THREE.Mesh>(null)
-  const leftRevealRef    = useRef<{ uProgress: number } | null>(null)
-  const rightRevealRef   = useRef<{ uProgress: number } | null>(null)
+  const doorRevealRef    = useRef<{ uProgress: number } | null>(null)
   const handleRevealRef  = useRef<{ uProgress: number } | null>(null)
   const handlePaintedRef = useRef<THREE.Mesh>(null)
 
@@ -180,37 +178,39 @@ export function DoorSection({
 
   // ─── Open door panels ────────────────────────────────────────────────────────
   const openDoorPanels = useCallback((fastMode: boolean, onComplete: () => void) => {
-    const left  = leftPanelRef.current
-    const right = rightPanelRef.current
-    if (!left || !right) { onComplete(); return }
+    const door = doorRef.current
+    if (!door) { onComplete(); return }
 
     isOpenRef.current = true
     play('door_open')
 
     const dur = fastMode ? 0.01 : 0.7
-    gsap.to(left.rotation,  { y: -Math.PI * 0.6, duration: dur, ease: fastMode ? 'none' : 'power2.out' })
-    gsap.to(right.rotation, { y:  Math.PI * 0.6, duration: dur, ease: fastMode ? 'none' : 'power2.out',
+    gsap.to(door.rotation, {
+      y: side === 'left' ? -Math.PI * 0.6 : Math.PI * 0.6,
+      duration: dur,
+      ease: fastMode ? 'none' : 'power2.out',
       onComplete,
     })
-  }, [play])
+  }, [play, side])
 
   // ─── Close door panels ───────────────────────────────────────────────────────
   const closeDoorPanels = useCallback((fastMode: boolean, onComplete?: () => void) => {
-    const left  = leftPanelRef.current
-    const right = rightPanelRef.current
-    if (!left || !right) { onComplete?.(); return }
+    const door = doorRef.current
+    if (!door) { onComplete?.(); return }
 
     isOpenRef.current = false
     play('door_close')
 
     const dur = fastMode ? 0.01 : 0.6
-    gsap.to(left.rotation,  { y: 0, duration: dur, ease: fastMode ? 'none' : 'power2.in' })
-    gsap.to(right.rotation, { y: 0, duration: dur, ease: fastMode ? 'none' : 'power2.in',
+    gsap.to(door.rotation, {
+      y: 0,
+      duration: dur,
+      ease: 'power2.in',
       onComplete,
     })
 
     // Reverse reveal materials
-    for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
+    for (const ref of [doorRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.6, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
@@ -429,8 +429,7 @@ export function DoorSection({
       setIsInsideRoom(false)
       setIsAnimating(false)
       setShowRoom(false)
-      if (leftPanelRef.current)  { leftPanelRef.current.rotation.y = 0 }
-      if (rightPanelRef.current) { rightPanelRef.current.rotation.y = 0 }
+      if (doorRef.current) { doorRef.current.rotation.y = 0 }
     }
   }, [isTeleporting, teleportPhase, isInsideRoom, currentRoom, roomId])
 
@@ -445,12 +444,11 @@ export function DoorSection({
   const handlePointerEnter = useCallback(() => {
     if (isOpenRef.current || isAnimating) return
     play('door_hover')
-    // Micro-open door panels on hover
-    // Micro-open: only left panel visible from front — matches itomdev single-door hover
-    if (leftPanelRef.current) {
-      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? 0.12 : -0.12, duration: 0.3, ease: 'power2.out', overwrite: true })
+    // Micro-open door on hover
+    if (doorRef.current) {
+      gsap.to(doorRef.current.rotation, { y: side === 'left' ? -0.12 : 0.12, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
-    for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
+    for (const ref of [doorRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
@@ -459,11 +457,11 @@ export function DoorSection({
 
   const handlePointerLeave = useCallback(() => {
     if (isOpenRef.current || isAnimating) return
-    // Return door panels to closed position
-    if (leftPanelRef.current) {
-      gsap.to(leftPanelRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
+    // Return door to closed position
+    if (doorRef.current) {
+      gsap.to(doorRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
-    for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
+    for (const ref of [doorRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.5, ease: 'power2.out', overwrite: true })
     }
     hideDelayRef.current = gsap.delayedCall(0.55, () => {
@@ -521,23 +519,25 @@ export function DoorSection({
           />
         )}
 
-        {/* ── Left hinge group — origin at left edge, rotates around hinge ── */}
+        {/* ── Door panel (single, pivots at hinge edge) ── */}
         <group
-          ref={leftPanelRef}
-          position={[wallOffsetX - DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
+          ref={doorRef}
+          position={[side === 'left' ? wallOffsetX - DOOR_WIDTH / 2 : wallOffsetX + DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
           onPointerEnter={handlePointerEnter}
           onPointerLeave={handlePointerLeave}
           onClick={() => handleClick()}
         >
-          <mesh position={[DOOR_WIDTH / 2, 0, -0.001]}>
+          {/* painted layer */}
+          <mesh position={[side === 'left' ? DOOR_WIDTH / 2 : -DOOR_WIDTH / 2, 0, -0.001]}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
             <meshBasicMaterial map={paintedTex} transparent alphaTest={0.3} />
           </mesh>
-          <mesh position={[DOOR_WIDTH / 2, 0, 0]}>
+          {/* sketch RevealMaterial layer */}
+          <mesh position={[side === 'left' ? DOOR_WIDTH / 2 : -DOOR_WIDTH / 2, 0, 0]}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
             {/* @ts-expect-error revealMaterial registered via extend() */}
             <revealMaterial
-              ref={leftRevealRef}
+              ref={doorRevealRef}
               map={doorTex}
               transparent
               alphaTest={0.3}
@@ -545,37 +545,8 @@ export function DoorSection({
               uProgress={0}
             />
           </mesh>
-          <mesh position={[DOOR_WIDTH / 2, 0, -0.005]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
-            <meshBasicMaterial map={backTex} transparent alphaTest={0.3} />
-          </mesh>
-        </group>
-
-        {/* ── Right hinge group ────────────────────────────────────────────── */}
-        <group
-          ref={rightPanelRef}
-          position={[wallOffsetX + DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
-          onClick={() => handleClick()}
-          onPointerEnter={handlePointerEnter}
-          onPointerLeave={handlePointerLeave}
-        >
-          <mesh position={[-DOOR_WIDTH / 2, 0, -0.001]}>
-            <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
-            <meshBasicMaterial map={paintedTex} transparent alphaTest={0.3} />
-          </mesh>
-          <mesh position={[-DOOR_WIDTH / 2, 0, 0]}>
-            <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
-            {/* @ts-expect-error revealMaterial registered via extend() */}
-            <revealMaterial
-              ref={rightRevealRef}
-              map={doorTex}
-              transparent
-              alphaTest={0.3}
-              depthWrite={false}
-              uProgress={0}
-            />
-          </mesh>
-          <mesh position={[-DOOR_WIDTH / 2, 0, -0.005]} rotation={[0, Math.PI, 0]}>
+          {/* back face */}
+          <mesh position={[side === 'left' ? DOOR_WIDTH / 2 : -DOOR_WIDTH / 2, 0, -0.005]} rotation={[0, Math.PI, 0]}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
             <meshBasicMaterial map={backTex} transparent alphaTest={0.3} />
           </mesh>

@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { ClassicPanel } from '@/components/entry/ClassicPanel'
+import { ExplorerBar } from '@/components/entry/ExplorerBar'
+import { AudioProvider } from '@/context/AudioContext'
 import type { EntryPreviewSceneProps } from '@/components/entry/EntryPreviewScene'
 
 const EntryPreviewScene = dynamic<EntryPreviewSceneProps>(
@@ -54,6 +56,7 @@ export default function EntryPage() {
   }, [])
 
   return (
+    <AudioProvider>
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       {/* LEFT — The Lab (hand-drawn corridor preview) */}
       <div
@@ -159,5 +162,7 @@ export default function EntryPage() {
         resume.yibinfeng.com
       </div>
     </div>
+    <ExplorerBar />
+    </AudioProvider>
   )
 }

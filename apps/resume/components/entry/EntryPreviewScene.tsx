@@ -7,6 +7,7 @@ import { Cat } from '@/components/lab/Cat'
 import '@/components/lab/shaders/RevealMaterial'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { useAudio } from '@/context/AudioContext'
 
 const FLOOR_Y       = -1.75
 const DOOR_WIDTH    = 0.94
@@ -26,7 +27,13 @@ const DUCK_QUOTES = [
   "Works in production! 🚀",
 ]
 
-function BrickScene({ onEntered }: { onEntered: () => void }) {
+interface BrickSceneProps {
+  onEntered: () => void
+  play: (name: import('@/context/AudioContext').SoundName) => void
+  playBgm: (name: import('@/context/AudioContext').SoundName) => void
+}
+
+function BrickScene({ onEntered, play, playBgm }: BrickSceneProps) {
   const brickTex        = useTexture('/textures/entrance/wall_bricks_2.webp')
   const floorTex        = useTexture('/textures/entrance/floor_paper.webp')
   const treeTex         = useTexture('/textures/entrance/tree_sketch.webp')
@@ -85,6 +92,7 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
   // ─── Hover handlers — micro-open + RevealMaterial ───────────────────────────
   const handlePointerEnter = useCallback(() => {
     if (isOpenRef.current) return
+    play('door_hover')
     // Doors crack open slightly
     gsap.to(leftRef.current!.rotation,  { y: -0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
     gsap.to(rightRef.current!.rotation, { y:  0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
@@ -98,7 +106,7 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (lHandlePaintedRef.current) lHandlePaintedRef.current.visible = true
     if (rHandlePaintedRef.current) rHandlePaintedRef.current.visible = true
-  }, [])
+  }, [play])
 
   const handlePointerLeave = useCallback(() => {
     if (isOpenRef.current) return
@@ -123,8 +131,8 @@ function BrickScene({ onEntered }: { onEntered: () => void }) {
     if (rightHandleRef.current) gsap.to(rightHandleRef.current.rotation, { z: -0.4, duration: 0.15, ease: 'power2.out' })
     gsap.to(leftRef.current!.rotation,  { y: -Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
     gsap.to(rightRef.current!.rotation, { y:  Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
-    gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: onEntered })
-  }, [camera, onEntered])
+    gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: () => { playBgm('corridor_bg'); onEntered() } })
+  }, [camera, onEntered, playBgm])
 
   // ─── Window hover ────────────────────────────────────────────────────────────
   const handleWinEnter = useCallback(() => {
@@ -322,15 +330,17 @@ export interface EntryPreviewSceneProps { onEnter: () => void }
 
 export function EntryPreviewScene({ onEnter }: EntryPreviewSceneProps) {
   const [flying, setFlying] = useState(false)
+  const { play, playBgm } = useAudio()
   return (
     <Canvas
       camera={{ position: [0, 0.3, 6], fov: 55, near: 0.1, far: 200 }}
       style={{ width: '100%', height: '100%' }}
       gl={{ antialias: true }}
+      onCreated={({ gl }) => gl.setClearColor('#f5f0e8', 1)}
     >
       <Suspense fallback={null}>
         <EntryCamera flying={flying} />
-        <BrickScene onEntered={() => { setFlying(true); onEnter() }} />
+        <BrickScene onEntered={() => { setFlying(true); onEnter() }} play={play} playBgm={playBgm} />
         <Cat position={[-1.5, FLOOR_Y + 0.6, 0.8]} />
       </Suspense>
     </Canvas>

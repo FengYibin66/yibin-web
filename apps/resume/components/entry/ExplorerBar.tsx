@@ -8,21 +8,23 @@ export function ExplorerBar() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
+      bottom: 16,
+      left: '50%',
+      transform: 'translateX(-50%)',
       zIndex: 100,
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '10px 24px 14px',
+      background: 'rgba(255,255,255,0.92)',
+      border: '2px solid #1a1a1a',
+      borderRadius: '12px',
+      boxShadow: '3px 3px 0 #1a1a1a',
+      padding: '10px 28px',
       pointerEvents: 'none',
+      whiteSpace: 'nowrap',
     }}>
       <span style={{
         fontFamily: "'CabinSketch-Bold', sans-serif",
         fontSize: '13px',
-        letterSpacing: '0.1em',
-        color: 'rgba(42,31,14,0.55)',
+        letterSpacing: '0.08em',
+        color: '#1a1a1a',
         userSelect: 'none',
       }}>
         EXPLORER
@@ -32,10 +34,9 @@ export function ExplorerBar() {
           style={{
             cursor: 'pointer',
             pointerEvents: 'auto',
-            color: isMuted ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.8)',
-            textDecoration: 'underline',
-            textDecorationStyle: 'dotted',
-            transition: 'color 0.3s',
+            color: isMuted ? '#999' : '#1a1a1a',
+            fontWeight: 'bold',
+            transition: 'color 0.2s',
           }}
           onClick={toggleMute}
         >

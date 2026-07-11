@@ -106,7 +106,7 @@ function LabCanvas() {
           <CorridorWindow />
           <BugEaster />                              {/* LOOP1: z=-70 (default) */}
           <BugEaster position={[0, 0, -170]} />   {/* LOOP2 */}
-          <CorridorDecorations />
+          <CorridorDecorations setCameraOverride={setCameraOverride} />
           {/* Alcove return walls removed — causes visual artifacts */}
           {/* <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} /> */}
           {/* Segment transition doors — auto-open on approach, mark loop boundaries */}

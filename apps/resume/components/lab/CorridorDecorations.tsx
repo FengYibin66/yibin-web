@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState, useMemo, useEffect } from 'react'
 import { useTexture } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import gsap from 'gsap'
 
@@ -9,47 +10,137 @@ const WALL_X   = 3.49
 const FLOOR_Y  = -1.75
 const CEIL_Y   =  1.75
 
-// ── Wall painting ─────────────────────────────────────────────────────────────
+// Pre-allocated vectors to avoid per-frame allocations
+const _tempPos   = new THREE.Vector3()
+const _tempDir   = new THREE.Vector3()
+const _tempScale = new THREE.Vector3()
+const _tempEuler = new THREE.Euler()
+const _tempQuat  = new THREE.Quaternion()
+const _camQuat   = new THREE.Quaternion()
 
-interface PaintingProps {
+// ── InspectableFrame ─────────────────────────────────────────────────────────
+
+interface InspectableFrameProps {
   side: 'left' | 'right'
   z: number
   textureUrl: string
   width?: number
   height?: number
   yOffset?: number
+  setCameraOverride?: (active: boolean) => void
 }
 
-function WallPainting({ side, z, textureUrl, width = 1.4, height = 1.0, yOffset = 0.3 }: PaintingProps) {
-  const tex      = useTexture(textureUrl)
-  const meshRef  = useRef<THREE.Mesh>(null)
-  const hovered  = useRef(false)
+function InspectableFrame({
+  side,
+  z,
+  textureUrl,
+  width = 1.4,
+  height = 1.0,
+  yOffset = 0.3,
+  setCameraOverride,
+}: InspectableFrameProps) {
+  const tex     = useTexture(textureUrl)
+  const groupRef = useRef<THREE.Group>(null)
+  const hovered = useRef(false)
+  const [, setIsInspected] = useState(false)
+  const isInspectedRef = useRef(false)
+
+  const { camera, viewport } = useThree()
 
   const x    = side === 'left' ? -WALL_X : WALL_X
   const rotY = side === 'left' ?  Math.PI / 2 : -Math.PI / 2
 
+  const originalPos = useMemo(() => new THREE.Vector3(x, yOffset, z), [x, yOffset, z])
+  const originalRot = useMemo(() => new THREE.Euler(0, rotY, 0), [rotY])
+
+  useEffect(() => {
+    return () => {
+      if (isInspectedRef.current && setCameraOverride) {
+        setCameraOverride(false)
+      }
+    }
+  }, [setCameraOverride])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isInspectedRef.current) {
+        isInspectedRef.current = false
+        setIsInspected(false)
+        if (setCameraOverride) setCameraOverride(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [setCameraOverride])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+
+    const factor = Math.min(1, delta * 6)
+
+    if (isInspectedRef.current) {
+      camera.getWorldDirection(_tempDir)
+      const aspectOffset = Math.max(0, 1.8 - viewport.aspect) * 1.5
+      const dist = Math.min(2.8, Math.max(1.5, 1.3 + aspectOffset))
+      _tempPos.copy(camera.position).add(_tempDir.multiplyScalar(dist))
+
+      camera.getWorldQuaternion(_camQuat)
+      _tempEuler.set(-state.pointer.y * 0.3, state.pointer.x * 0.3, 0)
+      _tempQuat.setFromEuler(_tempEuler)
+      _camQuat.multiply(_tempQuat)
+
+      _tempScale.set(1.2, 1.2, 1.2)
+    } else {
+      _tempPos.copy(originalPos)
+      _camQuat.setFromEuler(originalRot)
+      _tempScale.set(1, 1, 1)
+    }
+
+    groupRef.current.position.lerp(_tempPos, factor)
+    groupRef.current.quaternion.slerp(_camQuat, factor)
+    groupRef.current.scale.lerp(_tempScale, factor)
+  })
+
   const onEnter = useCallback(() => {
-    if (hovered.current || !meshRef.current) return
+    if (isInspectedRef.current) return
     hovered.current = true
-    gsap.to(meshRef.current.position, { z: 0.08, duration: 0.4, ease: 'power2.out' })
-    gsap.to(meshRef.current.scale,    { x: 1.06, y: 1.06, duration: 0.4, ease: 'power2.out' })
-  }, [])
+    if (!groupRef.current) return
+    gsap.to(groupRef.current.position, { z: originalPos.z + 0.08, duration: 0.4, ease: 'power2.out', overwrite: true })
+    gsap.to(groupRef.current.scale,    { x: 1.06, y: 1.06, duration: 0.4, ease: 'power2.out', overwrite: true })
+  }, [originalPos.z])
 
   const onLeave = useCallback(() => {
-    if (!hovered.current || !meshRef.current) return
+    if (isInspectedRef.current) return
     hovered.current = false
-    gsap.to(meshRef.current.position, { z: 0.02, duration: 0.35, ease: 'power2.inOut' })
-    gsap.to(meshRef.current.scale,    { x: 1, y: 1, duration: 0.35, ease: 'power2.inOut' })
-  }, [])
+    if (!groupRef.current) return
+    gsap.to(groupRef.current.position, { z: originalPos.z, duration: 0.35, ease: 'power2.inOut', overwrite: true })
+    gsap.to(groupRef.current.scale,    { x: 1, y: 1, duration: 0.35, ease: 'power2.inOut', overwrite: true })
+  }, [originalPos.z])
+
+  const onClick = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation()
+    const next = !isInspectedRef.current
+    isInspectedRef.current = next
+    setIsInspected(next)
+    if (setCameraOverride) setCameraOverride(next)
+  }, [setCameraOverride])
 
   return (
-    <group position={[x, yOffset, z]} rotation={[0, rotY, 0]}>
+    <group
+      ref={groupRef}
+      position={originalPos}
+      rotation={originalRot}
+    >
       <mesh
-        ref={meshRef}
-        position={[0, 0, 0.02]}
+        position={[0, 0, 0.05]}
         onPointerEnter={onEnter}
         onPointerLeave={onLeave}
+        onClick={onClick}
       >
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 0, 0.02]}>
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial map={tex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>
@@ -96,25 +187,20 @@ function CeilingLamp({ z }: { z: number }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-// Decoration layout for one corridor loop segment
-function LoopDecorations({ offsetZ = 0 }: { offsetZ?: number }) {
-  // Door positions: -8, -20, -32, -44, -56 — place decorations in gaps between doors
+interface CorridorDecorationsProps {
+  setCameraOverride?: (active: boolean) => void
+}
+
+function LoopDecorations({ offsetZ = 0, setCameraOverride }: { offsetZ?: number; setCameraOverride?: (active: boolean) => void }) {
   return (
     <group>
-      {/* Between door 1 (z=-8) and door 2 (z=-20): midpoint -14 */}
-      <WallPainting side="right" z={offsetZ - 14} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  />
-      {/* Between door 2 (z=-20) and door 3 (z=-32): midpoint -26 */}
-      <WallPainting side="left"  z={offsetZ - 26} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  />
-      {/* Between door 3 (z=-32) and door 4 (z=-44): midpoint -38 */}
-      <WallPainting side="right" z={offsetZ - 38} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} />
-      {/* Between door 4 (z=-44) and door 5 (z=-56): midpoint -50 */}
-      <WallPainting side="left"  z={offsetZ - 50} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  />
-      {/* After last door */}
-      <WallPainting side="right" z={offsetZ - 62} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  />
-      {/* Plants near corridor start and end */}
+      <InspectableFrame side="right" z={offsetZ - 14} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.6} height={1.1} yOffset={0.4}  setCameraOverride={setCameraOverride} />
+      <InspectableFrame side="left"  z={offsetZ - 26} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.4} height={1.0} yOffset={0.3}  setCameraOverride={setCameraOverride} />
+      <InspectableFrame side="right" z={offsetZ - 38} textureUrl="/textures/corridor/ramkanazdjecieduza.webp" width={1.5} height={1.1} yOffset={0.35} setCameraOverride={setCameraOverride} />
+      <InspectableFrame side="left"  z={offsetZ - 50} textureUrl="/textures/corridor/rysuneknaobraz1.webp"    width={1.4} height={1.0} yOffset={0.3}  setCameraOverride={setCameraOverride} />
+      <InspectableFrame side="right" z={offsetZ - 62} textureUrl="/textures/corridor/rysuneknaobrazek3.webp"  width={1.6} height={1.1} yOffset={0.4}  setCameraOverride={setCameraOverride} />
       <CorridorPlant side="left"  z={offsetZ - 4}  />
       <CorridorPlant side="right" z={offsetZ - 60} />
-      {/* Ceiling lamps aligned with doors */}
       <CeilingLamp z={offsetZ - 8}  />
       <CeilingLamp z={offsetZ - 20} />
       <CeilingLamp z={offsetZ - 44} />
@@ -123,11 +209,11 @@ function LoopDecorations({ offsetZ = 0 }: { offsetZ?: number }) {
   )
 }
 
-export function CorridorDecorations() {
+export function CorridorDecorations({ setCameraOverride }: CorridorDecorationsProps) {
   return (
     <group>
-      <LoopDecorations offsetZ={0}    />  {/* Loop 1 */}
-      <LoopDecorations offsetZ={-100} />  {/* Loop 2 */}
+      <LoopDecorations offsetZ={0}    setCameraOverride={setCameraOverride} />
+      <LoopDecorations offsetZ={-100} setCameraOverride={setCameraOverride} />
     </group>
   )
 }

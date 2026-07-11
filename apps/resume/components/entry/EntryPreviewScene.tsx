@@ -30,10 +30,9 @@ const DUCK_QUOTES = [
 interface BrickSceneProps {
   onEntered: () => void
   play: (name: import('@/context/AudioContext').SoundName) => void
-  playBgm: (name: import('@/context/AudioContext').SoundName) => void
 }
 
-function BrickScene({ onEntered, play, playBgm }: BrickSceneProps) {
+function BrickScene({ onEntered, play }: BrickSceneProps) {
   const brickTex        = useTexture('/textures/entrance/wall_bricks_2.webp')
   const floorTex        = useTexture('/textures/entrance/floor_paper.webp')
   const treeTex         = useTexture('/textures/entrance/tree_sketch.webp')
@@ -175,8 +174,8 @@ function BrickScene({ onEntered, play, playBgm }: BrickSceneProps) {
     if (rightHandleRef.current) gsap.to(rightHandleRef.current.rotation, { z: -0.4, duration: 0.15, ease: 'power2.out' })
     gsap.to(leftRef.current!.rotation,  { y: -Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
     gsap.to(rightRef.current!.rotation, { y:  Math.PI * 0.55, duration: 0.9, ease: 'power2.inOut' })
-    gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: () => { playBgm('corridor_bg'); onEntered() } })
-  }, [camera, onEntered, playBgm])
+    gsap.to(camera.position, { z: 10, y: 0.2, duration: 1.8, ease: 'power2.inOut', delay: 0.3, onComplete: () => { onEntered() } })
+  }, [camera, onEntered])
 
   // ─── Window hover ────────────────────────────────────────────────────────────
   const handleWinEnter = useCallback(() => {
@@ -290,6 +289,12 @@ function BrickScene({ onEntered, play, playBgm }: BrickSceneProps) {
         <meshBasicMaterial map={signTex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>
 
+      {/* Door hole background — opaque fill behind frame, hides black void */}
+      <mesh position={[0, DOOR_CENTER_Y, 0.11]}>
+        <planeGeometry args={[DOOR_WIDTH * 2 + 0.1, DOOR_HEIGHT + 0.1]} />
+        <meshBasicMaterial color="#f5f0e8" />
+      </mesh>
+
       {/* Door frame */}
       <mesh position={[0, DOOR_CENTER_Y, 0.12]}>
         <planeGeometry args={[DOOR_WIDTH * 2 + 0.3, DOOR_HEIGHT + 0.3]} />
@@ -401,7 +406,7 @@ export interface EntryPreviewSceneProps { onEnter: () => void }
 
 export function EntryPreviewScene({ onEnter }: EntryPreviewSceneProps) {
   const [flying, setFlying] = useState(false)
-  const { play, playBgm } = useAudio()
+  const { play } = useAudio()
   return (
     <Canvas
       camera={{ position: [0, 0.3, 6], fov: 55, near: 0.1, far: 200 }}
@@ -411,7 +416,7 @@ export function EntryPreviewScene({ onEnter }: EntryPreviewSceneProps) {
     >
       <Suspense fallback={null}>
         <EntryCamera flying={flying} />
-        <BrickScene onEntered={() => { setFlying(true); onEnter() }} play={play} playBgm={playBgm} />
+        <BrickScene onEntered={() => { setFlying(true); onEnter() }} play={play} />
         <Cat position={[-1.5, FLOOR_Y + 0.6, 0.8]} />
       </Suspense>
     </Canvas>

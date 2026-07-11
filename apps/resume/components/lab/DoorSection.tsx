@@ -445,15 +445,29 @@ export function DoorSection({
   const handlePointerEnter = useCallback(() => {
     if (isOpenRef.current || isAnimating) return
     play('door_hover')
+    // Micro-open door panels on hover
+    if (leftPanelRef.current) {
+      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? -0.08 : 0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
+    }
+    if (rightPanelRef.current) {
+      gsap.to(rightPanelRef.current.rotation, { y: side === 'left' ? 0.08 : -0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
+    }
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (handlePaintedRef.current) handlePaintedRef.current.visible = true
-  }, [isAnimating, play])
+  }, [isAnimating, play, side])
 
   const handlePointerLeave = useCallback(() => {
     if (isOpenRef.current || isAnimating) return
+    // Return door panels to closed position
+    if (leftPanelRef.current) {
+      gsap.to(leftPanelRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
+    }
+    if (rightPanelRef.current) {
+      gsap.to(rightPanelRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
+    }
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.5, ease: 'power2.out', overwrite: true })
     }
@@ -547,6 +561,8 @@ export function DoorSection({
           ref={rightPanelRef}
           position={[wallOffsetX + DOOR_WIDTH / 2, DOOR_CENTER_Y, 0.02]}
           onClick={() => handleClick()}
+          onPointerEnter={handlePointerEnter}
+          onPointerLeave={handlePointerLeave}
         >
           <mesh position={[-DOOR_WIDTH / 2, 0, -0.001]}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />

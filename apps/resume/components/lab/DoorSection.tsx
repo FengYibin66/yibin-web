@@ -446,13 +446,9 @@ export function DoorSection({
     if (isOpenRef.current || isAnimating) return
     play('door_hover')
     // Micro-open door panels on hover
+    // Micro-open: only left panel visible from front — matches itomdev single-door hover
     if (leftPanelRef.current) {
-      // leftPanel pivot is at left hinge — positive Y rotates right side forward (outward)
-      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? 0.15 : -0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
-    }
-    if (rightPanelRef.current) {
-      // rightPanel pivot is at right hinge — negative Y rotates left side forward (outward)
-      gsap.to(rightPanelRef.current.rotation, { y: side === 'left' ? -0.15 : 0.15, duration: 0.3, ease: 'power2.out', overwrite: true })
+      gsap.to(leftPanelRef.current.rotation, { y: side === 'left' ? 0.12 : -0.12, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })
@@ -466,9 +462,6 @@ export function DoorSection({
     // Return door panels to closed position
     if (leftPanelRef.current) {
       gsap.to(leftPanelRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
-    }
-    if (rightPanelRef.current) {
-      gsap.to(rightPanelRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.5, ease: 'power2.out', overwrite: true })

@@ -5,7 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
-import { audioManager } from '@/lib/audio/audioManager'
+import { useAudio } from '@/context/AudioContext'
 import '@/components/lab/shaders/RevealMaterial'
 
 // ─── Geometry constants (itomdev DoorSection values) ──────────────────────────
@@ -40,6 +40,8 @@ interface CorridorDoorProps {
 }
 
 export function CorridorDoor({ position, side, type, label, onEnter, isReset = false }: CorridorDoorProps) {
+  const { play } = useAudio()
+
   // ─── Textures ───────────────────────────────────────────────────────────────
   const doorTex         = useTexture(`/textures/corridor/doors/drzwi${type}.webp`)
   const paintedTex      = useTexture(`/textures/corridor/doors/drzwi${type}_painted.webp`)
@@ -161,7 +163,7 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
   const handleClick = useCallback(() => {
     if (isOpenRef.current) return
     isOpenRef.current = true
-    audioManager.play('door_open')
+    play('door_open')
     const left  = leftPanelRef.current
     const right = rightPanelRef.current
     if (!left || !right) return
@@ -169,17 +171,17 @@ export function CorridorDoor({ position, side, type, label, onEnter, isReset = f
     gsap.to(right.rotation, { y:  Math.PI * 0.52, duration: 0.8, ease: 'power2.inOut',
       onComplete: () => onEnter(),
     })
-  }, [onEnter])
+  }, [onEnter, play])
 
   // ─── Hover: RevealMaterial brush-stroke discard ──────────────────────────────
   const handlePointerEnter = useCallback(() => {
-    audioManager.play('door_hover')
+    play('door_hover')
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (handlePaintedRef.current) handlePaintedRef.current.visible = true
-  }, [])
+  }, [play])
 
   const handlePointerLeave = useCallback(() => {
     for (const ref of [leftRevealRef, rightRevealRef, handleRevealRef]) {

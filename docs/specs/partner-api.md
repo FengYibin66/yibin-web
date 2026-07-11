@@ -1,7 +1,7 @@
 # Spec: Partner API（协作服务 / 小程序）
 
 **状态**: Phase T（www 分流，不改小程序 URL）→ Phase 1（`partner.yibinfeng.com`）  
-**日期**: 2026-07-10  
+**日期**: 2026-07-11  
 **关联**: [platform.md](./platform.md)
 
 ---
@@ -35,7 +35,7 @@ Partner 小程序已上线，request 域名配置为 `www.yibinfeng.com`。
 
 ### WebSocket（`/api/ws`）
 
-Partner 后端在宿主机提供 `ws://127.0.0.1:8080/api/ws`（或容器内同等路径）。对外经 Nginx 升级为 **WSS**：
+Partner 后端在远程服务器 `${PARTNER_API_HOST}:8080` 提供 WebSocket。对外经 Nginx 升级为 **WSS**：
 
 | 环境 | 小程序 / 客户端应连接 |
 |------|------------------------|
@@ -66,11 +66,15 @@ Nginx 已配置 `Upgrade` / `Connection` 与 24h 读超时（`location ^~ /api/w
 
 | 项 | 说明 |
 |----|------|
-| 主机名 | `partner-api:8080` |
-| 默认 | 宿主机 `:8080`（nginx `extra_hosts: partner-api:host-gateway`） |
+| 主机名 | `partner-api:8080`（nginx `proxy_pass`） |
+| 解析 | `docker-compose.prod.yml` → `extra_hosts: partner-api:${PARTNER_API_HOST}` |
+| 生产默认 | `PARTNER_API_HOST=212.56.40.104`（Partner 独立服务器，非 CVM 本机） |
+| 本地 prod compose | `docker-compose.local-prod.yml` 覆盖为 `host-gateway`（本机调试） |
 | 长期 | Partner 容器加入 `yibin-net`，容器名 `partner-api`，删除 `extra_hosts` |
 
-**禁止**在 nginx 中硬编码公网 IP。
+**禁止**在 `nginx-prod.conf` 中硬编码公网 IP；IP 通过 env `PARTNER_API_HOST` + compose `extra_hosts` 注入。
+
+变更 `PARTNER_API_HOST` 后须重建 nginx：`docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx`
 
 ---
 

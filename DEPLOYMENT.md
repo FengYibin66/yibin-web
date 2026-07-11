@@ -210,14 +210,17 @@ git pull
 
 ```bash
 curl -I https://partner.yibinfeng.com/
-# 期望：HTTP/2 200 或 502（Partner 未启动时 502 正常，证书须无报错）
+# 期望：HTTP/2 200；若 Partner 远程服务未启动则为 502（证书须无报错）
 
 openssl s_client -connect partner.yibinfeng.com:443 -servername partner.yibinfeng.com </dev/null 2>/dev/null | openssl x509 -noout -subject -dates
 ```
 
-Partner 服务在宿主机 `:8080` 运行后：
+Partner 服务在远程服务器（`PARTNER_API_HOST`，默认 `212.56.40.104:8080`）运行后：
 
 ```bash
+# 确认 nginx 容器内 hosts 指向正确 IP
+docker compose --env-file .env.production -f docker-compose.prod.yml exec nginx cat /etc/hosts | grep partner-api
+
 curl -sf https://partner.yibinfeng.com/api/v1/health   # 按 Partner 实际 health 路径调整
 ```
 

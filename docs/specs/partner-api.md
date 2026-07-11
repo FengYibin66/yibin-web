@@ -74,7 +74,7 @@ Nginx 已配置 `Upgrade` / `Connection` 与 24h 读超时（`location ^~ /api/w
 
 **禁止**在 `nginx-prod.conf` 中硬编码公网 IP；IP 通过 env `PARTNER_API_HOST` + compose `extra_hosts` 注入。
 
-**Nginx 解析注意**：Alpine/musl 下 Nginx 即使用直连 `proxy_pass http://partner-api:8080` 也可能走 Docker DNS（`127.0.0.11`）而非 `/etc/hosts`，报 `partner-api could not be resolved`。生产 nginx 须用 **IP 变量**：`set $partner_upstream ${PARTNER_API_HOST}:8080`（与 `.env.production` 同步，当前默认 `212.56.40.104`）。
+**Nginx 解析注意**：Docker 内 Nginx 无法可靠解析 `extra_hosts` 注入的 `partner-api` 主机名（musl + `resolver 127.0.0.11`）。生产须在 `nginx-prod.conf` 用 **`upstream partner_remote { server <IP>:8080; }`** 写死 IP（与 `PARTNER_API_HOST` 同步，当前 `212.56.40.104`），`proxy_pass http://partner_remote;`，**不要**用 `$variable` 或 `partner-api` 主机名。
 
 变更 `PARTNER_API_HOST` 后须重建 nginx：`docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx`
 

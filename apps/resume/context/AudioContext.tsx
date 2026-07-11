@@ -45,22 +45,21 @@ export function useAudio(): AudioState {
 }
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
-  const [isMuted, setIsMuted] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('resume_muted') === 'true'
-  })
+  // Use consistent defaults for SSR + client initial render to avoid hydration mismatch.
+  // localStorage is synced in useEffect after mount.
+  const [isMuted, setIsMuted] = useState<boolean>(false)
+  const [sfxVolume, setSfxVolumeState] = useState<number>(0.8)
+  const [bgmVolume, setBgmVolumeState] = useState<number>(0.3)
 
-  const [sfxVolume, setSfxVolumeState] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0.8
-    const saved = localStorage.getItem('resume_sfx_vol')
-    return saved !== null ? parseFloat(saved) : 0.8
-  })
-
-  const [bgmVolume, setBgmVolumeState] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0.3
-    const saved = localStorage.getItem('resume_bgm_vol')
-    return saved !== null ? parseFloat(saved) : 0.3
-  })
+  // Hydrate from localStorage after mount (client-only)
+  useEffect(() => {
+    const storedMuted = localStorage.getItem('resume_muted')
+    if (storedMuted !== null) setIsMuted(storedMuted === 'true')
+    const storedSfx = localStorage.getItem('resume_sfx_vol')
+    if (storedSfx !== null) setSfxVolumeState(parseFloat(storedSfx))
+    const storedBgm = localStorage.getItem('resume_bgm_vol')
+    if (storedBgm !== null) setBgmVolumeState(parseFloat(storedBgm))
+  }, [])
 
   const [audioEnabled, setAudioEnabled] = useState(false)
 

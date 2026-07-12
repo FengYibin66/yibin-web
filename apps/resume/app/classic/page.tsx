@@ -15,6 +15,7 @@ import {
   ContactSection,
   GalleryDoorSection,
 } from '@/components/sections'
+import { CredentialsSection } from '@/components/classic/CredentialsViews'
 
 export default function ClassicPage() {
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function ClassicPage() {
         <ExperienceSection />
         <ProjectsSection />
         <PublicationsSection />
+        <CredentialsSection />
         <ContactSection />
         <GalleryDoorSection />
       </main>

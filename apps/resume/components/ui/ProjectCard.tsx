@@ -1,10 +1,17 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import type { ProjectItem } from '../../lib/content/types'
+import type { ProjectItem, ProjectStatus } from '../../lib/content/types'
 
 interface ProjectCardProps {
   item: ProjectItem
+}
+
+const STATUS_LABEL: Record<ProjectStatus, string> = {
+  live: 'Live',
+  dev: 'In Dev',
+  internal: 'Internal',
+  archive: 'Archive',
 }
 
 export function ProjectCard({ item }: ProjectCardProps) {
@@ -49,7 +56,16 @@ export function ProjectCard({ item }: ProjectCardProps) {
     }
   }, [])
 
-  const isLive = item.status === 'live'
+  const status = item.status
+
+  const badgeStyle =
+    status === 'live'
+      ? { color: 'var(--accent-primary)', borderColor: '#00d4ff55', background: '#00d4ff11' }
+      : status === 'dev'
+        ? { color: 'var(--accent-secondary)', borderColor: '#6366f155', background: '#6366f111' }
+        : status === 'archive'
+          ? { color: 'var(--text-secondary)', borderColor: 'var(--bg-border)', background: 'transparent' }
+          : { color: '#fbbf24', borderColor: '#fbbf2455', background: '#fbbf2411' }
 
   const cardContent = (
     <div
@@ -59,10 +75,8 @@ export function ProjectCard({ item }: ProjectCardProps) {
         transition: 'transform 0.1s ease, background 0.2s ease, border-top-color 0.2s ease, box-shadow 0.2s ease',
       }}
     >
-      {/* Gradient top bar */}
       <div className="h-px bg-gradient-to-r from-[#00d4ff] to-[#6366f1] mb-4 -mx-5 -mt-5 rounded-t-xl" />
 
-      {/* Header row: name + status badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <h3
           className="font-display font-bold text-lg leading-tight"
@@ -70,24 +84,20 @@ export function ProjectCard({ item }: ProjectCardProps) {
         >
           {item.name}
         </h3>
-        <span
-          className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full border font-medium"
-          style={
-            isLive
-              ? { color: 'var(--accent-primary)', borderColor: '#00d4ff55', background: '#00d4ff11' }
-              : { color: 'var(--accent-secondary)', borderColor: '#6366f155', background: '#6366f111' }
-          }
-        >
-          {isLive ? 'Live' : 'In Dev'}
-        </span>
+        {status ? (
+          <span
+            className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full border font-medium"
+            style={badgeStyle}
+          >
+            {STATUS_LABEL[status]}
+          </span>
+        ) : null}
       </div>
 
-      {/* Description */}
       <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
         {item.description}
       </p>
 
-      {/* Tech tags */}
       <div className="flex flex-wrap gap-1.5">
         {item.tech.map((t) => (
           <span

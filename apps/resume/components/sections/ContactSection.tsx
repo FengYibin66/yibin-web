@@ -35,43 +35,73 @@ export function ContactSection() {
 
   return (
     <section id="contact" className="relative z-10 w-full" style={{ background: 'var(--bg-base)' }}>
-      <div className="py-24 px-6 max-w-6xl mx-auto text-center">
-      <div className="flex justify-center">
-        <SectionTitle title={c.title} className="items-center" />
+      <div className="py-24 px-6 max-w-6xl mx-auto">
+        <div className="flex justify-center">
+          <SectionTitle title={c.title} className="items-center" />
+        </div>
+
+        <p className="mb-12 text-lg text-center" style={{ color: 'var(--text-secondary)' }}>
+          {c.subtitle}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-start">
+          <div className="text-center md:text-right md:pr-8 md:border-r md:border-white/15">
+            <h3
+              className="font-display font-bold text-lg mb-4"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {c.contactMeLabel}
+            </h3>
+            <div className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {c.phone ? <p>☏ {c.phone}</p> : null}
+              <p>✉ {c.email}</p>
+              {c.emailSecondary ? <p>✉ {c.emailSecondary}</p> : null}
+            </div>
+            <div className="mt-5 flex flex-wrap justify-center md:justify-end gap-3">
+              <GlowButton onClick={handleCopyEmail} variant="secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
+                {copied ? c.copiedLabel : c.copyLabel}
+              </GlowButton>
+            </div>
+          </div>
+
+          <div className="text-center md:text-left md:pl-2">
+            <h3
+              className="font-display font-bold text-lg mb-4"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {c.followMeLabel}
+            </h3>
+            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+              {c.facebook ? (
+                <GlowButton href={c.facebook} variant="secondary">
+                  Facebook
+                </GlowButton>
+              ) : null}
+              {c.wechatQr ? (
+                <GlowButton href={c.wechatQr} variant="secondary">
+                  WeChat
+                </GlowButton>
+              ) : null}
+              <GlowButton href={c.linkedin} variant="secondary">
+                <LinkedInIcon />
+                LinkedIn
+              </GlowButton>
+              {c.instagram ? (
+                <GlowButton href={c.instagram} variant="secondary">
+                  Instagram
+                </GlowButton>
+              ) : null}
+              <GlowButton href={c.github} variant="secondary">
+                <GitHubIcon />
+                GitHub
+              </GlowButton>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <p className="mb-10 text-lg" style={{ color: 'var(--text-secondary)' }}>
-        {c.subtitle}
-      </p>
-
-      <div className="flex flex-wrap justify-center gap-4">
-        {/* Email copy */}
-        <div className="contact-item">
-          <GlowButton onClick={handleCopyEmail} variant="secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-            </svg>
-            {copied ? c.copiedLabel : c.copyLabel}
-          </GlowButton>
-        </div>
-
-        {/* GitHub */}
-        <div className="contact-item">
-          <GlowButton href={c.github} variant="secondary">
-            <GitHubIcon />
-            GitHub
-          </GlowButton>
-        </div>
-
-        {/* LinkedIn */}
-        <div className="contact-item">
-          <GlowButton href={c.linkedin} variant="secondary">
-            <LinkedInIcon />
-            LinkedIn
-          </GlowButton>
-        </div>
-      </div>
-    </div>
     </section>
   )
 }

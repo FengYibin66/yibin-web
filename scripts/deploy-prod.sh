@@ -46,13 +46,21 @@ if [[ ! -f .npmrc && -f config/npmrc.cvm.example ]]; then
   echo "Using config/npmrc.cvm.example → .npmrc"
 fi
 
-echo "==> 3/4 Build static frontends (nginx volume mounts)"
+echo "==> 3/5 Build static frontends (nginx volume mounts)"
 ./scripts/build-prod-assets.sh
 
-echo "==> 4/4 Docker Compose up"
+echo "==> 4/5 Docker Compose up"
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+
+# Next.js/Vite builds delete and recreate dist/out directories. Docker bind
+# mounts keep the old inode, so nginx would keep serving an empty root
+# (403/404) until the container is recreated. Always remount after a build.
+echo "==> 5/5 Remount nginx static volumes"
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx
 
 echo ""
 echo "✅ Deploy finished. Verify:"
 echo "   docker compose -f docker-compose.prod.yml ps"
+echo "   curl -I https://resume.yibinfeng.com/"
+echo "   curl -I https://resume.yibinfeng.com/gallery/"
 echo "   curl -sf https://www.yibinfeng.com/api/health"

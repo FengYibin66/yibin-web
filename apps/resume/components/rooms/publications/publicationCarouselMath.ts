@@ -1,3 +1,5 @@
+import { PUBLICATION_CAROUSEL_MAX_DELTA_ULPS } from './publicationConstants'
+
 function assertFinite(value: number, name: string): void {
   if (!Number.isFinite(value)) {
     throw new RangeError(`${name} must be finite`)
@@ -18,33 +20,63 @@ function assertInteger(value: number, name: string): void {
   }
 }
 
-function normalizeToPeriod(
+function normalizeIndex(
   value: number,
-  totalWidth: number,
-  name: string,
+  itemCount: number,
 ): number {
-  const remainder = value % totalWidth
-  const normalized = remainder < 0 ? remainder + totalWidth : remainder
-  assertFinite(normalized, name)
+  const remainder = value % itemCount
+  const normalized = remainder < 0 ? remainder + itemCount : remainder
+  assertFinite(normalized, 'normalizedIndex')
   return normalized
 }
 
-function centerNormalizedOffset(
-  normalizedOffset: number,
+function getCenteredModulo(
+  value: number,
   totalWidth: number,
 ): number {
-  if (normalizedOffset === 0) {
+  const remainder = value % totalWidth
+  assertFinite(remainder, 'remainder')
+  if (remainder === 0) {
     return 0
   }
 
   const halfWidth = totalWidth / 2
-  if (normalizedOffset < halfWidth) {
-    return normalizedOffset
+  let centered = remainder
+  if (remainder >= halfWidth) {
+    centered = remainder - totalWidth
+  } else if (remainder < -halfWidth) {
+    centered = remainder + totalWidth
   }
 
-  const centered = normalizedOffset - totalWidth
   assertFinite(centered, 'centeredOffset')
   return centered
+}
+
+function assertDeltaPreserved(
+  current: number,
+  nearestTarget: number,
+  expectedDelta: number,
+): void {
+  const appliedDelta = nearestTarget - current
+  assertFinite(appliedDelta, 'appliedDelta')
+  if (expectedDelta !== 0 && appliedDelta === 0) {
+    throw new RangeError(
+      `nearestTarget cannot represent delta ${expectedDelta} from current ${current}`,
+    )
+  }
+
+  const tolerance = Math.max(
+    Number.MIN_VALUE,
+    Math.abs(expectedDelta) *
+      Number.EPSILON *
+      PUBLICATION_CAROUSEL_MAX_DELTA_ULPS,
+  )
+  const error = Math.abs(appliedDelta - expectedDelta)
+  if (!Number.isFinite(error) || error > tolerance) {
+    throw new RangeError(
+      `appliedDelta ${appliedDelta} differs from expected delta ${expectedDelta}`,
+    )
+  }
 }
 
 export function wrapDisplayOffset(
@@ -54,10 +86,7 @@ export function wrapDisplayOffset(
   assertFinite(rawOffset, 'rawOffset')
   assertPositive(totalWidth, 'totalWidth')
 
-  return centerNormalizedOffset(
-    normalizeToPeriod(rawOffset, totalWidth, 'normalizedOffset'),
-    totalWidth,
-  )
+  return getCenteredModulo(rawOffset, totalWidth)
 }
 
 export function getNearestCarouselTarget(
@@ -75,30 +104,19 @@ export function getNearestCarouselTarget(
   const totalWidth = itemGap * itemCount
   assertPositive(totalWidth, 'totalWidth')
 
-  const normalizedIndex = normalizeToPeriod(
-    targetIndex,
-    itemCount,
-    'normalizedIndex',
-  )
+  const normalizedIndex = normalizeIndex(targetIndex, itemCount)
   const target = normalizedIndex * itemGap
   assertFinite(target, 'target')
 
-  const currentInCycle = normalizeToPeriod(
-    current,
-    totalWidth,
-    'currentInCycle',
-  )
-  const targetInCycle = normalizeToPeriod(
-    target,
-    totalWidth,
-    'targetInCycle',
-  )
+  const currentInCycle = wrapDisplayOffset(current, totalWidth)
+  const targetInCycle = wrapDisplayOffset(target, totalWidth)
   const cycleDifference = targetInCycle - currentInCycle
   assertFinite(cycleDifference, 'cycleDifference')
 
   const delta = wrapDisplayOffset(cycleDifference, totalWidth)
   const nearestTarget = current + delta
   assertFinite(nearestTarget, 'nearestTarget')
+  assertDeltaPreserved(current, nearestTarget, delta)
   return nearestTarget
 }
 

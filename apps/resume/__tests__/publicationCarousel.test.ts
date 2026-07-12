@@ -33,6 +33,12 @@ describe('publication carousel math', () => {
       expect(wrapDisplayOffset(0, Number.MIN_VALUE)).toBe(0)
     })
 
+    it('preserves a negative subnormal remainder with a huge period', () => {
+      expect(
+        wrapDisplayOffset(-Number.MIN_VALUE, Number.MAX_VALUE),
+      ).toBe(-Number.MIN_VALUE)
+    })
+
     it.each([
       [0, 0],
       [0, -1],
@@ -194,6 +200,16 @@ describe('publication carousel math', () => {
           1,
         ),
       ).toThrow(RangeError)
+    })
+
+    it('fails fast when a finite nearest delta is swallowed by addition', () => {
+      expect(() =>
+        getNearestCarouselTarget(Number.MAX_VALUE, 0, 2, 3),
+      ).toThrow(RangeError)
+    })
+
+    it('accepts representable movement from a normal fractional current', () => {
+      expect(getNearestCarouselTarget(0.35, 0, 0.1, 4)).toBeCloseTo(0.4)
     })
   })
 

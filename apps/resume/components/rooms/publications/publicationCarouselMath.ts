@@ -11,6 +11,42 @@ function assertPositive(value: number, name: string): void {
   }
 }
 
+function assertInteger(value: number, name: string): void {
+  assertFinite(value, name)
+  if (!Number.isInteger(value)) {
+    throw new RangeError(`${name} must be an integer`)
+  }
+}
+
+function normalizeToPeriod(
+  value: number,
+  totalWidth: number,
+  name: string,
+): number {
+  const remainder = value % totalWidth
+  const normalized = remainder < 0 ? remainder + totalWidth : remainder
+  assertFinite(normalized, name)
+  return normalized
+}
+
+function centerNormalizedOffset(
+  normalizedOffset: number,
+  totalWidth: number,
+): number {
+  if (normalizedOffset === 0) {
+    return 0
+  }
+
+  const halfWidth = totalWidth / 2
+  if (normalizedOffset < halfWidth) {
+    return normalizedOffset
+  }
+
+  const centered = normalizedOffset - totalWidth
+  assertFinite(centered, 'centeredOffset')
+  return centered
+}
+
 export function wrapDisplayOffset(
   rawOffset: number,
   totalWidth: number,
@@ -18,10 +54,9 @@ export function wrapDisplayOffset(
   assertFinite(rawOffset, 'rawOffset')
   assertPositive(totalWidth, 'totalWidth')
 
-  const halfWidth = totalWidth / 2
-  return (
-    (((rawOffset + halfWidth) % totalWidth) + totalWidth) % totalWidth -
-    halfWidth
+  return centerNormalizedOffset(
+    normalizeToPeriod(rawOffset, totalWidth, 'normalizedOffset'),
+    totalWidth,
   )
 }
 
@@ -32,17 +67,39 @@ export function getNearestCarouselTarget(
   itemCount: number,
 ): number {
   assertFinite(current, 'current')
-  assertFinite(targetIndex, 'targetIndex')
+  assertInteger(targetIndex, 'targetIndex')
   assertPositive(itemGap, 'itemGap')
+  assertInteger(itemCount, 'itemCount')
   assertPositive(itemCount, 'itemCount')
 
   const totalWidth = itemGap * itemCount
-  assertFinite(totalWidth, 'totalWidth')
+  assertPositive(totalWidth, 'totalWidth')
 
-  const target = targetIndex * itemGap
+  const normalizedIndex = normalizeToPeriod(
+    targetIndex,
+    itemCount,
+    'normalizedIndex',
+  )
+  const target = normalizedIndex * itemGap
   assertFinite(target, 'target')
 
-  return current + wrapDisplayOffset(target - current, totalWidth)
+  const currentInCycle = normalizeToPeriod(
+    current,
+    totalWidth,
+    'currentInCycle',
+  )
+  const targetInCycle = normalizeToPeriod(
+    target,
+    totalWidth,
+    'targetInCycle',
+  )
+  const cycleDifference = targetInCycle - currentInCycle
+  assertFinite(cycleDifference, 'cycleDifference')
+
+  const delta = wrapDisplayOffset(cycleDifference, totalWidth)
+  const nearestTarget = current + delta
+  assertFinite(nearestTarget, 'nearestTarget')
+  return nearestTarget
 }
 
 export function applyCarouselDelta(

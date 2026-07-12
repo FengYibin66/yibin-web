@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   applyCarouselDelta,
   getNearestCarouselTarget,
@@ -9,16 +9,7 @@ import {
   PUBLICATION_CAROUSEL_WHEEL_SENSITIVITY,
 } from '@/components/rooms/publications/publicationConstants'
 
-const ORIGINAL_VIEWPORT_WIDTH = window.innerWidth
-
 describe('publication carousel math', () => {
-  afterEach(() => {
-    Object.defineProperty(window, 'innerWidth', {
-      configurable: true,
-      value: ORIGINAL_VIEWPORT_WIDTH,
-    })
-  })
-
   describe('wrapDisplayOffset', () => {
     it.each([
       [7, 12, -5],
@@ -27,6 +18,19 @@ describe('publication carousel math', () => {
       [-19, 12, 5],
     ])('wraps offset %s within width %s to %s', (rawOffset, totalWidth, expected) => {
       expect(wrapDisplayOffset(rawOffset, totalWidth)).toBe(expected)
+    })
+
+    it('chooses the negative half-period for exact ties', () => {
+      expect(wrapDisplayOffset(5, 10)).toBe(-5)
+      expect(wrapDisplayOffset(-5, 10)).toBe(-5)
+    })
+
+    it('avoids overflow while wrapping maximum finite values', () => {
+      expect(wrapDisplayOffset(Number.MAX_VALUE, Number.MAX_VALUE)).toBe(0)
+    })
+
+    it('preserves zero when half of the smallest period underflows', () => {
+      expect(wrapDisplayOffset(0, Number.MIN_VALUE)).toBe(0)
     })
 
     it.each([
@@ -70,6 +74,72 @@ describe('publication carousel math', () => {
     })
 
     it.each([
+      [4.5, 0],
+      [Number.NaN, 0],
+      [4, 1.5],
+      [4, Number.POSITIVE_INFINITY],
+    ])(
+      'rejects non-integer itemCount %s or targetIndex %s',
+      (itemCount, targetIndex) => {
+        expect(() =>
+          getNearestCarouselTarget(
+            0,
+            targetIndex,
+            PUBLICATION_CAROUSEL_ITEM_GAP,
+            itemCount,
+          ),
+        ).toThrow(RangeError)
+      },
+    )
+
+    it.each([5, -3, 9, -7])(
+      'normalizes out-of-range target index %s before scaling',
+      targetIndex => {
+        expect(
+          getNearestCarouselTarget(
+            0,
+            targetIndex,
+            PUBLICATION_CAROUSEL_ITEM_GAP,
+            4,
+          ),
+        ).toBe(PUBLICATION_CAROUSEL_ITEM_GAP)
+      },
+    )
+
+    it('normalizes an extreme target index before multiplying itemGap', () => {
+      const normalizedIndex = Number.MAX_VALUE % 3
+      const totalWidth = 6
+      const normalizedTarget = normalizedIndex * 2
+
+      expect(getNearestCarouselTarget(0, Number.MAX_VALUE, 2, 3)).toBe(
+        wrapDisplayOffset(normalizedTarget, totalWidth),
+      )
+    })
+
+    it.each([
+      [100.5, 0, 100],
+      [-100.5, 0, -100],
+      [107.5, 1, 102.5],
+      [-107.5, -1, -112.5],
+    ])(
+      'finds the nearest target across multiple current cycles',
+      (current, targetIndex, expected) => {
+        expect(
+          getNearestCarouselTarget(
+            current,
+            targetIndex,
+            PUBLICATION_CAROUSEL_ITEM_GAP,
+            4,
+          ),
+        ).toBe(expected)
+      },
+    )
+
+    it('chooses the negative direction for an exact half-period tie', () => {
+      expect(getNearestCarouselTarget(0, 2, 2.5, 4)).toBe(-5)
+    })
+
+    it.each([
       [Number.NaN, 0, 2.5, 4],
       [0, Number.POSITIVE_INFINITY, 2.5, 4],
       [0, 0, 0, 4],
@@ -85,24 +155,46 @@ describe('publication carousel math', () => {
       },
     )
 
-    it.each([320, 768, 1440])(
-      'does not depend on viewport width %s',
-      viewportWidth => {
-        Object.defineProperty(window, 'innerWidth', {
-          configurable: true,
-          value: viewportWidth,
-        })
+    it.each([
+      [37.5, 5],
+      [-42.5, -3],
+      [109.5, 9],
+      [-109.5, -7],
+    ])(
+      'returns a cycle-equivalent target within half a period',
+      (current, targetIndex) => {
+        const itemGap = PUBLICATION_CAROUSEL_ITEM_GAP
+        const itemCount = 4
+        const totalWidth = itemGap * itemCount
+        const normalizedIndex =
+          ((targetIndex % itemCount) + itemCount) % itemCount
+        const normalizedTarget = normalizedIndex * itemGap
+        const nearestTarget = getNearestCarouselTarget(
+          current,
+          targetIndex,
+          itemGap,
+          itemCount,
+        )
 
+        expect(Math.abs(nearestTarget - current)).toBeLessThanOrEqual(
+          totalWidth / 2,
+        )
         expect(
-          getNearestCarouselTarget(
-            9.5,
-            0,
-            PUBLICATION_CAROUSEL_ITEM_GAP,
-            4,
-          ),
-        ).toBe(10)
+          wrapDisplayOffset(nearestTarget - normalizedTarget, totalWidth),
+        ).toBeCloseTo(0)
       },
     )
+
+    it('fails fast when the nearest representable target overflows', () => {
+      expect(() =>
+        getNearestCarouselTarget(
+          Number.MAX_VALUE,
+          0,
+          Number.MAX_VALUE * 0.6,
+          1,
+        ),
+      ).toThrow(RangeError)
+    })
   })
 
   describe('applyCarouselDelta', () => {
@@ -126,6 +218,7 @@ describe('publication carousel math', () => {
       [Number.NaN, 1, 1],
       [0, Number.POSITIVE_INFINITY, 1],
       [0, 1, Number.NEGATIVE_INFINITY],
+      [Number.MAX_VALUE, Number.MAX_VALUE, 2],
     ])(
       'rejects non-finite delta parameters',
       (currentTarget, delta, sensitivity) => {

@@ -62,6 +62,7 @@ export function PublicationCardBack({
             {paperAction.label}
           </Text>
           <mesh
+            name="publication-paper-hit-area"
             position={[0, 0, 0.02]}
             raycast={isOpen ? undefined : disableRaycast}
             onClick={handlePaperClick}

@@ -1,10 +1,18 @@
-import { forwardRef, useImperativeHandle } from 'react'
+import {
+  createRef,
+  forwardRef,
+  useImperativeHandle,
+} from 'react'
 import { fireEvent, render } from '@testing-library/react'
 import * as THREE from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  bindFaceToPaperSurface,
   getPaperSurfaceTransform,
   PublicationCard,
+} from '@/components/rooms/publications/PublicationCard'
+import type {
+  PublicationCardHandle,
 } from '@/components/rooms/publications/PublicationCard'
 import type { PaperMaterialHandle } from '@/components/rooms/gallery/PaperMaterial'
 import type { PublicationRoomItem } from '@/components/rooms/publications/publicationTypes'
@@ -19,6 +27,13 @@ const testState = vi.hoisted(() => ({
     uProgress: 0,
     material: null,
   } as PaperMaterialHandle,
+  motion: {
+    paperRef: { current: null },
+    materialRef: { current: null },
+    open: vi.fn(() => Promise.resolve()),
+    close: vi.fn(() => Promise.resolve()),
+    cancel: vi.fn(),
+  },
 }))
 
 vi.mock('@react-three/fiber', () => ({
@@ -39,6 +54,10 @@ vi.mock('@/components/rooms/gallery/PaperMaterial', () => ({
     useImperativeHandle(ref, () => testState.material)
     return <meshBasicMaterial />
   }),
+}))
+
+vi.mock('@/components/rooms/publications/usePublicationCardMotion', () => ({
+  usePublicationCardMotion: () => testState.motion,
 }))
 
 const PUBLICATION: PublicationRoomItem = {
@@ -71,6 +90,9 @@ beforeEach(() => {
   testState.material.bend = 0
   testState.material.windStrength = 0
   testState.material.uProgress = 0
+  testState.motion.open.mockClear()
+  testState.motion.close.mockClear()
+  testState.motion.cancel.mockClear()
   BASE_PROPS.onSelect.mockReset()
   vi.spyOn(window, 'open').mockImplementation(() => null)
 })
@@ -88,9 +110,50 @@ describe('getPaperSurfaceTransform', () => {
       Math.atan(2 * 0.5 * 0.4 + Math.cos(phase) * 2 * flutterStrength),
     )
   })
+
+  it('binds front and back anchors in their correct local coordinates', () => {
+    const frontFace = new THREE.Group()
+    const frontContent = new THREE.Group()
+    const frontAnchor = new THREE.Group()
+    frontAnchor.position.set(0, 0.5, 0.01)
+    frontFace.add(frontContent)
+    frontContent.add(frontAnchor)
+
+    const backFace = new THREE.Group()
+    const backContent = new THREE.Group()
+    const backAnchor = new THREE.Group()
+    backContent.rotation.x = Math.PI
+    backAnchor.position.set(0, 0.5, 0.01)
+    backFace.add(backContent)
+    backContent.add(backAnchor)
+
+    bindFaceToPaperSurface(frontFace, 'front', 0.4, 0.08, 1.25)
+    bindFaceToPaperSurface(backFace, 'back', 0.4, 0.08, 1.25)
+
+    const frontTransform = getPaperSurfaceTransform(0.5, 0.4, 0.08, 1.25)
+    const backTransform = getPaperSurfaceTransform(-0.5, 0.4, 0.08, 1.25)
+    expect(frontAnchor.position.z).toBeCloseTo(0.01 + frontTransform.z)
+    expect(frontAnchor.rotation.x).toBeCloseTo(frontTransform.rotationX)
+    expect(backAnchor.position.z).toBeCloseTo(0.01 - backTransform.z)
+    expect(backAnchor.rotation.x).toBeCloseTo(backTransform.rotationX)
+  })
 })
 
 describe('PublicationCard interaction', () => {
+  it('exposes the motion API through its imperative handle', () => {
+    const ref = createRef<PublicationCardHandle>()
+    render(<PublicationCard ref={ref} {...BASE_PROPS} />)
+    const target = new THREE.Vector3(0, 1, 2)
+
+    ref.current?.open(target)
+    ref.current?.close()
+    ref.current?.cancel()
+
+    expect(testState.motion.open).toHaveBeenCalledWith(target)
+    expect(testState.motion.close).toHaveBeenCalledOnce()
+    expect(testState.motion.cancel).toHaveBeenCalledOnce()
+  })
+
   it('reveals paint on desktop hover and restores it on leave', () => {
     const { container } = renderCard()
     const card = container.querySelector('group')
@@ -109,6 +172,20 @@ describe('PublicationCard interaction', () => {
     fireEvent.pointerOver(card!, { pointerType: 'touch' })
 
     expect(testState.material.uProgress).toBe(0)
+  })
+
+  it.each([
+    { isSelected: true, isLocked: false },
+    { isSelected: false, isLocked: true },
+  ])('does not change reveal while selected or locked', state => {
+    testState.material.uProgress = 0.65
+    const { container } = renderCard(state)
+    const card = container.querySelector('group')
+
+    fireEvent.pointerOver(card!, { pointerType: 'mouse' })
+    fireEvent.pointerOut(card!, { pointerType: 'mouse' })
+
+    expect(testState.material.uProgress).toBe(0.65)
   })
 
   it.each([
@@ -138,12 +215,13 @@ describe('PublicationCard interaction', () => {
       isSelected: true,
       onSelect,
     })
-    const meshes = container.querySelectorAll('mesh')
-    const paperButtonHitArea = meshes.item(meshes.length - 1)
+    const paperButtonHitArea = container.querySelector(
+      '[name="publication-paper-hit-area"]',
+    )
     const clickEvent = new MouseEvent('click', { bubbles: true })
     const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation')
 
-    fireEvent(paperButtonHitArea, clickEvent)
+    fireEvent(paperButtonHitArea!, clickEvent)
 
     expect(stopPropagation).toHaveBeenCalledOnce()
     expect(window.open).toHaveBeenCalledOnce()

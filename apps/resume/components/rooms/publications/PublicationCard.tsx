@@ -1,6 +1,11 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+} from 'react'
 import { useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
@@ -34,10 +39,18 @@ export interface PublicationCardProps {
   onSelect: (id: string) => void
 }
 
+export interface PublicationCardHandle {
+  open: (target: THREE.Vector3) => Promise<void>
+  close: () => Promise<void>
+  cancel: () => void
+}
+
 export interface PaperSurfaceTransform {
   z: number
   rotationX: number
 }
+
+export type PublicationCardFace = 'front' | 'back'
 
 /**
  * Mirrors PaperMaterial's vertex displacement and returns its local tangent.
@@ -75,8 +88,9 @@ function getSurfaceBase(
   return object.userData[key] as number
 }
 
-function bindFaceToPaperSurface(
+export function bindFaceToPaperSurface(
   face: THREE.Group | null,
+  side: PublicationCardFace,
   bend: number,
   wind: number,
   time: number,
@@ -87,6 +101,8 @@ function bindFaceToPaperSurface(
   }
 
   contentRoot.children.forEach(child => {
+    const surfaceY = side === 'back' ? -child.position.y : child.position.y
+    const zDirection = side === 'back' ? -1 : 1
     const baseZ = getSurfaceBase(child, SURFACE_BASE_Z_KEY, child.position.z)
     const baseRotationX = getSurfaceBase(
       child,
@@ -94,12 +110,12 @@ function bindFaceToPaperSurface(
       child.rotation.x,
     )
     const transform = getPaperSurfaceTransform(
-      child.position.y,
+      surfaceY,
       bend,
       wind,
       time,
     )
-    child.position.z = baseZ + transform.z
+    child.position.z = baseZ + zDirection * transform.z
     child.rotation.x = baseRotationX + transform.rotationX
   })
 }
@@ -108,20 +124,29 @@ function isTouchPointer(event: ThreeEvent<PointerEvent>): boolean {
   return event.pointerType === 'touch'
 }
 
-export function PublicationCard({
-  publication,
-  index,
-  displayPosition,
-  isSelected,
-  isLocked,
-  canHover,
-  onSelect,
-}: PublicationCardProps) {
+export const PublicationCard = forwardRef<
+  PublicationCardHandle,
+  PublicationCardProps
+>(function PublicationCard({
+    publication,
+    index,
+    displayPosition,
+    isSelected,
+    isLocked,
+    canHover,
+    onSelect,
+  }, ref) {
   const clothespinTexture = useTexture(CLOTHESPIN_TEXTURE_PATH)
   const paperBackTexture = useTexture(PAPER_BACK_TEXTURE_PATH)
   const frontRef = useRef<THREE.Group>(null)
   const backRef = useRef<THREE.Group>(null)
   const motion = usePublicationCardMotion()
+
+  useImperativeHandle(ref, () => ({
+    open: motion.open,
+    close: motion.close,
+    cancel: motion.cancel,
+  }), [motion.cancel, motion.close, motion.open])
 
   useFrame(state => {
     const material = motion.materialRef.current
@@ -131,12 +156,14 @@ export function PublicationCard({
     const time = state.clock.getElapsedTime()
     bindFaceToPaperSurface(
       frontRef.current,
+      'front',
       material.bend,
       material.windStrength,
       time,
     )
     bindFaceToPaperSurface(
       backRef.current,
+      'back',
       material.bend,
       material.windStrength,
       time,
@@ -155,26 +182,26 @@ export function PublicationCard({
     event: ThreeEvent<PointerEvent>,
   ): void => {
     event.stopPropagation()
-    if (!canHover || isTouchPointer(event)) {
+    if (!canHover || isSelected || isLocked || isTouchPointer(event)) {
       return
     }
     if (motion.materialRef.current) {
       motion.materialRef.current.uProgress = 1
     }
     document.body.style.cursor = 'pointer'
-  }, [canHover, motion.materialRef])
+  }, [canHover, isLocked, isSelected, motion.materialRef])
 
   const handlePointerOut = useCallback((
     event: ThreeEvent<PointerEvent>,
   ): void => {
-    if (!canHover || isTouchPointer(event)) {
+    if (!canHover || isSelected || isLocked || isTouchPointer(event)) {
       return
     }
     if (motion.materialRef.current) {
       motion.materialRef.current.uProgress = 0
     }
     document.body.style.cursor = 'auto'
-  }, [canHover, motion.materialRef])
+  }, [canHover, isLocked, isSelected, motion.materialRef])
 
   return (
     <group
@@ -221,4 +248,4 @@ export function PublicationCard({
       </group>
     </group>
   )
-}
+})

@@ -9,3 +9,8 @@ export interface PublicationRoomItem {
   keywords: readonly string[]
   featured: boolean
 }
+
+export interface PublicationCardFaceProps {
+  publication: PublicationRoomItem
+  opacity: number
+}

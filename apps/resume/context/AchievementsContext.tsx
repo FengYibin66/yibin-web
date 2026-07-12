@@ -11,8 +11,8 @@ export interface AchievementDef {
 }
 
 export const ACHIEVEMENTS: Record<string, AchievementDef> = {
-  corridor_enter:    { id: 'corridor_enter',    title: 'Explorer',      label: 'Click a door to enter' },
-  corridor_explore:  { id: 'corridor_explore',  title: 'Wanderer',      label: 'Scroll to explore the corridor' },
+  corridor_enter:    { id: 'corridor_enter',    title: 'Explorer',      label: 'Click or tap a door to enter' },
+  corridor_explore:  { id: 'corridor_explore',  title: 'Wanderer',      label: 'Scroll or swipe to explore' },
   about_scroll:      { id: 'about_scroll',      title: 'Sky Walker',    label: 'Scroll to fly through my story' },
   projects_inspect:  { id: 'projects_inspect',  title: 'Director',      label: 'Drag to rotate and browse' },
   gallery_inspect:   { id: 'gallery_inspect',   title: 'Art Critic',    label: 'Click a project to inspect' },

@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SEGMENT_LENGTH, segmentZStart } from '@/components/lab/CorridorSegment'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
+import { nextTargetZ, nextLookX } from '@/lib/lab/touchControls'
 
 // Door Z positions within a segment (relative to segment start)
 const DOOR_RELATIVE_POSITIONS: Array<{ relativeZ: number; side: 'left' | 'right' }> = [
@@ -90,23 +91,54 @@ export function useCorridorCamera({
     }
   }, [scrollSpeed])
 
+  // After any touch, browsers fire a synthetic mousemove at the tap position.
+  // Without this guard, tapping the left/right half of a phone screen would
+  // yank the camera sideways — the confusing "tap edges to turn" behaviour.
+  const lastTouchTime = useRef(0)
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (performance.now() - lastTouchTime.current < 1000) return
     const nx = (e.clientX / window.innerWidth)  * 2 - 1
     const ny = (e.clientY / window.innerHeight) * 2 - 1
     targetLook.current.x = nx * lookIntensity
     targetLook.current.y = -ny * 0.4
   }, [lookIntensity])
 
-  const touchStart = useRef({ y: 0 })
+  // Touch gestures: vertical drag walks, horizontal drag turns.
+  // The gesture locks onto its dominant axis after a small dead zone so a
+  // slightly diagonal walk-swipe doesn't also swing the camera.
+  const AXIS_LOCK_THRESHOLD_PX = 10
+  const touchState = useRef({ x: 0, y: 0, startX: 0, startY: 0, axis: null as 'walk' | 'look' | null })
+
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    touchStart.current.y = e.touches[0].clientY
+    lastTouchTime.current = performance.now()
+    const t = e.touches[0]
+    touchState.current = { x: t.clientX, y: t.clientY, startX: t.clientX, startY: t.clientY, axis: null }
   }, [])
+
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!scrollEnabledRef.current) return
-    const delta = (touchStart.current.y - e.touches[0].clientY) * scrollSpeed * 1.5
-    targetZ.current = targetZ.current - delta
-    touchStart.current.y = e.touches[0].clientY
-  }, [scrollSpeed])
+    lastTouchTime.current = performance.now()
+    const t = e.touches[0]
+    const s = touchState.current
+    const deltaX = t.clientX - s.x
+    const deltaY = t.clientY - s.y
+    s.x = t.clientX
+    s.y = t.clientY
+
+    if (s.axis === null) {
+      const totalX = Math.abs(t.clientX - s.startX)
+      const totalY = Math.abs(t.clientY - s.startY)
+      if (Math.max(totalX, totalY) < AXIS_LOCK_THRESHOLD_PX) return
+      s.axis = totalX > totalY ? 'look' : 'walk'
+    }
+
+    if (s.axis === 'walk') {
+      targetZ.current = nextTargetZ(targetZ.current, deltaY, scrollSpeed)
+    } else {
+      targetLook.current.x = nextLookX(targetLook.current.x, deltaX, window.innerWidth, lookIntensity)
+    }
+  }, [scrollSpeed, lookIntensity])
 
   useEffect(() => {
     window.addEventListener('keydown',    handleKeyDown)

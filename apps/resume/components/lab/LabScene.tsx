@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, Suspense, useEffect } from 'react'
+import { useRef, useCallback, Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 
 import gsap from 'gsap'
@@ -14,6 +14,7 @@ import { InfiniteCorridorManager } from './InfiniteCorridorManager'
 if (typeof window !== 'undefined') preloadCorridorTextures()
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
+import { LabTutorial } from './LabTutorial'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
@@ -45,6 +46,11 @@ function LabCanvas() {
   const { playBgm, stopBgm } = useAudio()
   const { isInRoom, markEntered } = useScene()
   const { unlockAchievement } = useAchievements()
+
+  const [isTouch, setIsTouch] = useState(false)
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
 
   // Mark as entered immediately — /lab route means the user has entered the corridor
   useEffect(() => { markEntered() }, [markEntered])
@@ -108,7 +114,7 @@ function LabCanvas() {
           zIndex: 10,
         }}>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: 'rgba(42,31,14,0.4)', margin: 0 }}>
-            SCROLL TO EXPLORE
+            {isTouch ? 'SWIPE TO EXPLORE' : 'SCROLL TO EXPLORE'}
           </p>
         </div>
       )}
@@ -128,6 +134,7 @@ function LabCanvas() {
 
       <PaperTransition />
       <NavigationUI />
+      <LabTutorial />
 
     </div>
   )

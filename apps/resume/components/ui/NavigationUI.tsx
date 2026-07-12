@@ -7,6 +7,7 @@ import { useAchievements } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import { AchievementPopup } from './AchievementPopup'
 import { AchievementsPanel } from './AchievementsPanel'
+import { TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 
 const ROOM_LABELS: Record<RoomId, string> = {
   about:        'About',
@@ -216,6 +217,17 @@ export function NavigationUI() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M8 21h8M12 17v4M7 4h10M5 4h14v5a7 7 0 0 1-7 7 7 7 0 0 1-7-7z" />
             <path d="M5 9H3V6h2" /><path d="M19 9h2V6h-2" />
+          </svg>
+        </NavButton>
+
+        {/* Help button — reopens the controls tutorial */}
+        <NavButton
+          onClick={() => { closeAll(); window.dispatchEvent(new Event(TUTORIAL_OPEN_EVENT)) }}
+          aria-label="How to explore"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .6-1.6 1.2-1.6 2.5" />
+            <circle cx="12" cy="17.5" r="0.5" fill="currentColor" />
           </svg>
         </NavButton>
       </div>

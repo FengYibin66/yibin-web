@@ -44,7 +44,8 @@ const CARD_HEIGHT = 2
 const CARD_SEGMENTS = 16
 const PAPER_HANG_Y = -1.1
 const CLOTHESPIN_TEXTURE_PATH = '/textures/gallery/klamerka.webp'
-const PAPER_BACK_TEXTURE_PATH = '/textures/gallery/tylkartki.webp'
+/** Plain paper tint — do not use Gallery tylkartki (baked sketch frames). */
+const PAPER_COLOR = '#f7f2e8'
 const SURFACE_BASE_WIND = 0.02
 const WIND_TIME_FREQUENCY = 2
 const WIND_Y_FREQUENCY = 2
@@ -173,7 +174,6 @@ export const PublicationCard = forwardRef<
     onSelect,
   }, ref) {
   const clothespinTexture = useTexture(CLOTHESPIN_TEXTURE_PATH)
-  const paperBackTexture = useTexture(PAPER_BACK_TEXTURE_PATH)
   const frontRef = useRef<THREE.Group>(null)
   const backRef = useRef<THREE.Group>(null)
   const hoveredRef = useRef(false)
@@ -183,8 +183,7 @@ export const PublicationCard = forwardRef<
 
   useEffect(() => {
     clothespinTexture.colorSpace = THREE.SRGBColorSpace
-    paperBackTexture.colorSpace = THREE.SRGBColorSpace
-  }, [clothespinTexture, paperBackTexture])
+  }, [clothespinTexture])
 
   useImperativeHandle(ref, () => ({
     open: motion.open,
@@ -350,14 +349,12 @@ export const PublicationCard = forwardRef<
           />
           <PaperMaterial
             ref={motion.materialRef}
-            color="#ffffff"
-            map={paperBackTexture}
-            mapBack={paperBackTexture}
+            color={PAPER_COLOR}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        {/* Preview: Title → Image → Venue · Year */}
+        {/* Preview: Title → Image → Venue · Year (on plain paper, no Gallery frames) */}
         <group ref={frontRef} visible={!isSelected}>
           <PublicationCardFront publication={publication} opacity={1} />
         </group>

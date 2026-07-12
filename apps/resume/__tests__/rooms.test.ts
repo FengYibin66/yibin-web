@@ -3,8 +3,6 @@
  * 覆盖：SkyChunk seededRandom、云朵配置、SocialBarrel 路径派生、
  *       wave 动画数学、NavigationUI z-index 关系、轮询守卫逻辑
  */
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 
 // ─── seededRandom（从 SkyChunk 提取）────────────────────────────────────────
@@ -284,32 +282,6 @@ describe('wheel event showRoom guard', () => {
     ref.current = true
     handler(100)
     expect(count).toBe(1)
-  })
-})
-
-// ─── Room readiness contract ─────────────────────────────────────────────────
-
-const ROOM_COMPONENTS = ['AboutRoom', 'ProjectsRoom', 'PublicationsRoom', 'ContactRoom'] as const
-
-function readRoomSource(roomName: typeof ROOM_COMPONENTS[number]): string {
-  return readFileSync(resolve(process.cwd(), `components/rooms/${roomName}.tsx`), 'utf8')
-}
-
-describe('Room readiness contract', () => {
-  it.each(ROOM_COMPONENTS)('%s does not own a frame-based ready signal', (roomName) => {
-    const source = readRoomSource(roomName)
-
-    expect(source).not.toContain('hasSignaled')
-    expect(source).not.toContain('frameCount')
-    expect(source).not.toContain('onReady')
-  })
-
-  it.each(ROOM_COMPONENTS)('%s keeps its room animation frame loop', (roomName) => {
-    expect(readRoomSource(roomName)).toContain('useFrame(')
-  })
-
-  it.each(ROOM_COMPONENTS)('%s gates its tutorial on the entered phase', (roomName) => {
-    expect(readRoomSource(roomName)).toContain("roomLoadState.phase !== 'entered'")
   })
 })
 

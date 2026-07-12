@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import '@/components/lab/shaders/RevealMaterial'
 
@@ -63,10 +64,11 @@ interface MonitorItem {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
-  const { isTeleporting, roomLoadState } = useScene()
-  const { unlockAchievement, showTutorial } = useAchievements()
+  const { isTeleporting } = useScene()
+  const { unlockAchievement } = useAchievements()
   const { camera } = useThree()
   const router = useWheelRouter()
+  useRoomTutorial('projects_inspect')
 
   const towerRef        = useRef<THREE.Group>(null)
   const showRoomRef     = useRef(showRoom)
@@ -116,12 +118,6 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
       fallSpeed.current    = BASE_FALL_SPEED
     }
   }, [isTeleporting])
-
-  useEffect(() => {
-    if (roomLoadState.phase !== 'entered') return
-    const tutorialTimer = window.setTimeout(() => showTutorial('projects_inspect'), 2000)
-    return () => window.clearTimeout(tutorialTimer)
-  }, [roomLoadState.phase, showTutorial])
 
   useFrame((_, delta) => {
     if (isExiting || !towerRef.current) return

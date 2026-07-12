@@ -6,6 +6,7 @@ import { Text, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { PaperAirplane } from './about/PaperAirplane'
 import SkyChunk, { CHUNK_LENGTH, CORRIDOR_CLIP_Z, ROOM_Z } from './about/SkyChunk'
@@ -207,9 +208,10 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
 
 export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { camera }              = useThree()
-  const { isTeleporting, roomLoadState } = useScene()
-  const { unlockAchievement, showTutorial }   = useAchievements()
+  const { isTeleporting }       = useScene()
+  const { unlockAchievement }   = useAchievements()
   const router = useWheelRouter()
+  useRoomTutorial('about_scroll')
 
   const scrollPos       = useRef(0)
   const scrollVelocity  = useRef(0)
@@ -231,12 +233,6 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
       scrollVelocity.current   = 0
     }
   }, [isTeleporting])
-
-  useEffect(() => {
-    if (roomLoadState.phase !== 'entered') return
-    const tutorialTimer = window.setTimeout(() => showTutorial('about_scroll'), 2000)
-    return () => window.clearTimeout(tutorialTimer)
-  }, [roomLoadState.phase, showTutorial])
 
   // For InfiniteSkyChunks: world group moves with scrollPos
   const [activeChunks, setActiveChunks] = useState<number[]>([-1, 0, 1, 2])

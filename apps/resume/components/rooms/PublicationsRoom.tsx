@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import PaperMaterial, { type PaperMaterialHandle } from './gallery/PaperMaterial'
 import { GalleryClouds } from './gallery/GalleryClouds'
@@ -66,9 +67,10 @@ interface PublicationsRoomProps {
 }
 
 export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps) {
-  const { isTeleporting, roomLoadState } = useScene()
-  const { unlockAchievement, showTutorial } = useAchievements()
+  const { isTeleporting } = useScene()
+  const { unlockAchievement } = useAchievements()
   const router = useWheelRouter()
+  useRoomTutorial('publications_read')
 
   const targetScroll   = useRef(0)
   const currentScroll  = useRef(0)
@@ -87,12 +89,6 @@ export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps)
       setGlobalAnimating(false)
     }
   }, [isTeleporting])
-
-  useEffect(() => {
-    if (roomLoadState.phase !== 'entered') return
-    const tutorialTimer = window.setTimeout(() => showTutorial('publications_read'), 2000)
-    return () => window.clearTimeout(tutorialTimer)
-  }, [roomLoadState.phase, showTutorial])
 
   useFrame((_, delta) => {
     if (isExiting) return

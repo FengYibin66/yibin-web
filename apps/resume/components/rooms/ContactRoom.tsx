@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useTexture, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAchievements } from '@/context/AchievementsContext'
-import { useScene } from '@/context/SceneContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { SocialBarrel } from './contact/SocialBarrel'
 import { MessagePaper } from './contact/MessagePaper'
 
@@ -28,8 +28,8 @@ const STATEK_SETTINGS = {
 }
 
 export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
-  const { roomLoadState } = useScene()
-  const { unlockAchievement, showTutorial } = useAchievements()
+  const { unlockAchievement } = useAchievements()
+  useRoomTutorial('contact_found')
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)
@@ -54,12 +54,6 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
       moloTexture.needsUpdate = true
     }
   }, [seaTexture, moloTexture])
-
-  useEffect(() => {
-    if (roomLoadState.phase !== 'entered') return
-    const tutorialTimer = window.setTimeout(() => showTutorial('contact_found'), 2000)
-    return () => window.clearTimeout(tutorialTimer)
-  }, [roomLoadState.phase, showTutorial])
 
   useFrame((state) => {
     if (isExiting) return

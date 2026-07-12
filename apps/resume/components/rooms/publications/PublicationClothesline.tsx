@@ -105,6 +105,7 @@ export function PublicationClothesline({
         isSelected={motion.selectedId === publication.id}
         isLocked={cardsLocked}
         canHover={canHover}
+        didDragRef={carousel.didDragRef}
         onSelect={onSelect}
       />
     </group>

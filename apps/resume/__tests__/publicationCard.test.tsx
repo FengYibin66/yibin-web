@@ -2,6 +2,7 @@ import {
   createRef,
   forwardRef,
   useImperativeHandle,
+  type MutableRefObject,
 } from 'react'
 import { fireEvent, render } from '@testing-library/react'
 import * as THREE from 'three'
@@ -79,6 +80,7 @@ const BASE_PROPS = {
   isSelected: false,
   isLocked: false,
   canHover: true,
+  didDragRef: { current: false } as MutableRefObject<boolean>,
   onSelect: vi.fn(),
 }
 
@@ -95,6 +97,7 @@ beforeEach(() => {
   testState.motion.close.mockClear()
   testState.motion.cancel.mockClear()
   BASE_PROPS.onSelect.mockReset()
+  BASE_PROPS.didDragRef.current = false
   document.body.style.cursor = 'auto'
   vi.spyOn(window, 'open').mockImplementation(() => null)
 })
@@ -274,12 +277,18 @@ describe('PublicationCard interaction', () => {
     expect(document.body.style.cursor).toBe('auto')
   })
 
-  it.each([
-    { isSelected: true, isLocked: false },
-    { isSelected: false, isLocked: true },
-  ])('ignores outer clicks while selected or locked', state => {
+  it('lets an unlocked selected card close itself', () => {
     const onSelect = vi.fn()
-    const { container } = renderCard({ ...state, onSelect })
+    const { container } = renderCard({ isSelected: true, onSelect })
+
+    fireEvent.click(container.querySelector('group')!)
+
+    expect(onSelect).toHaveBeenCalledWith(PUBLICATION.id)
+  })
+
+  it('ignores outer clicks while locked', () => {
+    const onSelect = vi.fn()
+    const { container } = renderCard({ isLocked: true, onSelect })
 
     fireEvent.click(container.querySelector('group')!)
 
@@ -293,6 +302,16 @@ describe('PublicationCard interaction', () => {
     fireEvent.click(container.querySelector('group')!)
 
     expect(onSelect).toHaveBeenCalledWith(PUBLICATION.id)
+  })
+
+  it('ignores selection immediately after a carousel drag', () => {
+    const onSelect = vi.fn()
+    const didDragRef: MutableRefObject<boolean> = { current: true }
+    const { container } = renderCard({ didDragRef, onSelect })
+
+    fireEvent.click(container.querySelector('group')!)
+
+    expect(onSelect).not.toHaveBeenCalled()
   })
 
   it('stops paper button clicks from selecting the card', () => {

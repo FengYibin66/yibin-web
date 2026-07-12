@@ -46,6 +46,7 @@ export interface UsePublicationCarouselOptions {
 
 export interface PublicationCarouselApi {
   currentScroll: MutableRefObject<number>
+  didDragRef: MutableRefObject<boolean>
   centerItem: (index: number) => Promise<void>
 }
 
@@ -81,6 +82,7 @@ export function usePublicationCarousel(
   const enabledRef = useRef(options.active && !options.locked)
   const mountedRef = useRef(false)
   const dragRef = useRef<DragState | null>(null)
+  const didDragRef = useRef(false)
   const activeTweenRef = useRef<ActiveTween | null>(null)
 
   optionsRef.current = options
@@ -241,6 +243,7 @@ export function usePublicationCarousel(
       ) {
         return
       }
+      didDragRef.current = false
       dragRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -267,6 +270,7 @@ export function usePublicationCarousel(
             return
           }
           drag.captured = true
+          didDragRef.current = true
         }
         drag.direction = lockedDirection
       }
@@ -307,7 +311,7 @@ export function usePublicationCarousel(
   }, [clearDrag, pointerTarget])
 
   return useMemo(
-    () => ({ currentScroll, centerItem }),
+    () => ({ currentScroll, didDragRef, centerItem }),
     [centerItem],
   )
 }

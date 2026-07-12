@@ -6,6 +6,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  type MutableRefObject,
 } from 'react'
 import { useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
@@ -38,6 +39,7 @@ export interface PublicationCardProps {
   isSelected: boolean
   isLocked: boolean
   canHover: boolean
+  didDragRef: MutableRefObject<boolean>
   onSelect: (id: string) => void
 }
 
@@ -146,6 +148,7 @@ export const PublicationCard = forwardRef<
     isSelected,
     isLocked,
     canHover,
+    didDragRef,
     onSelect,
   }, ref) {
   const clothespinTexture = useTexture(CLOTHESPIN_TEXTURE_PATH)
@@ -201,11 +204,11 @@ export const PublicationCard = forwardRef<
 
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>): void => {
     event.stopPropagation()
-    if (isSelected || isLocked) {
+    if (isLocked || didDragRef.current) {
       return
     }
     onSelect(publication.id)
-  }, [isLocked, isSelected, onSelect, publication.id])
+  }, [didDragRef, isLocked, onSelect, publication.id])
 
   const handlePointerOver = useCallback((
     event: ThreeEvent<PointerEvent>,

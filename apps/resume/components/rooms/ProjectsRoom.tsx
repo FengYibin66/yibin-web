@@ -64,7 +64,7 @@ interface MonitorItem {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
-  const { isTeleporting } = useScene()
+  const { isTeleporting, roomLoadState } = useScene()
   const { unlockAchievement } = useAchievements()
   const { camera } = useThree()
   const router = useWheelRouter()
@@ -106,9 +106,17 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   useEffect(() => { showRoomRef.current = showRoom }, [showRoom])
 
   useEffect(() => {
-    if (!showRoom) return
-    gsap.to(camera.position, { x: 3, y: CAMERA_Y_OFFSET, duration: 0.8, ease: 'power2.inOut' })
-  }, [showRoom, camera])
+    if (!showRoom || isExiting || roomLoadState.phase !== 'entered') return
+    const cameraTween = gsap.to(camera.position, {
+      x: 3,
+      y: CAMERA_Y_OFFSET,
+      duration: 0.8,
+      ease: 'power2.inOut',
+    })
+    return () => {
+      cameraTween.kill()
+    }
+  }, [camera, isExiting, roomLoadState.phase, showRoom])
 
 
   useEffect(() => {

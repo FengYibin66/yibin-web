@@ -235,6 +235,23 @@ describe('usePublicationCarousel pointer input', () => {
     expect(target.setPointerCapture).toHaveBeenCalledWith(1)
     expect(move.defaultPrevented).toBe(true)
     expect(result.current.currentScroll.current).toBeGreaterThan(0)
+    expect(result.current.didDragRef.current).toBe(true)
+  })
+
+  it('resets the drag marker at the start of the next touch gesture', () => {
+    const target = mocks.canvas!
+    const { result } = renderHook(() =>
+      usePublicationCarousel(DEFAULT_OPTIONS),
+    )
+
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 80, clientY: 100 })
+    expect(result.current.didDragRef.current).toBe(true)
+
+    dispatchPointer(target, 'pointerup')
+    dispatchPointer(target, 'pointerdown', { clientX: 40, clientY: 100 })
+
+    expect(result.current.didDragRef.current).toBe(false)
   })
 
   it('does not update or capture for a vertical touch drag', () => {

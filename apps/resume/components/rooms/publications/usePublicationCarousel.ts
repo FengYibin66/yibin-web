@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { MutableRefObject } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import gsap from 'gsap'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import {
@@ -26,14 +26,15 @@ interface DragState {
   startX: number
   startY: number
   lastTouchX: number
-  captureTarget: Element
+  captureTarget: HTMLCanvasElement
   direction: DragDirection
   captured: boolean
 }
 
 interface ActiveTween {
-  tween: gsap.core.Tween
+  tween: gsap.core.Tween | null
   resolve: () => void
+  settled: boolean
 }
 
 export interface UsePublicationCarouselOptions {
@@ -72,20 +73,48 @@ export function usePublicationCarousel(
   options: UsePublicationCarouselOptions,
 ): PublicationCarouselApi {
   const router = useWheelRouter()
+  const pointerTarget = useThree(state => state.gl.domElement)
   const currentScroll = useRef(0)
   const targetScroll = useRef(0)
   const optionsRef = useRef(options)
+  const previousOptionsRef = useRef(options)
   const enabledRef = useRef(options.active && !options.locked)
-  const mountedRef = useRef(true)
+  const mountedRef = useRef(false)
   const dragRef = useRef<DragState | null>(null)
   const activeTweenRef = useRef<ActiveTween | null>(null)
 
   optionsRef.current = options
   enabledRef.current = options.active && !options.locked
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false
+  const settleTween = useCallback((
+    activeTween: ActiveTween,
+    syncCurrent: boolean,
+  ): void => {
+    if (activeTween.settled) {
+      return
+    }
+    activeTween.settled = true
+    if (activeTweenRef.current === activeTween) {
+      activeTweenRef.current = null
+    }
+    if (syncCurrent && mountedRef.current) {
+      currentScroll.current = targetScroll.current
+    }
+    activeTween.resolve()
+  }, [])
+
+  const clearDrag = useCallback((releaseCapture: boolean): void => {
+    const drag = dragRef.current
+    dragRef.current = null
+    if (!drag || !releaseCapture || !drag.captured) {
+      return
+    }
+    try {
+      if (drag.captureTarget.hasPointerCapture(drag.pointerId)) {
+        drag.captureTarget.releasePointerCapture(drag.pointerId)
+      }
+    } catch {
+      // Capture may already be gone when the browser dispatches cancellation.
     }
   }, [])
 
@@ -96,23 +125,10 @@ export function usePublicationCarousel(
     }
 
     activeTweenRef.current = null
-    activeTween.tween.kill()
-    activeTween.resolve()
-  }, [])
-
-  const clearDrag = useCallback((releaseCapture: boolean): void => {
-    const drag = dragRef.current
-    dragRef.current = null
-    if (
-      !drag ||
-      !releaseCapture ||
-      !drag.captured ||
-      !drag.captureTarget.hasPointerCapture(drag.pointerId)
-    ) {
-      return
-    }
-    drag.captureTarget.releasePointerCapture(drag.pointerId)
-  }, [])
+    activeTween.tween?.kill()
+    settleTween(activeTween, false)
+    targetScroll.current = currentScroll.current
+  }, [settleTween])
 
   const centerItem = useCallback(
     (index: number): Promise<void> => {
@@ -130,25 +146,38 @@ export function usePublicationCarousel(
 
       cancelActiveTween()
       return new Promise(resolve => {
-        const tween = gsap.to(targetScroll, {
+        const activeTween: ActiveTween = {
+          tween: null,
+          resolve,
+          settled: false,
+        }
+        activeTweenRef.current = activeTween
+        activeTween.tween = gsap.to(targetScroll, {
           current: centeredTarget,
           duration: CENTER_DURATION_SECONDS,
           ease: 'power2.inOut',
           onComplete: () => {
-            if (activeTweenRef.current?.tween !== tween) {
+            if (activeTween.settled) {
               return
             }
-            activeTweenRef.current = null
             targetScroll.current = centeredTarget
-            currentScroll.current = centeredTarget
-            resolve()
+            settleTween(activeTween, true)
           },
+          onInterrupt: () => settleTween(activeTween, false),
         })
-        activeTweenRef.current = { tween, resolve }
       })
     },
-    [cancelActiveTween],
+    [cancelActiveTween, settleTween],
   )
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      clearDrag(true)
+      cancelActiveTween()
+    }
+  }, [cancelActiveTween, clearDrag])
 
   useFrame((_, delta) => {
     if (!mountedRef.current || !Number.isFinite(delta) || delta <= 0) {
@@ -178,13 +207,30 @@ export function usePublicationCarousel(
   }, [router])
 
   useEffect(() => {
+    const previousOptions = previousOptionsRef.current
+    const geometryChanged =
+      previousOptions.itemCount !== options.itemCount ||
+      previousOptions.itemGap !== options.itemGap
+    previousOptionsRef.current = options
+
+    if (!options.active || options.locked || geometryChanged) {
+      cancelActiveTween()
+      clearDrag(true)
+    }
     if (options.active && !options.locked) {
       router.activate(WHEEL_CONSUMER_ID)
       return
     }
     router.deactivate(WHEEL_CONSUMER_ID)
-    clearDrag(true)
-  }, [clearDrag, options.active, options.locked, router])
+  }, [
+    cancelActiveTween,
+    clearDrag,
+    options.active,
+    options.itemCount,
+    options.itemGap,
+    options.locked,
+    router,
+  ])
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent): void => {
@@ -195,16 +241,12 @@ export function usePublicationCarousel(
       ) {
         return
       }
-      const captureTarget = event.target
-      if (!(captureTarget instanceof Element)) {
-        return
-      }
       dragRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         lastTouchX: event.clientX,
-        captureTarget,
+        captureTarget: pointerTarget,
         direction: 'pending',
         captured: false,
       }
@@ -216,11 +258,17 @@ export function usePublicationCarousel(
         return
       }
       if (drag.direction === 'pending') {
-        drag.direction = getLockedDirection(drag, event)
-        if (drag.direction === 'horizontal') {
-          drag.captureTarget.setPointerCapture(drag.pointerId)
+        const lockedDirection = getLockedDirection(drag, event)
+        if (lockedDirection === 'horizontal') {
+          try {
+            drag.captureTarget.setPointerCapture(drag.pointerId)
+          } catch {
+            dragRef.current = null
+            return
+          }
           drag.captured = true
         }
+        drag.direction = lockedDirection
       }
       if (drag.direction !== 'horizontal') {
         return
@@ -241,22 +289,22 @@ export function usePublicationCarousel(
       }
     }
 
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('pointermove', handlePointerMove, { passive: false })
-    window.addEventListener('pointerup', handlePointerEnd)
-    window.addEventListener('pointercancel', handlePointerEnd)
-    window.addEventListener('lostpointercapture', handlePointerEnd)
+    pointerTarget.addEventListener('pointerdown', handlePointerDown)
+    pointerTarget.addEventListener('pointermove', handlePointerMove, {
+      passive: false,
+    })
+    pointerTarget.addEventListener('pointerup', handlePointerEnd)
+    pointerTarget.addEventListener('pointercancel', handlePointerEnd)
+    pointerTarget.addEventListener('lostpointercapture', handlePointerEnd)
     return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerEnd)
-      window.removeEventListener('pointercancel', handlePointerEnd)
-      window.removeEventListener('lostpointercapture', handlePointerEnd)
+      pointerTarget.removeEventListener('pointerdown', handlePointerDown)
+      pointerTarget.removeEventListener('pointermove', handlePointerMove)
+      pointerTarget.removeEventListener('pointerup', handlePointerEnd)
+      pointerTarget.removeEventListener('pointercancel', handlePointerEnd)
+      pointerTarget.removeEventListener('lostpointercapture', handlePointerEnd)
       clearDrag(true)
     }
-  }, [clearDrag])
-
-  useEffect(() => cancelActiveTween, [cancelActiveTween])
+  }, [clearDrag, pointerTarget])
 
   return useMemo(
     () => ({ currentScroll, centerItem }),

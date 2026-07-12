@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePublicationCarousel } from '@/components/rooms/publications/usePublicationCarousel'
@@ -5,6 +6,7 @@ import { usePublicationCarousel } from '@/components/rooms/publications/usePubli
 interface TweenVars {
   current: number
   onComplete: () => void
+  onInterrupt?: () => void
 }
 
 interface TweenCall {
@@ -26,6 +28,7 @@ const mocks = vi.hoisted(() => {
       | ((state: unknown, delta: number) => void)
       | undefined,
     wheelHandler: undefined as ((event: WheelEvent) => void) | undefined,
+    canvas: undefined as HTMLCanvasElement | undefined,
     unsubscribe: vi.fn(),
     tweenCalls: [] as TweenCall[],
     gsapTo: vi.fn(),
@@ -40,6 +43,11 @@ vi.mock('@react-three/fiber', () => ({
   useFrame: (callback: (state: unknown, delta: number) => void) => {
     mocks.frameCallback = callback
   },
+  useThree: (
+    selector: (state: { gl: { domElement: HTMLCanvasElement } }) => unknown,
+  ) => selector({
+    gl: { domElement: mocks.canvas! },
+  }),
 }))
 
 vi.mock('gsap', () => ({
@@ -86,8 +94,8 @@ function dispatchPointer(
   return event
 }
 
-function createPointerTarget(): HTMLDivElement {
-  const target = document.createElement('div')
+function createPointerTarget(): HTMLCanvasElement {
+  const target = document.createElement('canvas')
   Object.defineProperties(target, {
     setPointerCapture: { value: vi.fn() },
     releasePointerCapture: { value: vi.fn() },
@@ -113,6 +121,7 @@ beforeEach(() => {
   mocks.router.activate.mockReset()
   mocks.router.deactivate.mockReset()
   mocks.gsapTo.mockReset()
+  mocks.canvas = createPointerTarget()
 
   mocks.router.subscribe.mockImplementation(
     (_id: string, handler: (event: WheelEvent) => void) => {
@@ -130,6 +139,23 @@ beforeEach(() => {
 })
 
 describe('usePublicationCarousel wheel routing', () => {
+  it('continues handling wheel, pointer, and frames after StrictMode remount', () => {
+    const { result } = renderHook(
+      () => usePublicationCarousel(DEFAULT_OPTIONS),
+      { wrapper: StrictMode },
+    )
+    const target = mocks.canvas!
+
+    act(() => {
+      mocks.wheelHandler?.({ deltaY: 100 } as WheelEvent)
+    })
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 80, clientY: 100 })
+    runFrame(100)
+
+    expect(result.current.currentScroll.current).toBeCloseTo(0.66)
+  })
+
   it('consumes wheel only while active and unlocked without preventing default', () => {
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
@@ -173,14 +199,34 @@ describe('usePublicationCarousel wheel routing', () => {
 })
 
 describe('usePublicationCarousel pointer input', () => {
+  it('does not start a drag from an overlay outside the R3F canvas', () => {
+    const overlayButton = document.createElement('button')
+    document.body.append(overlayButton)
+    const { result } = renderHook(() =>
+      usePublicationCarousel(DEFAULT_OPTIONS),
+    )
+
+    dispatchPointer(overlayButton, 'pointerdown', {
+      clientX: 100,
+      clientY: 100,
+    })
+    dispatchPointer(overlayButton, 'pointermove', {
+      clientX: 50,
+      clientY: 100,
+    })
+    runFrame(100)
+
+    expect(result.current.currentScroll.current).toBe(0)
+  })
+
   it('captures and applies a primary horizontal touch drag', () => {
-    const target = createPointerTarget()
+    const target = mocks.canvas!
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
     )
 
     dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
-    const move = dispatchPointer(window, 'pointermove', {
+    const move = dispatchPointer(target, 'pointermove', {
       clientX: 80,
       clientY: 102,
     })
@@ -192,13 +238,13 @@ describe('usePublicationCarousel pointer input', () => {
   })
 
   it('does not update or capture for a vertical touch drag', () => {
-    const target = createPointerTarget()
+    const target = mocks.canvas!
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
     )
 
     dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
-    const move = dispatchPointer(window, 'pointermove', {
+    const move = dispatchPointer(target, 'pointermove', {
       clientX: 98,
       clientY: 75,
     })
@@ -210,7 +256,7 @@ describe('usePublicationCarousel pointer input', () => {
   })
 
   it('ignores non-primary pointers and mouse drags', () => {
-    const target = createPointerTarget()
+    const target = mocks.canvas!
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
     )
@@ -220,14 +266,14 @@ describe('usePublicationCarousel pointer input', () => {
       clientX: 100,
       clientY: 100,
     })
-    dispatchPointer(window, 'pointermove', { clientX: 50, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
     dispatchPointer(target, 'pointerdown', {
       pointerType: 'mouse',
       pointerId: 2,
       clientX: 100,
       clientY: 100,
     })
-    dispatchPointer(window, 'pointermove', {
+    dispatchPointer(target, 'pointermove', {
       pointerType: 'mouse',
       pointerId: 2,
       clientX: 50,
@@ -239,23 +285,60 @@ describe('usePublicationCarousel pointer input', () => {
   })
 
   it('clears drag state on pointercancel', () => {
-    const target = createPointerTarget()
+    const target = mocks.canvas!
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
     )
 
     dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
-    dispatchPointer(window, 'pointermove', { clientX: 80, clientY: 100 })
-    dispatchPointer(window, 'pointercancel')
-    dispatchPointer(window, 'pointermove', { clientX: 40, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 80, clientY: 100 })
+    dispatchPointer(target, 'pointercancel')
+    dispatchPointer(target, 'pointermove', { clientX: 40, clientY: 100 })
     runFrame(100)
 
     expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
     expect(result.current.currentScroll.current).toBeCloseTo(0.16)
   })
 
+  it('clears drag state on lostpointercapture', () => {
+    const target = mocks.canvas!
+    const { result } = renderHook(() =>
+      usePublicationCarousel(DEFAULT_OPTIONS),
+    )
+
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 80, clientY: 100 })
+    dispatchPointer(target, 'lostpointercapture')
+    dispatchPointer(target, 'pointermove', { clientX: 40, clientY: 100 })
+    runFrame(100)
+
+    expect(result.current.currentScroll.current).toBeCloseTo(0.16)
+  })
+
+  it('resets without consuming movement when pointer capture fails', () => {
+    const target = mocks.canvas!
+    vi.mocked(target.setPointerCapture).mockImplementation(() => {
+      throw new DOMException('capture failed')
+    })
+    const { result } = renderHook(() =>
+      usePublicationCarousel(DEFAULT_OPTIONS),
+    )
+
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+    const failedMove = dispatchPointer(target, 'pointermove', {
+      clientX: 80,
+      clientY: 100,
+    })
+    dispatchPointer(target, 'pointermove', { clientX: 40, clientY: 100 })
+    runFrame(100)
+
+    expect(failedMove.defaultPrevented).toBe(false)
+    expect(result.current.currentScroll.current).toBe(0)
+    expect(target.setPointerCapture).toHaveBeenCalledOnce()
+  })
+
   it('stops responding after cleanup', () => {
-    const target = createPointerTarget()
+    const target = mocks.canvas!
     const { result, unmount } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
     )
@@ -263,7 +346,7 @@ describe('usePublicationCarousel pointer input', () => {
 
     unmount()
     dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
-    dispatchPointer(window, 'pointermove', { clientX: 50, clientY: 100 })
+    dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
     mocks.wheelHandler?.({ deltaY: 100 } as WheelEvent)
     runFrame(1)
 
@@ -273,6 +356,61 @@ describe('usePublicationCarousel pointer input', () => {
 })
 
 describe('usePublicationCarousel animation', () => {
+  it.each([
+    { active: false, locked: false },
+    { active: true, locked: true },
+  ])(
+    'cancels center and clears drag when interaction changes to %o',
+    async disabledOptions => {
+      const target = mocks.canvas!
+      const { result, rerender } = renderHook(
+        (options: typeof DEFAULT_OPTIONS) =>
+          usePublicationCarousel(options),
+        { initialProps: DEFAULT_OPTIONS },
+      )
+      const promise = result.current.centerItem(1)
+      const call = mocks.tweenCalls[0]
+      dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+
+      rerender({ ...DEFAULT_OPTIONS, ...disabledOptions })
+      await promise
+      call.vars.onComplete()
+      rerender(DEFAULT_OPTIONS)
+      dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
+      runFrame(100)
+
+      expect(call.tween.kill).toHaveBeenCalledOnce()
+      expect(result.current.currentScroll.current).toBe(0)
+    },
+  )
+
+  it.each([
+    { itemCount: 5 },
+    { itemGap: 3 },
+  ])(
+    'cancels stale center and drag when geometry changes to %o',
+    async geometry => {
+      const target = mocks.canvas!
+      const { result, rerender } = renderHook(
+        (options: typeof DEFAULT_OPTIONS) =>
+          usePublicationCarousel(options),
+        { initialProps: DEFAULT_OPTIONS },
+      )
+      const promise = result.current.centerItem(1)
+      const call = mocks.tweenCalls[0]
+      dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+
+      rerender({ ...DEFAULT_OPTIONS, ...geometry })
+      await promise
+      call.vars.onComplete()
+      dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
+      runFrame(100)
+
+      expect(call.tween.kill).toHaveBeenCalledOnce()
+      expect(result.current.currentScroll.current).toBe(0)
+    },
+  )
+
   it('uses frame-rate-independent smoothing without overshoot', () => {
     const { result } = renderHook(() =>
       usePublicationCarousel(DEFAULT_OPTIONS),
@@ -327,6 +465,29 @@ describe('usePublicationCarousel animation', () => {
     completeTween(secondCall)
     await second
     expect(result.current.currentScroll.current).toBe(-5)
+  })
+
+  it('settles only once when kill also invokes onInterrupt', async () => {
+    const { result } = renderHook(() =>
+      usePublicationCarousel(DEFAULT_OPTIONS),
+    )
+    let settlementCount = 0
+    const first = result.current.centerItem(1).then(() => {
+      settlementCount += 1
+    })
+    const firstCall = mocks.tweenCalls[0]
+    firstCall.tween.kill.mockImplementation(() => {
+      firstCall.vars.onInterrupt?.()
+    })
+
+    const second = result.current.centerItem(2)
+    await first
+    firstCall.vars.onComplete()
+    await Promise.resolve()
+
+    expect(settlementCount).toBe(1)
+    completeTween(mocks.tweenCalls[1])
+    await second
   })
 
   it('kills an active tween and settles its promise on unmount', async () => {

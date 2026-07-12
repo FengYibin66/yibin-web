@@ -22,7 +22,7 @@ export function GalleryDoorSection() {
     right.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
     left.style.transform = 'rotateY(-75deg)'
     right.style.transform = 'rotateY(75deg)'
-    setTimeout(() => router.push('/gallery'), 700)
+    setTimeout(() => router.push('/gallery?from=classic'), 700)
   }
 
   const hoverOpen = () => {

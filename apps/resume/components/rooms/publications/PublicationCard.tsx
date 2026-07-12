@@ -18,6 +18,27 @@ import { PublicationCardFront } from './PublicationCardFront'
 import type { PublicationRoomItem } from './publicationTypes'
 import { usePublicationCardMotion } from './usePublicationCardMotion'
 
+function fmt3(v: THREE.Vector3 | number[]): string {
+  const a = Array.isArray(v) ? v : v.toArray()
+  return `[${a.map(n => n.toFixed(3)).join(', ')}]`
+}
+
+function summarizeFace(face: THREE.Group | null, label: string) {
+  const contentRoot = face?.children[0]
+  if (!contentRoot) {
+    return { label, missing: true }
+  }
+  return {
+    label,
+    rootRotX: contentRoot.rotation.x.toFixed(3),
+    children: contentRoot.children.slice(0, 4).map(child => ({
+      name: child.name || child.type,
+      pos: fmt3(child.position),
+      rotX: child.rotation.x.toFixed(3),
+    })),
+  }
+}
+
 const CARD_WIDTH = 1.5
 const CARD_HEIGHT = 2
 const CARD_SEGMENTS = 16
@@ -44,7 +65,7 @@ export interface PublicationCardProps {
 }
 
 export interface PublicationCardHandle {
-  open: (target: THREE.Vector3) => Promise<void>
+  open: () => Promise<void>
   close: () => Promise<void>
   cancel: (restoreSnapshot?: boolean) => void
 }
@@ -157,7 +178,13 @@ export const PublicationCard = forwardRef<
   const backRef = useRef<THREE.Group>(null)
   const hoveredRef = useRef(false)
   const cursorOwnerRef = useRef<object>({})
+  const visibilityDumpDoneRef = useRef(false)
   const motion = usePublicationCardMotion()
+
+  useEffect(() => {
+    clothespinTexture.colorSpace = THREE.SRGBColorSpace
+    paperBackTexture.colorSpace = THREE.SRGBColorSpace
+  }, [clothespinTexture, paperBackTexture])
 
   useImperativeHandle(ref, () => ({
     open: motion.open,
@@ -182,7 +209,8 @@ export const PublicationCard = forwardRef<
 
   useFrame(state => {
     const material = motion.materialRef.current
-    if (!material) {
+    const paper = motion.paperRef.current
+    if (!material || !paper) {
       return
     }
     const time = state.clock.getElapsedTime()
@@ -200,13 +228,68 @@ export const PublicationCard = forwardRef<
       material.windStrength,
       time,
     )
+
+    // Dump once after present pose (rotation.x ≈ π, z pushed toward camera).
+    const nearOpenPose = (
+      isSelected
+      && Math.abs(paper.rotation.x - Math.PI) < 0.2
+      && Math.abs(paper.position.z) > 1
+    )
+    if (!isSelected) {
+      visibilityDumpDoneRef.current = false
+    } else if (nearOpenPose && !visibilityDumpDoneRef.current) {
+      visibilityDumpDoneRef.current = true
+      paper.updateWorldMatrix(true, true)
+      const worldPos = new THREE.Vector3()
+      paper.getWorldPosition(worldPos)
+      const slot = paper.parent?.parent
+      const slotWorld = new THREE.Vector3()
+      slot?.getWorldPosition(slotWorld)
+      const cam = state.camera.position.clone()
+      const toPaper = worldPos.clone().sub(cam)
+      const camForward = new THREE.Vector3()
+      state.camera.getWorldDirection(camForward)
+      const mesh = paper.children.find(
+        (child): child is THREE.Mesh => child instanceof THREE.Mesh,
+      )
+      const ndc = worldPos.clone().project(state.camera)
+      const inFront = toPaper.dot(camForward)
+      const inFrustum = (
+        Math.abs(ndc.x) <= 1.2
+        && Math.abs(ndc.y) <= 1.2
+        && ndc.z >= -1
+        && ndc.z <= 1
+      )
+      // Flat lines so DevTools can't collapse the critical fields.
+      console.log('[pub-debug] VISIBILITY id=', publication.id)
+      console.log('[pub-debug] VISIBILITY localPos=', fmt3(paper.position))
+      console.log('[pub-debug] VISIBILITY worldPos=', fmt3(worldPos))
+      console.log('[pub-debug] VISIBILITY slotWorld=', fmt3(slotWorld))
+      console.log('[pub-debug] VISIBILITY cameraPos=', fmt3(cam))
+      console.log('[pub-debug] VISIBILITY camForward=', fmt3(camForward))
+      console.log('[pub-debug] VISIBILITY distToCam=', toPaper.length().toFixed(3))
+      console.log('[pub-debug] VISIBILITY inFrontOfCam=', inFront.toFixed(3), inFront > 0 ? 'OK' : 'BEHIND')
+      console.log('[pub-debug] VISIBILITY ndc=', fmt3(ndc))
+      console.log('[pub-debug] VISIBILITY inNdcFrustum=', inFrustum)
+      console.log('[pub-debug] VISIBILITY meshVisible=', mesh?.visible)
+      console.log('[pub-debug] VISIBILITY mat=', (mesh?.material as THREE.Material | undefined)?.type, 'opacity=', (mesh?.material as THREE.Material | undefined)?.opacity)
+      console.log('[pub-debug] VISIBILITY bend/uProgress=', material.bend, material.uProgress)
+      console.log('[pub-debug] VISIBILITY front=', JSON.stringify(summarizeFace(frontRef.current, 'front')))
+      console.log('[pub-debug] VISIBILITY back=', JSON.stringify(summarizeFace(backRef.current, 'back')))
+    }
   })
 
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>): void => {
     event.stopPropagation()
     if (isLocked || didDragRef.current) {
+      console.warn('[pub-debug] card click blocked', {
+        id: publication.id,
+        isLocked,
+        didDrag: didDragRef.current,
+      })
       return
     }
+    console.log('[pub-debug] card click', publication.id)
     onSelect(publication.id)
   }, [didDragRef, isLocked, onSelect, publication.id])
 
@@ -260,6 +343,7 @@ export const PublicationCard = forwardRef<
       </mesh>
 
       <group ref={motion.paperRef} position={[0, PAPER_HANG_Y, 0]}>
+        {/* itom: paper mesh always raycasts; OPEN hit-area stopPropagates above it */}
         <mesh>
           <planeGeometry
             args={[CARD_WIDTH, CARD_HEIGHT, CARD_SEGMENTS, CARD_SEGMENTS]}
@@ -267,12 +351,14 @@ export const PublicationCard = forwardRef<
           <PaperMaterial
             ref={motion.materialRef}
             color="#ffffff"
+            map={paperBackTexture}
             mapBack={paperBackTexture}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        <group ref={frontRef}>
+        {/* Preview: Title → Image → Venue · Year */}
+        <group ref={frontRef} visible={!isSelected}>
           <PublicationCardFront publication={publication} opacity={1} />
         </group>
         <group ref={backRef}>

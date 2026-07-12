@@ -148,13 +148,11 @@ describe('PublicationCard interaction', () => {
   it('exposes the motion API through its imperative handle', () => {
     const ref = createRef<PublicationCardHandle>()
     render(<PublicationCard ref={ref} {...BASE_PROPS} />)
-    const target = new THREE.Vector3(0, 1, 2)
-
-    ref.current?.open(target)
+    ref.current?.open()
     ref.current?.close()
     ref.current?.cancel()
 
-    expect(testState.motion.open).toHaveBeenCalledWith(target)
+    expect(testState.motion.open).toHaveBeenCalledOnce()
     expect(testState.motion.close).toHaveBeenCalledOnce()
     expect(testState.motion.cancel).toHaveBeenCalledOnce()
   })

@@ -77,9 +77,11 @@ function mapPublicationRoomItem(
     year: item.year,
     authors: item.authors,
     abstract: item.abstract ?? ABSTRACT_FALLBACKS[locale],
-    doi: item.doi,
+    doi: normalizedDoi,
     keywords: [...item.keywords],
     featured: id === 'cscw25',
+    // Temporary: reuse CSCW poster until each paper has its own cover art.
+    image: item.image ?? '/cscw-poster.png',
   }
 }
 

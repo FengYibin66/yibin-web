@@ -17,12 +17,28 @@ interface PaperMaterialProps {
   mapBack?: THREE.Texture | null
   mapPainted?: THREE.Texture | null
   side?: THREE.Side
+  depthTest?: boolean
+  depthWrite?: boolean
+  transparent?: boolean
+  opacity?: number
   paintProgress?: { value: number }
   roomOrigin?: { value: THREE.Vector3 }
 }
 
 const PaperMaterial = forwardRef<PaperMaterialHandle, PaperMaterialProps>(function PaperMaterial(
-  { color = '#e0e0e0', map, mapBack, mapPainted, side = THREE.DoubleSide, paintProgress, roomOrigin },
+  {
+    color = '#e0e0e0',
+    map,
+    mapBack,
+    mapPainted,
+    side = THREE.DoubleSide,
+    depthTest = true,
+    depthWrite = true,
+    transparent = false,
+    opacity = 1,
+    paintProgress,
+    roomOrigin,
+  },
   ref
 ) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
@@ -129,6 +145,10 @@ const PaperMaterial = forwardRef<PaperMaterialHandle, PaperMaterialProps>(functi
       map={map === null ? undefined : map}
       color={color as string}
       side={side as THREE.Side}
+      depthTest={depthTest}
+      depthWrite={depthWrite}
+      transparent={transparent}
+      opacity={opacity}
       onBeforeCompile={onBeforeCompile}
       needsUpdate
     />

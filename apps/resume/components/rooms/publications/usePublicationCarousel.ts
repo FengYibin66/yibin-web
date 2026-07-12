@@ -126,6 +126,12 @@ export function usePublicationCarousel(
       return
     }
 
+    console.warn('[pub-debug] carousel.cancelActiveTween', {
+      active: optionsRef.current.active,
+      locked: optionsRef.current.locked,
+      currentScroll: currentScroll.current,
+      targetScroll: targetScroll.current,
+    })
     activeTweenRef.current = null
     activeTween.tween?.kill()
     settleTween(activeTween, false)

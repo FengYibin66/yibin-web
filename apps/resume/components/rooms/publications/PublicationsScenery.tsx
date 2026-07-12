@@ -32,6 +32,8 @@ const HOUSES_HEIGHT = HOUSES_WIDTH / 2.357
 const CITY_WIDTH = 30
 const CITY_HEIGHT = CITY_WIDTH / 2.357
 const RAILING_HEIGHT = 1.25
+/** Decorative scenery must not steal pointer hits from hanging cards. */
+const disableRaycast: THREE.Mesh['raycast'] = () => undefined
 
 export const PUBLICATION_ROPE_POINTS = [
   new THREE.Vector3(-16, 3.5, -6),
@@ -113,8 +115,8 @@ function FlyingBird({ texture, opacity }: {
   })
 
   return (
-    <mesh ref={ref} name="publication-bird" position={[-25, 4.5, -10]}
-      scale={[0.49, 0.35, 1]}>
+      <mesh ref={ref} name="publication-bird" position={[-25, 4.5, -10]}
+      scale={[0.49, 0.35, 1]} raycast={disableRaycast}>
       <planeGeometry args={[1.5, 1.5]} />
       <meshBasicMaterial map={texture} color="#e0e0e0" transparent
         opacity={opacity} alphaTest={0.1} side={THREE.DoubleSide} />
@@ -205,51 +207,55 @@ export function PublicationsScenery({
 
   return (
     <group name="publications-scenery" position={[0, -0.7, -2]}>
-      <mesh name="publication-floor" rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh name="publication-floor" rotation={[-Math.PI / 2, 0, 0]}
+        raycast={disableRaycast}>
         <shapeGeometry args={[floorShape]} />
         <primitive object={floorMaterial} />
       </mesh>
       <group name="publication-floor-outline" rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.01, 0]}>
+        position={[0, 0.01, 0]} raycast={disableRaycast}>
         <primitive object={floorOutline} />
       </group>
-      <mesh name="publication-railing" position={[0, RAILING_HEIGHT / 2, -3.9]}>
+      <mesh name="publication-railing" position={[0, RAILING_HEIGHT / 2, -3.9]}
+        raycast={disableRaycast}>
         <planeGeometry args={[20, RAILING_HEIGHT]} />
         <meshBasicMaterial {...materialProps} map={railingTexture} transparent
           alphaTest={0.1} side={THREE.DoubleSide} />
       </mesh>
       <mesh name="publication-threshold" position={[0, 0.01, -3.9]}
-        rotation={[-Math.PI / 2, 0, 0]}>
+        rotation={[-Math.PI / 2, 0, 0]} raycast={disableRaycast}>
         <planeGeometry args={[15, 0.15]} />
         <meshBasicMaterial {...materialProps} map={thresholdTexture}
           side={THREE.DoubleSide} />
       </mesh>
       <group name="publication-clothesline" position={[0, 1.6, -4]}>
-        <mesh name="publication-rope" geometry={ropeGeometry}>
+        <mesh name="publication-rope" geometry={ropeGeometry} raycast={disableRaycast}>
           <meshBasicMaterial {...materialProps} color="#666666" />
         </mesh>
         {children}
       </group>
-      <mesh name="publication-houses-center" position={[0, -1, -9]}>
+      <mesh name="publication-houses-center" position={[0, -1, -9]}
+        raycast={disableRaycast}>
         <planeGeometry args={[HOUSES_WIDTH, HOUSES_HEIGHT]} />
         <meshBasicMaterial {...materialProps} map={housesTexture} transparent
           alphaTest={0.1} side={THREE.DoubleSide} />
       </mesh>
       <mesh name="publication-houses-left" position={[-15, -1, -9]}
-        scale={[-1, 1, 1]}>
+        scale={[-1, 1, 1]} raycast={disableRaycast}>
         <planeGeometry args={[HOUSES_WIDTH, HOUSES_HEIGHT]} />
         <meshBasicMaterial {...materialProps} map={housesTexture} transparent
           alphaTest={0.1} side={THREE.DoubleSide} />
       </mesh>
       <mesh name="publication-houses-right"
-        position={[rightCrop.centerX, -1, -9]} scale={[-1, 1, 1]}>
+        position={[rightCrop.centerX, -1, -9]} scale={[-1, 1, 1]}
+        raycast={disableRaycast}>
         <planeGeometry args={[rightCrop.width, HOUSES_HEIGHT]} />
         <meshBasicMaterial {...materialProps} map={rightHousesTexture} transparent
           alphaTest={0.1} side={THREE.DoubleSide} />
       </mesh>
-      {[-30, 0, 30].map((x, index) => (
-        <mesh key={x} name={`publication-city-${index}`} position={[x, 3.4, -17]}
-          scale={x === 0 ? [1, 1, 1] : [-1, 1, 1]}>
+      {[-30, 0, 30].map((x) => (
+        <mesh key={x} name={`publication-city-${x}`} position={[x, 3.4, -17]}
+          scale={x === 0 ? [1, 1, 1] : [-1, 1, 1]} raycast={disableRaycast}>
           <planeGeometry args={[CITY_WIDTH, CITY_HEIGHT]} />
           <meshBasicMaterial {...materialProps} map={cityTexture} transparent
             alphaTest={0.1} side={THREE.DoubleSide} />
@@ -257,7 +263,7 @@ export function PublicationsScenery({
       ))}
       <FlyingBird texture={birdTexture} opacity={materialProps.opacity} />
       <GalleryClouds count={getPublicationCloudCount(tier)} seed={123} />
-      <mesh name="publication-sky" position={[0, 5, -20]}>
+      <mesh name="publication-sky" position={[0, 5, -20]} raycast={disableRaycast}>
         <sphereGeometry args={[40, 32, 32]} />
         <meshBasicMaterial color="#f0f0f0" side={THREE.BackSide} transparent
           opacity={0.5 * materialProps.opacity}

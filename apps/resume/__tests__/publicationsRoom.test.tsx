@@ -1,7 +1,14 @@
-import { StrictMode, useEffect } from 'react'
+import {
+  StrictMode,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  type Ref,
+} from 'react'
 import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublicationCardHandle } from '@/components/rooms/publications/PublicationCard'
+import type { PublicationClotheslineHandle } from '@/components/rooms/publications/PublicationClothesline'
 import type { PublicationMotionState } from '@/components/rooms/publications/publicationMotionMachine'
 import type { PublicationRoomItem } from '@/components/rooms/publications/publicationTypes'
 
@@ -55,6 +62,7 @@ const mocks = vi.hoisted(() => ({
   scene: {
     isTeleporting: false,
     teleportPhase: null as 'closing' | 'teleporting' | 'opening' | null,
+    currentRoom: null as 'publications' | null,
   },
   paint: {
     isRevealing: false,
@@ -112,6 +120,10 @@ vi.mock('@/components/rooms/publications/usePublicationCarousel', () => ({
   },
 }))
 
+vi.mock('@/components/rooms/publications/usePublicationBrowseCamera', () => ({
+  usePublicationBrowseCamera: () => undefined,
+}))
+
 vi.mock('@/components/rooms/publications/PublicationsScenery', () => ({
   PublicationsScenery: (
     props: Record<string, unknown> & { children?: React.ReactNode },
@@ -122,8 +134,15 @@ vi.mock('@/components/rooms/publications/PublicationsScenery', () => ({
 }))
 
 vi.mock('@/components/rooms/publications/PublicationClothesline', () => ({
-  PublicationClothesline: (props: ClotheslineProps) => {
+  PublicationClothesline: forwardRef(function MockClothesline(
+    props: ClotheslineProps,
+    ref: Ref<PublicationClotheslineHandle>,
+  ) {
     mocks.clotheslineProps.push(props)
+    useImperativeHandle(ref, () => ({
+      syncSlotsToScroll: () => undefined,
+      getClotheslineRoot: () => null,
+    }))
     useEffect(() => {
       props.publications.forEach(publication => {
         props.onCardReady(
@@ -150,7 +169,7 @@ vi.mock('@/components/rooms/publications/PublicationClothesline', () => ({
         ))}
       </group>
     )
-  },
+  }),
 }))
 
 import { PublicationsRoom } from '@/components/rooms/publications/PublicationsRoom'
@@ -181,6 +200,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.scene.isTeleporting = false
   mocks.scene.teleportPhase = null
+  mocks.scene.currentRoom = null
   mocks.paint.isRevealing = false
   mocks.carouselOptions.length = 0
   mocks.clotheslineProps.length = 0

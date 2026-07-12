@@ -8,9 +8,13 @@ export interface PublicationRoomItem {
   doi?: string
   keywords: readonly string[]
   featured: boolean
+  /** Cover / poster texture for the hanging paper face (itom mapPainted). */
+  image?: string
 }
 
 export interface PublicationCardFaceProps {
   publication: PublicationRoomItem
   opacity: number
+  depthTest?: boolean
+  renderOrder?: number
 }

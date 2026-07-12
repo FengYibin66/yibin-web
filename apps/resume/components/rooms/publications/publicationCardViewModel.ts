@@ -55,5 +55,8 @@ export function openPublicationPaper(
   doi: string,
   openWindow: OpenWindow = window.open.bind(window),
 ): void {
-  openWindow(doi, '_blank', 'noopener,noreferrer')
+  const opened = openWindow(doi, '_blank', 'noopener,noreferrer')
+  if (opened == null) {
+    console.warn('[pub] window.open blocked for', doi)
+  }
 }

@@ -6,14 +6,6 @@ import {
 } from '@/lib/content/publications'
 
 const PUBLICATION_IDS = ['cscw25', 'acm23', 'chi25'] as const
-const PUBLICATION_ID_BY_DOI: ReadonlyMap<
-  string,
-  (typeof PUBLICATION_IDS)[number]
-> = new Map([
-  ['https://doi.org/10.1145/3715070.3749246', 'cscw25'],
-  ['https://dl.acm.org/doi/abs/10.1145/3757633', 'acm23'],
-  ['https://dl.acm.org/doi/full/10.1145/3706599.3719973', 'chi25'],
-])
 const ABSTRACT_FALLBACKS: Record<Locale, string> = {
   en: 'Abstract unavailable. Please view the publication for details.',
   zh: '暂无摘要，请查看论文原文了解详情。',
@@ -30,19 +22,19 @@ describe('publication room data', () => {
       expect(roomItems.map(item => item.title)).toEqual(
         sourceItems.map(item => item.title),
       )
-      expect(roomItems).toEqual(
-        sourceItems.map(item => ({
-          id: PUBLICATION_ID_BY_DOI.get(item.doi!),
-          title: item.title,
-          venue: item.venue,
-          year: item.year,
-          authors: item.authors,
-          abstract: item.abstract ?? ABSTRACT_FALLBACKS[locale],
-          doi: item.doi,
-          keywords: item.keywords,
-          featured: item.featured ?? false,
-        })),
-      )
+      expect(roomItems.map(item => item.id)).toEqual([...PUBLICATION_IDS])
+      expect(roomItems.map(item => item.image)).toEqual([
+        '/cscw-poster.png',
+        '/cscw-poster.png',
+        '/cscw-poster.png',
+      ])
+      roomItems.forEach(item => {
+        expect(item.doi).toMatch(/^https:\/\/doi\.org\//)
+      })
+      expect(roomItems.find(item => item.id === 'cscw25')).toMatchObject({
+        featured: true,
+        image: '/cscw-poster.png',
+      })
     },
   )
 

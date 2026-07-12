@@ -1,68 +1,79 @@
-import { Text } from '@react-three/drei'
+'use client'
+
+import { Text, useTexture } from '@react-three/drei'
+import * as THREE from 'three'
+import type { Mesh } from 'three'
 import { createPublicationCardFrontViewModel } from './publicationCardViewModel'
 import type { PublicationCardFaceProps } from './publicationTypes'
 
 const FONT_BOLD = '/fonts/CabinSketch-Bold.ttf'
-const FONT_REGULAR = '/fonts/CabinSketch-Regular.ttf'
-const FEATURED_COLOR = '#c4804a'
-const VENUE_COLOR = '#888888'
+const disableRaycast: Mesh['raycast'] = () => undefined
+const IMAGE_WIDTH = 1.25
+const IMAGE_HEIGHT = 0.85
 
+/**
+ * Hanging preview stack (top → bottom):
+ * Title → cover image → Venue · Year
+ */
 export function PublicationCardFront({
   publication,
   opacity,
+  depthTest = true,
+  renderOrder = 0,
 }: PublicationCardFaceProps) {
   const viewModel = createPublicationCardFrontViewModel(publication)
-  const venueColor = viewModel.isFeatured ? FEATURED_COLOR : VENUE_COLOR
+  const cover = useTexture(publication.image ?? '/cscw-poster.png')
+  cover.colorSpace = THREE.SRGBColorSpace
 
   return (
     <group>
       <Text
-        position={[0, 0.6, 0.01]}
-        fontSize={0.1}
-        color={venueColor}
+        depthTest={depthTest}
+        renderOrder={renderOrder + 1}
+        position={[0, 0.78, 0.03]}
+        fontSize={0.08}
+        color="#1c1c1c"
+        fillOpacity={opacity}
+        font={FONT_BOLD}
+        anchorX="center"
+        anchorY="top"
+        maxWidth={1.3}
+        lineHeight={1.15}
+        raycast={disableRaycast}
+      >
+        {viewModel.title}
+      </Text>
+
+      <mesh
+        position={[0, 0.02, 0.025]}
+        renderOrder={renderOrder}
+        raycast={disableRaycast}
+      >
+        <planeGeometry args={[IMAGE_WIDTH, IMAGE_HEIGHT]} />
+        <meshBasicMaterial
+          map={cover}
+          color="#ffffff"
+          transparent
+          opacity={opacity}
+          depthTest={depthTest}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <Text
+        depthTest={depthTest}
+        renderOrder={renderOrder + 1}
+        position={[0, -0.72, 0.03]}
+        fontSize={0.065}
+        color="#6a5a40"
         fillOpacity={opacity}
         font={FONT_BOLD}
         anchorX="center"
         anchorY="middle"
+        maxWidth={1.3}
+        raycast={disableRaycast}
       >
         {viewModel.venueAndYear}
-      </Text>
-      {viewModel.isFeatured && (
-        <Text
-          position={[0.45, 0.85, 0.01]}
-          fontSize={0.07}
-          color={FEATURED_COLOR}
-          fillOpacity={opacity}
-          font={FONT_BOLD}
-        >
-          ★
-        </Text>
-      )}
-      <Text
-        position={[0, 0.3, 0.01]}
-        fontSize={0.09}
-        color="#2a1f0e"
-        fillOpacity={opacity}
-        font={FONT_BOLD}
-        anchorX="center"
-        anchorY="top"
-        maxWidth={1.3}
-        lineHeight={1.3}
-      >
-        {viewModel.title}
-      </Text>
-      <Text
-        position={[0, -0.65, 0.01]}
-        fontSize={0.065}
-        color="#6a5a40"
-        fillOpacity={opacity}
-        font={FONT_REGULAR}
-        anchorX="center"
-        anchorY="top"
-        maxWidth={1.3}
-        lineHeight={1.3}
-      >
-        {viewModel.authors}
       </Text>
     </group>
   )

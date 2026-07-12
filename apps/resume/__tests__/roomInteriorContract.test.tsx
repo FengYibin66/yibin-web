@@ -41,7 +41,7 @@ vi.mock('@/components/rooms/ProjectsRoom', () => ({
     return null
   },
 }))
-vi.mock('@/components/rooms/PublicationsRoom', () => ({
+vi.mock('@/components/rooms/publications/PublicationsRoom', () => ({
   PublicationsRoom: (props: RoomProps) => {
     roomMocks.publications(props)
     return null

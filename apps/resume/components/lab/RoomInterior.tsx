@@ -5,7 +5,9 @@ import type { RoomId } from '@/context/SceneContext'
 import { useScene } from '@/context/SceneContext'
 import { AboutRoom } from '@/components/rooms/AboutRoom'
 import { ProjectsRoom } from '@/components/rooms/ProjectsRoom'
-import { PublicationsRoom } from '@/components/rooms/PublicationsRoom'
+import {
+  PublicationsRoom,
+} from '@/components/rooms/publications/PublicationsRoom'
 import { ContactRoom } from '@/components/rooms/ContactRoom'
 import { RoomReadyBoundary } from '@/components/lab/RoomReadyBoundary'
 

@@ -22,7 +22,7 @@ vi.mock('@/components/rooms/AboutRoom', () => ({
 vi.mock('@/components/rooms/ProjectsRoom', () => ({
   ProjectsRoom: () => null,
 }))
-vi.mock('@/components/rooms/PublicationsRoom', () => ({
+vi.mock('@/components/rooms/publications/PublicationsRoom', () => ({
   PublicationsRoom: () => null,
 }))
 vi.mock('@/components/rooms/ContactRoom', () => ({

@@ -66,12 +66,10 @@ interface PublicationsRoomProps {
 }
 
 export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps) {
-  const { isTeleporting } = useScene()
+  const { isTeleporting, roomLoadState } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
   const router = useWheelRouter()
 
-  const hasSignaled    = useRef(false)
-  const frameCount     = useRef(0)
   const targetScroll   = useRef(0)
   const currentScroll  = useRef(0)
   const showRoomRef    = useRef(showRoom)
@@ -83,8 +81,6 @@ export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps)
 
   useEffect(() => {
     if (isTeleporting) {
-      hasSignaled.current   = false
-      frameCount.current    = 0
       targetScroll.current  = 0
       currentScroll.current = 0
       setSelectedCard(null)
@@ -92,11 +88,13 @@ export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps)
     }
   }, [isTeleporting])
 
+  useEffect(() => {
+    if (roomLoadState.phase !== 'entered') return
+    const tutorialTimer = window.setTimeout(() => showTutorial('publications_read'), 2000)
+    return () => window.clearTimeout(tutorialTimer)
+  }, [roomLoadState.phase, showTutorial])
+
   useFrame((_, delta) => {
-    if (!hasSignaled.current) {
-      frameCount.current++
-      if (frameCount.current >= 10) { hasSignaled.current = true; setTimeout(() => showTutorial('publications_read'), 2000) }
-    }
     if (isExiting) return
     currentScroll.current = THREE.MathUtils.lerp(currentScroll.current, targetScroll.current, delta * 5)
   })

@@ -3,6 +3,8 @@
  * 覆盖：SkyChunk seededRandom、云朵配置、SocialBarrel 路径派生、
  *       wave 动画数学、NavigationUI z-index 关系、轮询守卫逻辑
  */
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 
 // ─── seededRandom（从 SkyChunk 提取）────────────────────────────────────────
@@ -285,65 +287,29 @@ describe('wheel event showRoom guard', () => {
   })
 })
 
-// ─── isTeleporting hasSignaled 重置逻辑 ──────────────────────────────────────
+// ─── Room readiness contract ─────────────────────────────────────────────────
 
-describe('hasSignaled reset on teleport', () => {
-  function simulateRoom() {
-    let hasSignaled = false
-    let frameCount = 0
-    let onReadyCalled = 0
+const ROOM_COMPONENTS = ['AboutRoom', 'ProjectsRoom', 'PublicationsRoom', 'ContactRoom'] as const
 
-    function onReady() { onReadyCalled++ }
+function readRoomSource(roomName: typeof ROOM_COMPONENTS[number]): string {
+  return readFileSync(resolve(process.cwd(), `components/rooms/${roomName}.tsx`), 'utf8')
+}
 
-    function frame() {
-      if (!hasSignaled) {
-        frameCount++
-        if (frameCount >= 10) {
-          hasSignaled = true
-          onReady()
-        }
-      }
-    }
+describe('Room readiness contract', () => {
+  it.each(ROOM_COMPONENTS)('%s does not own a frame-based ready signal', (roomName) => {
+    const source = readRoomSource(roomName)
 
-    function onTeleport() {
-      hasSignaled = false
-      frameCount = 0
-    }
-
-    return { frame, onTeleport, getOnReadyCalled: () => onReadyCalled }
-  }
-
-  it('首次进入：10帧后调用 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
+    expect(source).not.toContain('hasSignaled')
+    expect(source).not.toContain('frameCount')
+    expect(source).not.toContain('onReady')
   })
 
-  it('进入后 onReady 不再重复调用', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 20; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
+  it.each(ROOM_COMPONENTS)('%s keeps its room animation frame loop', (roomName) => {
+    expect(readRoomSource(roomName)).toContain('useFrame(')
   })
 
-  it('teleport 后 hasSignaled 重置，再次进入可触发 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
-
-    room.onTeleport()  // 模拟传送
-
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(2)
-  })
-
-  it('teleport 后未满 10 帧不触发 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-
-    room.onTeleport()
-
-    for (let i = 0; i < 5; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)  // 还是 1，还没到 10 帧
+  it.each(ROOM_COMPONENTS)('%s gates its tutorial on the entered phase', (roomName) => {
+    expect(readRoomSource(roomName)).toContain("roomLoadState.phase !== 'entered'")
   })
 })
 

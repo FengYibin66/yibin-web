@@ -63,14 +63,12 @@ interface MonitorItem {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
-  const { isTeleporting } = useScene()
+  const { isTeleporting, roomLoadState } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
   const { camera } = useThree()
   const router = useWheelRouter()
 
   const towerRef        = useRef<THREE.Group>(null)
-  const hasSignaled     = useRef(false)
-  const frameCount      = useRef(0)
   const showRoomRef     = useRef(showRoom)
   const isDraggingRef   = useRef(false)
   const lastXRef        = useRef(0)
@@ -113,18 +111,19 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
 
   useEffect(() => {
     if (isTeleporting) {
-      hasSignaled.current  = false
-      frameCount.current   = 0
       rotVelocity.current  = 0
       autoRotSpeed.current = 0.12
       fallSpeed.current    = BASE_FALL_SPEED
     }
   }, [isTeleporting])
 
+  useEffect(() => {
+    if (roomLoadState.phase !== 'entered') return
+    const tutorialTimer = window.setTimeout(() => showTutorial('projects_inspect'), 2000)
+    return () => window.clearTimeout(tutorialTimer)
+  }, [roomLoadState.phase, showTutorial])
+
   useFrame((_, delta) => {
-    if (!hasSignaled.current) {
-      if (++frameCount.current >= 10) { hasSignaled.current = true; setTimeout(() => showTutorial('projects_inspect'), 2000) }
-    }
     if (isExiting || !towerRef.current) return
 
     towerRef.current.rotation.y += autoRotSpeed.current * delta + rotVelocity.current

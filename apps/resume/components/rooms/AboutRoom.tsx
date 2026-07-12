@@ -207,7 +207,7 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
 
 export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { camera }              = useThree()
-  const { isTeleporting }       = useScene()
+  const { isTeleporting, roomLoadState } = useScene()
   const { unlockAchievement, showTutorial }   = useAchievements()
   const router = useWheelRouter()
 
@@ -216,8 +216,6 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const currentBank     = useRef(0)
   const currentPitch    = useRef(0)
   const isFlightActive  = useRef(false)
-  const hasSignaled     = useRef(false)
-  const frameCount      = useRef(0)
 
   // showRoom ref for event handler guards
   const showRoomRef = useRef(showRoom)
@@ -226,8 +224,6 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   // Reset on teleport
   useEffect(() => {
     if (isTeleporting) {
-      hasSignaled.current      = false
-      frameCount.current       = 0
       currentBank.current      = 0
       currentPitch.current     = 0
       isFlightActive.current   = false
@@ -236,22 +232,18 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
     }
   }, [isTeleporting])
 
+  useEffect(() => {
+    if (roomLoadState.phase !== 'entered') return
+    const tutorialTimer = window.setTimeout(() => showTutorial('about_scroll'), 2000)
+    return () => window.clearTimeout(tutorialTimer)
+  }, [roomLoadState.phase, showTutorial])
+
   // For InfiniteSkyChunks: world group moves with scrollPos
   const [activeChunks, setActiveChunks] = useState<number[]>([-1, 0, 1, 2])
   const [activeStoryCycles, setActiveStoryCycles] = useState<number[]>([-1, 0, 1])
   const worldRef = useRef<THREE.Group>(null)
 
   useFrame((_, delta) => {
-    // Ready signal
-    if (!hasSignaled.current) {
-      frameCount.current++
-      if (frameCount.current >= 20) {
-        hasSignaled.current = true
-        setTimeout(() => showTutorial('about_scroll'), 2000)
-      }
-      return
-    }
-
     if (isExiting || isTeleporting) return
 
     // Momentum scroll

@@ -28,11 +28,9 @@ const STATEK_SETTINGS = {
 }
 
 export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
-  const { isTeleporting } = useScene()
+  const { roomLoadState } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
 
-  const hasSignaled  = useRef(false)
-  const frameCount   = useRef(0)
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)
   const audioRef     = useRef<{ setVolume: (v: number) => void } | null>(null)
@@ -57,22 +55,13 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
     }
   }, [seaTexture, moloTexture])
 
-  // Reset hasSignaled on teleport so onReady fires again on re-entry
   useEffect(() => {
-    if (isTeleporting) {
-      hasSignaled.current = false
-      frameCount.current = 0
-    }
-  }, [isTeleporting])
+    if (roomLoadState.phase !== 'entered') return
+    const tutorialTimer = window.setTimeout(() => showTutorial('contact_found'), 2000)
+    return () => window.clearTimeout(tutorialTimer)
+  }, [roomLoadState.phase, showTutorial])
 
-  useFrame((state, delta) => {
-    if (!hasSignaled.current) {
-      frameCount.current++
-      if (frameCount.current >= 10) {
-        hasSignaled.current = true
-        setTimeout(() => showTutorial('contact_found'), 2000)
-      }
-    }
+  useFrame((state) => {
     if (isExiting) return
 
     const t = state.clock.getElapsedTime()

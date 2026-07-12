@@ -10,6 +10,7 @@ import { useAudio } from '@/context/AudioContext'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
+import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 
@@ -149,6 +150,9 @@ export function DoorSection({
     if (!inner) return
 
     const dist = Math.abs(camera.position.z - position[2])
+    if (roomId !== 'gallery' && dist < TILT_START) {
+      preloadRoomAssets(roomId)
+    }
 
     let targetTilt = BASE_TILT
     if (isTiltLockedRef.current) {
@@ -471,6 +475,7 @@ export function DoorSection({
 
   // ─── Hover handlers ──────────────────────────────────────────────────────────
   const handlePointerEnter = useCallback(() => {
+    if (roomId !== 'gallery') preloadRoomAssets(roomId)
     if (isOpenRef.current || isAnimating) return
     play('door_hover')
     // Micro-open door on hover
@@ -483,7 +488,7 @@ export function DoorSection({
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (handlePaintedRef.current) handlePaintedRef.current.visible = true
     if (doorPaintedRef.current) doorPaintedRef.current.visible = true
-  }, [isAnimating, play, side])
+  }, [isAnimating, play, roomId, side])
 
   const handlePointerLeave = useCallback(() => {
     if (isOpenRef.current || isAnimating) return

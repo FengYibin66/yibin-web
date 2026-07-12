@@ -24,16 +24,16 @@ describe('publication room data', () => {
       )
       expect(roomItems.map(item => item.id)).toEqual([...PUBLICATION_IDS])
       expect(roomItems.map(item => item.image)).toEqual([
-        '/cscw-poster.png',
-        '/cscw-poster.png',
-        '/cscw-poster.png',
+        '/publications-cscw-cover.png',
+        '/publications-cscw-cover.png',
+        '/publications-cscw-cover.png',
       ])
       roomItems.forEach(item => {
         expect(item.doi).toMatch(/^https:\/\/doi\.org\//)
       })
       expect(roomItems.find(item => item.id === 'cscw25')).toMatchObject({
         featured: true,
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       })
     },
   )

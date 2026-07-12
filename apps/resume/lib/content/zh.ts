@@ -200,7 +200,7 @@ export const zh: SiteContent = {
         abstract:
           '多智能体系统可通过建立虚拟社会规范来鼓励亲社会行为。内群体智能体使捐款率提升 62%，而外群体仅为 25%（χ²=3.95，p<0.05），表明 AI 群体可通过社会认同动态有效影响人类行为。',
         featured: true,
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
       {
         title: '多智能体作为社会群体：探究多智能体在人机交互中的社会影响力',
@@ -209,7 +209,7 @@ export const zh: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
         keywords: ['多智能体', '社会影响', '人机交互'],
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
       {
         title: '整体大于部分之和：探索多智能体的社会影响力',
@@ -218,7 +218,7 @@ export const zh: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
         keywords: ['多智能体', '社会影响', 'CHI'],
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
     ],
   },

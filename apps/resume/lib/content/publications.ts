@@ -81,7 +81,7 @@ function mapPublicationRoomItem(
     keywords: [...item.keywords],
     featured: id === 'cscw25',
     // Temporary: reuse CSCW poster until each paper has its own cover art.
-    image: item.image ?? '/cscw-poster.png',
+    image: item.image ?? '/publications-cscw-cover.png',
   }
 }
 

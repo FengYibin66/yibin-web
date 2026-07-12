@@ -358,7 +358,8 @@ export const PublicationCard = forwardRef<
         <group ref={frontRef} visible={!isSelected}>
           <PublicationCardFront publication={publication} opacity={1} />
         </group>
-        <group ref={backRef}>
+        {/* Only mount detail face when open — otherwise back Text ghosts through / around cards */}
+        <group ref={backRef} visible={isSelected}>
           <PublicationCardBack
             publication={publication}
             opacity={1}

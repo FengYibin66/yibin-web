@@ -62,11 +62,10 @@ const ROPE_CURVE = new THREE.CatmullRomCurve3([
 
 interface PublicationsRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
-export function PublicationsRoom({ showRoom, onReady, isExiting }: PublicationsRoomProps) {
+export function PublicationsRoom({ showRoom, isExiting }: PublicationsRoomProps) {
   const { isTeleporting } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
   const router = useWheelRouter()
@@ -96,7 +95,7 @@ export function PublicationsRoom({ showRoom, onReady, isExiting }: PublicationsR
   useFrame((_, delta) => {
     if (!hasSignaled.current) {
       frameCount.current++
-      if (frameCount.current >= 10) { hasSignaled.current = true; onReady(); setTimeout(() => showTutorial('publications_read'), 2000) }
+      if (frameCount.current >= 10) { hasSignaled.current = true; setTimeout(() => showTutorial('publications_read'), 2000) }
     }
     if (isExiting) return
     currentScroll.current = THREE.MathUtils.lerp(currentScroll.current, targetScroll.current, delta * 5)

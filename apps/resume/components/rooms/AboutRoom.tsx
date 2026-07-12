@@ -21,7 +21,6 @@ const AVATAR_HEIGHT = AVATAR_WIDTH / AVATAR_LEGACY_ASPECT
 
 interface AboutRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -206,7 +205,7 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AboutRoom({ showRoom, onReady, isExiting }: AboutRoomProps) {
+export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { camera }              = useThree()
   const { isTeleporting }       = useScene()
   const { unlockAchievement, showTutorial }   = useAchievements()
@@ -248,7 +247,6 @@ export function AboutRoom({ showRoom, onReady, isExiting }: AboutRoomProps) {
       frameCount.current++
       if (frameCount.current >= 20) {
         hasSignaled.current = true
-        onReady()
         setTimeout(() => showTutorial('about_scroll'), 2000)
       }
       return

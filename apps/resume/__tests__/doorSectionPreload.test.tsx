@@ -60,6 +60,20 @@ vi.mock('@/context/SceneContext', () => ({
     teleportPhase: 'idle',
     currentRoom: null,
     signalRoomReady: vi.fn(),
+    roomLoadState: {
+      phase: 'idle',
+      roomId: null,
+      attempt: 0,
+      error: null,
+    },
+    beginRoomLoad: vi.fn(),
+    markRoomAligned: vi.fn(),
+    markRoomReady: vi.fn(),
+    markRoomOpening: vi.fn(),
+    markRoomEntered: vi.fn(),
+    failRoomLoad: vi.fn(),
+    resetRoomLoad: vi.fn(),
+    requestExit: vi.fn(),
   }),
 }))
 

@@ -18,7 +18,7 @@ interface RoomInteriorProps {
   isExiting: boolean
 }
 
-type RoomProps = Pick<RoomInteriorProps, 'showRoom' | 'onReady' | 'isExiting'>
+type RoomProps = Pick<RoomInteriorProps, 'showRoom' | 'isExiting'>
 
 const NOOP = () => {}
 
@@ -47,7 +47,7 @@ export function RoomInterior({
   isExiting,
 }: RoomInteriorProps) {
   const { roomLoadState: { attempt } } = useScene()
-  const props = { showRoom, onReady, isExiting }
+  const props = { showRoom, isExiting }
 
   return (
     <RoomReadyBoundary

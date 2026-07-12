@@ -50,7 +50,6 @@ const PLATFORM_DIM: Record<Platform, [number, number, number]> = {
 
 interface ProjectsRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -63,7 +62,7 @@ interface MonitorItem {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ProjectsRoom({ showRoom, onReady, isExiting }: ProjectsRoomProps) {
+export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const { isTeleporting } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
   const { camera } = useThree()
@@ -124,7 +123,7 @@ export function ProjectsRoom({ showRoom, onReady, isExiting }: ProjectsRoomProps
 
   useFrame((_, delta) => {
     if (!hasSignaled.current) {
-      if (++frameCount.current >= 10) { hasSignaled.current = true; onReady(); setTimeout(() => showTutorial('projects_inspect'), 2000) }
+      if (++frameCount.current >= 10) { hasSignaled.current = true; setTimeout(() => showTutorial('projects_inspect'), 2000) }
     }
     if (isExiting || !towerRef.current) return
 

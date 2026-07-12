@@ -11,7 +11,6 @@ import { MessagePaper } from './contact/MessagePaper'
 
 interface ContactRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -28,7 +27,7 @@ const STATEK_SETTINGS = {
   scale: [3.35, 1.3] as [number, number],
 }
 
-export function ContactRoom({ showRoom, onReady, isExiting }: ContactRoomProps) {
+export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   const { isTeleporting } = useScene()
   const { unlockAchievement, showTutorial } = useAchievements()
 
@@ -71,7 +70,6 @@ export function ContactRoom({ showRoom, onReady, isExiting }: ContactRoomProps) 
       frameCount.current++
       if (frameCount.current >= 10) {
         hasSignaled.current = true
-        onReady()
         setTimeout(() => showTutorial('contact_found'), 2000)
       }
     }

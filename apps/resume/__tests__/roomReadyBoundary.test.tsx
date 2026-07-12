@@ -255,6 +255,22 @@ describe('RoomInterior boundary callbacks', () => {
     expect(sceneActionMocks.markRoomAligned).not.toHaveBeenCalled()
   })
 
+  it('keeps readiness in the boundary instead of passing it to the room', () => {
+    render(
+      <RoomInterior
+        roomId="about"
+        showRoom
+        onReady={vi.fn()}
+        isExiting={false}
+      />,
+    )
+
+    expect(roomRenderMock).toHaveBeenCalledWith({
+      showRoom: true,
+      isExiting: false,
+    })
+  })
+
   it('forwards render errors without failing SceneContext directly', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     roomRenderMock.mockImplementation(() => {

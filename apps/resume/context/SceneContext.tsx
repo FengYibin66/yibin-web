@@ -129,8 +129,10 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const requestExit = useCallback(() => {
+    if (roomLoadState.phase !== 'entered') return
+    dispatchRoomLoad({ type: 'EXIT' })
     setExitRequested(true)
-  }, [])
+  }, [roomLoadState.phase])
 
   const clearExitRequest = useCallback(() => {
     setExitRequested(false)

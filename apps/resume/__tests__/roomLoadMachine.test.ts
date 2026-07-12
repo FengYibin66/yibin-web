@@ -154,6 +154,13 @@ describe('SceneContext room loading', () => {
 
     act(() => result.current.markRoomEntered())
     expect(result.current.roomLoadState.phase).toBe('entered')
+
+    act(() => result.current.requestExit())
+    expect(result.current.roomLoadState.phase).toBe('exiting')
+    expect(result.current.exitRequested).toBe(true)
+
+    act(() => result.current.resetRoomLoad())
+    expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
   })
 
   it('exposes failure recovery actions without duplicating loading state', () => {

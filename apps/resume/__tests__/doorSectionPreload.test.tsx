@@ -71,6 +71,7 @@ vi.mock('@/context/SceneContext', () => ({
     markRoomReady: vi.fn(),
     markRoomOpening: vi.fn(),
     markRoomEntered: vi.fn(),
+    timeoutRoomLoad: vi.fn(),
     failRoomLoad: vi.fn(),
     resetRoomLoad: vi.fn(),
     requestExit: vi.fn(),

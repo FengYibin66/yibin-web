@@ -188,4 +188,17 @@ describe('SceneContext room loading', () => {
     act(() => result.current.resetRoomLoad())
     expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
   })
+
+  it('preserves timeout semantics through the scene action', () => {
+    const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+
+    act(() => result.current.beginRoomLoad('publications'))
+    act(() => result.current.markRoomAligned())
+    act(() => result.current.timeoutRoomLoad('Room loading timed out'))
+
+    expect(result.current.roomLoadState).toMatchObject({
+      phase: 'failed',
+      error: 'Room loading timed out',
+    })
+  })
 })

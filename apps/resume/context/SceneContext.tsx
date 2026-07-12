@@ -37,6 +37,7 @@ export interface SceneState {
   markRoomReady: () => void
   markRoomOpening: () => void
   markRoomEntered: () => void
+  timeoutRoomLoad: (message: string) => void
   failRoomLoad: (message: string) => void
   retryRoomLoad: () => void
   resetRoomLoad: () => void
@@ -102,6 +103,10 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
 
   const markRoomEntered = useCallback(() => {
     dispatchRoomLoad({ type: 'OPENED' })
+  }, [])
+
+  const timeoutRoomLoad = useCallback((message: string) => {
+    dispatchRoomLoad({ type: 'TIMEOUT', message })
   }, [])
 
   const failRoomLoad = useCallback((message: string) => {
@@ -200,6 +205,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     markRoomReady,
     markRoomOpening,
     markRoomEntered,
+    timeoutRoomLoad,
     failRoomLoad,
     retryRoomLoad,
     resetRoomLoad,
@@ -231,6 +237,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     markRoomReady,
     markRoomOpening,
     markRoomEntered,
+    timeoutRoomLoad,
     failRoomLoad,
     retryRoomLoad,
     resetRoomLoad,

@@ -75,7 +75,7 @@ function LabCanvas() {
   }, [playBgm, stopBgm])
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#f0ece4' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#f0ece4', touchAction: 'none', overscrollBehavior: 'none' }}>
       <Canvas
         camera={{ position: [0, 0.2, 28], fov: 60, near: 0.1, far: 400 }}
         style={{ position: 'absolute', inset: 0 }}

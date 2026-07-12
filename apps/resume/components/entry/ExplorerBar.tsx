@@ -1,9 +1,15 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useAudio } from '@/context/AudioContext'
 
 export function ExplorerBar() {
   const { isMuted, toggleMute } = useAudio()
+  const [isTouch, setIsTouch] = useState(false)
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
 
   return (
     <div style={{
@@ -16,9 +22,10 @@ export function ExplorerBar() {
       border: '2px solid #1a1a1a',
       borderRadius: '12px',
       boxShadow: '3px 3px 0 #1a1a1a',
-      padding: '10px 28px',
+      padding: isTouch ? '8px 16px' : '10px 28px',
       pointerEvents: 'none',
-      whiteSpace: 'nowrap',
+      maxWidth: 'min(92vw, 640px)',
+      textAlign: 'center',
     }}>
       <span style={{
         fontFamily: "'CabinSketch-Bold', sans-serif",
@@ -29,7 +36,7 @@ export function ExplorerBar() {
       }}>
         EXPLORER
         <span style={{ margin: '0 8px', opacity: 0.4 }}>—</span>
-        Click a door to enter. Audio is currently{' '}
+        {isTouch ? 'Tap' : 'Click'} a door to enter. Audio is currently{' '}
         <span
           style={{
             cursor: 'pointer',

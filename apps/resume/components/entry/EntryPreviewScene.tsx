@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState, useCallback, Suspense } from 'react'
+import { useRef, useState, useCallback, useEffect, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useTexture, Text } from '@react-three/drei'
+import { useTexture, Text, useProgress } from '@react-three/drei'
 import { Cat } from '@/components/lab/Cat'
 import '@/components/lab/shaders/RevealMaterial'
 import * as THREE from 'three'
@@ -415,23 +415,76 @@ function EntryCamera({ flying }: { flying: boolean }) {
   return null
 }
 
+// Texture-loading indicator overlaid on the preview panel.
+// useProgress subscribes to three's global LoadingManager, so this works
+// outside <Canvas>. Hidden when nothing is loading (e.g. warm cache).
+function PreviewLoadingOverlay() {
+  const { progress, active } = useProgress()
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (!active && progress >= 100 && !done) {
+      const t = setTimeout(() => setDone(true), 350)
+      return () => clearTimeout(t)
+    }
+  }, [active, progress, done])
+
+  if (done || (!active && progress === 0)) return null
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        paddingBottom: '14%',
+        pointerEvents: 'none',
+        zIndex: 5,
+        opacity: !active && progress >= 100 ? 0 : 1,
+        transition: 'opacity 0.35s ease',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: 11,
+          letterSpacing: '0.25em',
+          color: 'rgba(42,31,14,0.55)',
+          textTransform: 'uppercase',
+        }}
+      >
+        Drawing… {Math.round(progress)}%
+      </span>
+    </div>
+  )
+}
+
 export interface EntryPreviewSceneProps { onEnter: () => void }
 
 export function EntryPreviewScene({ onEnter }: EntryPreviewSceneProps) {
   const [flying, setFlying] = useState(false)
   const { play } = useAudio()
+  // Coarse-pointer devices get a lighter GL config — antialias plus an
+  // uncapped DPR is what makes low-end phones choke on first paint.
+  const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
   return (
-    <Canvas
-      camera={{ position: [0, 0.3, 6], fov: 55, near: 0.1, far: 200 }}
-      style={{ width: '100%', height: '100%' }}
-      gl={{ antialias: true }}
-      onCreated={({ gl }) => gl.setClearColor('#f5f0e8', 1)}
-    >
-      <Suspense fallback={null}>
-        <EntryCamera flying={flying} />
-        <BrickScene onEntered={() => { setFlying(true); onEnter() }} play={play} />
-        <Cat position={[-1.5, FLOOR_Y + 0.6, 0.8]} />
-      </Suspense>
-    </Canvas>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <Canvas
+        camera={{ position: [0, 0.3, 6], fov: 55, near: 0.1, far: 200 }}
+        style={{ position: 'absolute', inset: 0 }}
+        gl={{ antialias: !isTouch }}
+        dpr={isTouch ? [1, 1.5] : [1, 2]}
+        onCreated={({ gl }) => gl.setClearColor('#f5f0e8', 1)}
+      >
+        <Suspense fallback={null}>
+          <EntryCamera flying={flying} />
+          <BrickScene onEntered={() => { setFlying(true); onEnter() }} play={play} />
+          <Cat position={[-1.5, FLOOR_Y + 0.6, 0.8]} />
+        </Suspense>
+      </Canvas>
+      <PreviewLoadingOverlay />
+    </div>
   )
 }

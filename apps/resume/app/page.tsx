@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
@@ -9,15 +9,57 @@ import { ExplorerBar } from '@/components/entry/ExplorerBar'
 import { AudioProvider } from '@/context/AudioContext'
 import type { EntryPreviewSceneProps } from '@/components/entry/EntryPreviewScene'
 
+// Lightweight DOM-only fallback shown while the three.js chunk downloads.
+// Must not import drei/three — that would defeat the code split.
+function PreviewChunkFallback() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        paddingBottom: '18%',
+        pointerEvents: 'none',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: 11,
+          letterSpacing: '0.3em',
+          color: 'rgba(42,31,14,0.4)',
+          textTransform: 'uppercase',
+          animation: 'entryPulse 1.4s ease-in-out infinite',
+        }}
+      >
+        Sketching the door…
+      </span>
+      <style>{`@keyframes entryPulse { 0%,100% { opacity: 0.35 } 50% { opacity: 0.9 } }`}</style>
+    </div>
+  )
+}
+
 const EntryPreviewScene = dynamic<EntryPreviewSceneProps>(
   () => import('@/components/entry/EntryPreviewScene').then(m => ({ default: m.EntryPreviewScene })),
-  { ssr: false }
+  { ssr: false, loading: () => <PreviewChunkFallback /> }
 )
 
 export default function EntryPage() {
   const leftRef  = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
   const router   = useRouter()
+
+  // Stacked layout on small screens — the side-by-side split is unusable there.
+  const [isStacked, setIsStacked] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const update = () => setIsStacked(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   useEffect(() => {
     const left  = leftRef.current
@@ -31,6 +73,18 @@ export default function EntryPage() {
     // in sync with the flexBasis CSS animation (ResizeObserver alone is too slow).
     const dispatchResize = () => window.dispatchEvent(new Event('resize'))
 
+    const expandFull = () => {
+      gsap.to(left,  { flexBasis: '100%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
+      gsap.to(right, { flexBasis: '0%',   duration: 0.5, ease: 'power2.out' })
+    }
+    window.addEventListener('entry-expand', expandFull)
+
+    // Hover expand only makes sense on devices that can actually hover.
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    if (!canHover) {
+      return () => window.removeEventListener('entry-expand', expandFull)
+    }
+
     const expandLeft = () => {
       gsap.to(left,  { flexBasis: '72%', duration: 0.6, ease: 'power2.out', onUpdate: dispatchResize })
       gsap.to(right, { flexBasis: '28%', duration: 0.6, ease: 'power2.out' })
@@ -43,16 +97,10 @@ export default function EntryPage() {
       gsap.to([left, right], { flexBasis: '50%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
     }
 
-    const expandFull = () => {
-      gsap.to(left,  { flexBasis: '100%', duration: 0.5, ease: 'power2.out', onUpdate: dispatchResize })
-      gsap.to(right, { flexBasis: '0%',   duration: 0.5, ease: 'power2.out' })
-    }
-
     left.addEventListener('mouseenter', expandLeft)
     right.addEventListener('mouseenter', expandRight)
     left.addEventListener('mouseleave', reset)
     right.addEventListener('mouseleave', reset)
-    window.addEventListener('entry-expand', expandFull)
     return () => {
       left.removeEventListener('mouseenter', expandLeft)
       right.removeEventListener('mouseenter', expandRight)
@@ -64,8 +112,15 @@ export default function EntryPage() {
 
   return (
     <AudioProvider>
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      {/* LEFT — The Lab (hand-drawn corridor preview) */}
+    <div style={{
+      display: 'flex',
+      flexDirection: isStacked ? 'column' : 'row',
+      width: '100vw',
+      height: '100dvh',
+      overflow: 'hidden',
+      touchAction: 'manipulation',
+    }}>
+      {/* TOP/LEFT — The Lab (hand-drawn corridor preview) */}
       <div
         ref={leftRef}
         style={{
@@ -122,12 +177,24 @@ export default function EntryPage() {
           }}>
             Immersive · 3D · Interactive
           </p>
+          {isStacked && (
+            <p style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '10px',
+              color: 'rgba(42,31,14,0.35)',
+              letterSpacing: '0.2em',
+              margin: '4px 0 0',
+              textTransform: 'uppercase',
+            }}>
+              Tap the door
+            </p>
+          )}
         </div>
 
         <div style={{
           position: 'absolute',
-          bottom: '32px',
-          right: '32px',
+          bottom: isStacked ? '16px' : '32px',
+          right: isStacked ? '16px' : '32px',
           fontFamily: 'var(--font-mono)',
           fontSize: '20px',
           color: 'rgba(42,31,14,0.35)',
@@ -137,9 +204,15 @@ export default function EntryPage() {
       </div>
 
       {/* Divider */}
-      <div style={{ width: '1px', background: 'rgba(42,31,14,0.1)', flexShrink: 0, zIndex: 20 }} />
+      <div style={{
+        width: isStacked ? '100%' : '1px',
+        height: isStacked ? '1px' : 'auto',
+        background: 'rgba(42,31,14,0.1)',
+        flexShrink: 0,
+        zIndex: 20,
+      }} />
 
-      {/* RIGHT — Classic (light, elegant) */}
+      {/* BOTTOM/RIGHT — Classic (light, elegant) */}
       <div
         ref={rightRef}
         onClick={() => router.push('/classic')}
@@ -154,20 +227,22 @@ export default function EntryPage() {
         <ClassicPanel />
       </div>
 
-      <div style={{
-        position: 'fixed',
-        bottom: '16px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        fontSize: '10px',
-        color: 'rgba(42,31,14,0.25)',
-        letterSpacing: '0.2em',
-        fontFamily: 'var(--font-mono, monospace)',
-        zIndex: 30,
-        pointerEvents: 'none',
-      }}>
-        resume.yibinfeng.com
-      </div>
+      {!isStacked && (
+        <div style={{
+          position: 'fixed',
+          bottom: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '10px',
+          color: 'rgba(42,31,14,0.25)',
+          letterSpacing: '0.2em',
+          fontFamily: 'var(--font-mono, monospace)',
+          zIndex: 30,
+          pointerEvents: 'none',
+        }}>
+          resume.yibinfeng.com
+        </div>
+      )}
     </div>
     <ExplorerBar />
     </AudioProvider>

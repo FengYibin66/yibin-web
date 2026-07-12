@@ -1,7 +1,9 @@
 'use client'
 import { useProgress } from '@react-three/drei'
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import gsap from 'gsap'
+
+const SLOW_LOAD_HINT_MS = 8000
 
 export function LabLoader() {
   const { progress, active } = useProgress()
@@ -10,6 +12,16 @@ export function LabLoader() {
   const rightRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLSpanElement>(null)
   const exitedRef = useRef(false)
+
+  // Escape hatch — on slow connections (mobile), offer the classic view
+  // instead of leaving the user staring at a progress ring.
+  const [showSlowHint, setShowSlowHint] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!exitedRef.current) setShowSlowHint(true)
+    }, SLOW_LOAD_HINT_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Generate stable tear points — same algorithm as PaperTransition
   const tearPoints = useMemo<[number, number][]>(() => {
@@ -44,6 +56,7 @@ export function LabLoader() {
       const right = rightRef.current
       if (!container || !left || !right) return
 
+      setShowSlowHint(false)
       const tl = gsap.timeline({
         onComplete: () => gsap.set(container, { display: 'none' }),
       })
@@ -110,6 +123,28 @@ export function LabLoader() {
         }}
       >
         <div style={{ position: 'relative', width: 100, height: 100 }}>
+          {/* Slow-connection escape hatch */}
+          {showSlowHint && (
+            <a
+              href="/classic"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 28px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: 12,
+                letterSpacing: '0.08em',
+                color: 'rgba(42,31,14,0.65)',
+                textDecoration: 'underline',
+                textUnderlineOffset: 4,
+                pointerEvents: 'auto',
+              }}
+            >
+              Slow connection? Open Classic View →
+            </a>
+          )}
           <svg
             width="100"
             height="100"

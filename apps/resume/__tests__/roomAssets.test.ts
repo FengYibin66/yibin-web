@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTexture } from '@react-three/drei'
 import {
+  PUBLICATION_AUDIO_ASSETS,
   ROOM_ASSETS,
   preloadRoomAssets,
   reloadRoomAssets,
@@ -14,6 +15,27 @@ vi.mock('@react-three/drei', () => ({
 }))
 
 const ROOM_IDS = ['about', 'projects', 'publications', 'contact'] as const
+const PUBLICATION_TEXTURES = [
+  '/textures/gallery/floor.webp',
+  '/textures/gallery/railing.webp',
+  '/textures/corridor/texturadoprogow.webp',
+  '/textures/gallery/domki.webp',
+  '/textures/gallery/miastotlo.webp',
+  '/textures/gallery/bird_gray.webp',
+  '/textures/gallery/klamerka.webp',
+  '/textures/gallery/tylkartki.webp',
+  '/textures/gallery/tylkartki_painted.webp',
+  '/textures/gallery/przyciskdotylukartki.webp',
+  '/textures/gallery/przyciskdotylukartki_painted.webp',
+  '/textures/gallery/monetuneprzod.webp',
+  '/textures/gallery/monetuneprzod_painted.webp',
+  '/textures/gallery/timberkittyprzod.webp',
+  '/textures/gallery/timberkittyprzod_painted.webp',
+  '/textures/gallery/youngmultiprzod.webp',
+  '/textures/gallery/youngmultiprzod_painted.webp',
+  '/textures/gallery/bioprzod.webp',
+  '/textures/gallery/bioprzod_painted.webp',
+] as const
 
 describe('ROOM_ASSETS', () => {
   it('仅包含四个普通房间', () => {
@@ -39,6 +61,22 @@ describe('ROOM_ASSETS', () => {
     const sharedAssets = ROOM_ASSETS.publications.filter(asset => aboutAssets.has(asset))
 
     expect(sharedAssets.length).toBeGreaterThan(0)
+  })
+
+  it('publications 收录完整场景和纸张纹理变体', () => {
+    expect(ROOM_ASSETS.publications).toEqual(
+      expect.arrayContaining([...PUBLICATION_TEXTURES]),
+    )
+  })
+
+  it('将纸张与城市音频独立于纹理清单', () => {
+    expect(PUBLICATION_AUDIO_ASSETS).toEqual([
+      '/sounds/papersound.mp3',
+      '/sounds/szummiasta.mp3',
+    ])
+    expect(ROOM_ASSETS.publications).not.toEqual(
+      expect.arrayContaining([...PUBLICATION_AUDIO_ASSETS]),
+    )
   })
 })
 
@@ -76,5 +114,13 @@ describe('preloadRoomAssets', () => {
         vi.mocked(useTexture.preload).mock.invocationCallOrder[index],
       )
     })
+  })
+
+  it('不通过 useTexture 预载 publications 音频', () => {
+    reloadRoomAssets('publications')
+
+    for (const audioAsset of PUBLICATION_AUDIO_ASSETS) {
+      expect(useTexture.preload).not.toHaveBeenCalledWith(audioAsset)
+    }
   })
 })

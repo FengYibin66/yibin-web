@@ -16,6 +16,11 @@ const CLOUD_TEXTURES = [
   '/textures/clouds/f6e358bc-d27c-41dd-95f4-6787a835c41e.webp',
 ] as const
 
+export const PUBLICATION_AUDIO_ASSETS = [
+  '/sounds/papersound.mp3',
+  '/sounds/szummiasta.mp3',
+] as const
+
 export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = {
   about: [
     '/textures/about/awatarnachmurce.webp',
@@ -56,12 +61,23 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
   publications: [
     '/textures/gallery/floor.webp',
     '/textures/gallery/railing.webp',
+    '/textures/corridor/texturadoprogow.webp',
     '/textures/gallery/domki.webp',
     '/textures/gallery/miastotlo.webp',
     '/textures/gallery/bird_gray.webp',
     '/textures/gallery/klamerka.webp',
     '/textures/gallery/tylkartki.webp',
+    '/textures/gallery/tylkartki_painted.webp',
     '/textures/gallery/przyciskdotylukartki.webp',
+    '/textures/gallery/przyciskdotylukartki_painted.webp',
+    '/textures/gallery/monetuneprzod.webp',
+    '/textures/gallery/monetuneprzod_painted.webp',
+    '/textures/gallery/timberkittyprzod.webp',
+    '/textures/gallery/timberkittyprzod_painted.webp',
+    '/textures/gallery/youngmultiprzod.webp',
+    '/textures/gallery/youngmultiprzod_painted.webp',
+    '/textures/gallery/bioprzod.webp',
+    '/textures/gallery/bioprzod_painted.webp',
     ...CLOUD_TEXTURES,
   ],
   contact: [

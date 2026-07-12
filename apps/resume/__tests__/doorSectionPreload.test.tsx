@@ -80,7 +80,7 @@ vi.mock('@/context/SceneContext', () => ({
       attempt: 0,
       error: null,
     },
-    beginRoomLoad: vi.fn(),
+    beginRoomLoad: vi.fn(() => true),
     markRoomAligned: vi.fn(),
     markRoomReady: vi.fn(),
     markRoomOpening: vi.fn(),

@@ -33,7 +33,7 @@ export interface SceneState {
 
   roomLoadState: RoomLoadState
   isRoomLoading: boolean
-  beginRoomLoad: (roomId: RoomId) => void
+  beginRoomLoad: (roomId: RoomId) => boolean
   markRoomAligned: () => void
   markRoomReady: () => void
   markRoomOpening: () => void
@@ -91,8 +91,13 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   const isRoomLoading =
     roomLoadState.phase === 'aligning' || roomLoadState.phase === 'loading'
 
-  const beginRoomLoad = useCallback((roomId: RoomId) => {
+  const beginRoomLoad = useCallback((roomId: RoomId): boolean => {
+    if (roomLoadPhaseRef.current !== 'idle') {
+      return false
+    }
+    roomLoadPhaseRef.current = 'aligning'
     dispatchRoomLoad({ type: 'BEGIN', roomId })
+    return true
   }, [])
 
   const markRoomAligned = useCallback(() => {

@@ -314,11 +314,10 @@ export function DoorSection({
 
     const isTeleport = opts?.isTeleport ?? false
     if (roomId !== 'gallery') {
-      if (roomLoadState.phase !== 'idle') return
       const decision = decideDoorEntry({ type: 'CLICK', roomId })
       if (!decision.commands.includes('ALIGN_CAMERA')) return
+      if (!beginRoomLoad(roomId)) return
       activeEntryRef.current = true
-      beginRoomLoad(roomId)
     }
     setIsAnimating(true)
     setCameraOverride(true)
@@ -391,7 +390,7 @@ export function DoorSection({
         markRoomAligned()
       },
     })
-  }, [beginRoomLoad, camera, isAnimating, isFastTeleport, markRoomAligned, position, roomId, roomLoadState.phase, router, setCameraOverride, side, unlockAchievement])
+  }, [beginRoomLoad, camera, isAnimating, isFastTeleport, markRoomAligned, position, roomId, router, setCameraOverride, side, unlockAchievement])
 
   const restoreSavedCamera = useCallback(() => {
     const saved = savedCameraState.current

@@ -279,7 +279,10 @@ describe('SceneContext room loading', () => {
     expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
     expect(result.current.isRoomLoading).toBe(false)
 
-    act(() => result.current.beginRoomLoad('publications'))
+    act(() => {
+      expect(result.current.beginRoomLoad('publications')).toBe(true)
+      expect(result.current.beginRoomLoad('publications')).toBe(false)
+    })
     expect(result.current.roomLoadState.phase).toBe('aligning')
     expect(result.current.isRoomLoading).toBe(true)
 

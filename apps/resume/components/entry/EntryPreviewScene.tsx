@@ -1,13 +1,19 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect, Suspense } from 'react'
+import { useRef, useState, useCallback, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useTexture, Text, useProgress } from '@react-three/drei'
+import { useTexture, Text } from '@react-three/drei'
 import { Cat } from '@/components/lab/Cat'
 import '@/components/lab/shaders/RevealMaterial'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAudio } from '@/context/AudioContext'
+import { useStableProgress } from '@/hooks/useStableProgress'
+import { preloadEntranceTextures } from '@/lib/lab/texturePreload'
+
+// Register all entrance texture requests in one LoadingManager wave when
+// this chunk loads — see texturePreload.ts for why this matters.
+if (typeof window !== 'undefined') preloadEntranceTextures()
 
 const FLOOR_Y       = -1.75
 const DOOR_WIDTH    = 0.94
@@ -416,20 +422,13 @@ function EntryCamera({ flying }: { flying: boolean }) {
 }
 
 // Texture-loading indicator overlaid on the preview panel.
-// useProgress subscribes to three's global LoadingManager, so this works
-// outside <Canvas>. Hidden when nothing is loading (e.g. warm cache).
+// useStableProgress subscribes to three's global LoadingManager, so this
+// works outside <Canvas>. Progress is monotonic; `complete` fires once,
+// after all load waves have finished.
 function PreviewLoadingOverlay() {
-  const { progress, active } = useProgress()
-  const [done, setDone] = useState(false)
+  const { progress, complete } = useStableProgress(400)
 
-  useEffect(() => {
-    if (!active && progress >= 100 && !done) {
-      const t = setTimeout(() => setDone(true), 350)
-      return () => clearTimeout(t)
-    }
-  }, [active, progress, done])
-
-  if (done || (!active && progress === 0)) return null
+  if (complete) return null
 
   return (
     <div
@@ -442,8 +441,6 @@ function PreviewLoadingOverlay() {
         paddingBottom: '14%',
         pointerEvents: 'none',
         zIndex: 5,
-        opacity: !active && progress >= 100 ? 0 : 1,
-        transition: 'opacity 0.35s ease',
       }}
     >
       <span
@@ -455,7 +452,7 @@ function PreviewLoadingOverlay() {
           textTransform: 'uppercase',
         }}
       >
-        Drawing… {Math.round(progress)}%
+        Drawing… {progress}%
       </span>
     </div>
   )

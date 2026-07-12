@@ -7,11 +7,17 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 import { InfiniteCorridorManager } from './InfiniteCorridorManager'
+
+// Kick off all texture requests in ONE LoadingManager wave as soon as this
+// chunk loads — before components mount and start their suspense waterfalls.
+// This is what keeps useProgress from cycling 0→100 multiple times.
+if (typeof window !== 'undefined') preloadCorridorTextures()
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
+import { preloadCorridorTextures } from '@/lib/lab/texturePreload'
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'

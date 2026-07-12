@@ -1,6 +1,8 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, Suspense } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -8,6 +10,42 @@ import { galleryRooms } from '@/lib/gallery/data'
 import type { GalleryImage } from '@/lib/gallery/data'
 import { GalleryRoom } from './GalleryRoom'
 import { GalleryLightbox } from './GalleryLightbox'
+
+// Back link needs useSearchParams (?from=classic) — wrapped in Suspense
+// per Next.js requirement for static export.
+function ExitBackLink() {
+  const params = useSearchParams()
+  const isFromClassic = params.get('from') === 'classic'
+  return (
+    <Link
+      href={isFromClassic ? '/classic' : '/lab'}
+      style={{
+        display: 'inline-block',
+        padding: '12px 24px',
+        background: 'rgba(200,169,110,0.1)',
+        border: '1.5px solid rgba(200,169,110,0.3)',
+        borderRadius: '4px',
+        color: '#2a1f0e',
+        textDecoration: 'none',
+        fontSize: '13px',
+        fontFamily: "'CabinSketch-Bold', serif",
+        letterSpacing: '0.05em',
+        transition: 'all 0.2s',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(200,169,110,0.2)'
+        e.currentTarget.style.borderColor = 'rgba(200,169,110,0.5)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(200,169,110,0.1)'
+        e.currentTarget.style.borderColor = 'rgba(200,169,110,0.3)'
+      }}
+    >
+      ← {isFromClassic ? 'Back to Portfolio' : 'Back to Corridor'}
+    </Link>
+  )
+}
 
 export function GalleryTrack() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -97,15 +135,40 @@ export function GalleryTrack() {
             <GalleryRoom key={room.id} room={room} onExpand={setLightboxImage} />
           ))}
 
-          {/* Exit hall */}
+          {/* Exit hall — closing statement lives inside the horizontal flow,
+              so the journey ends where the scroll ends (no extra vertical
+              footer below the track). */}
           <div
-            className="flex-shrink-0 w-[30vw] h-screen flex items-center justify-center"
+            className="flex-shrink-0 w-[70vw] md:w-[50vw] h-screen flex items-center justify-center"
             style={{ background: '#f0ece4' }}
           >
-            <div className="text-center" style={{ fontFamily: 'var(--font-gallery, Georgia, serif)' }}>
+            <div
+              className="text-center px-8"
+              style={{ fontFamily: 'var(--font-gallery, Georgia, serif)', maxWidth: '480px' }}
+            >
               <div className="w-24 h-px mx-auto mb-6" style={{ background: '#c8a96e' }} />
-              <p className="text-sm italic" style={{ color: '#6b5a3e' }}>
+              <p className="text-sm italic mb-6" style={{ color: '#6b5a3e' }}>
                 End of Collection
+              </p>
+              <p
+                className="text-sm italic mb-8"
+                style={{ color: '#6b5a3e', lineHeight: 1.7 }}
+              >
+                Thank you for exploring the collection. These moments capture travel,
+                culture, and the beauty of connections across the world.
+              </p>
+              <Suspense fallback={null}>
+                <ExitBackLink />
+              </Suspense>
+              <p
+                className="mt-10 text-[10px] uppercase"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  color: 'rgba(42,31,14,0.4)',
+                  letterSpacing: '0.1em',
+                }}
+              >
+                © 2024 Yibin Feng · All rights reserved
               </p>
             </div>
           </div>

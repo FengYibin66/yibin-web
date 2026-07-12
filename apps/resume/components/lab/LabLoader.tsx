@@ -1,12 +1,14 @@
 'use client'
-import { useProgress } from '@react-three/drei'
 import { useEffect, useRef, useMemo, useState } from 'react'
 import gsap from 'gsap'
+import { useStableProgress } from '@/hooks/useStableProgress'
 
 const SLOW_LOAD_HINT_MS = 8000
 
 export function LabLoader() {
-  const { progress, active } = useProgress()
+  // Monotonic progress (never jumps back to 0 between load waves);
+  // `complete` only fires after loading has been quiet for a while.
+  const { progress, complete } = useStableProgress(600)
   const containerRef = useRef<HTMLDivElement>(null)
   const leftRef = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
@@ -42,20 +44,20 @@ export function LabLoader() {
   // Direct DOM update for progress text — bypass React re-renders
   useEffect(() => {
     if (textRef.current) {
-      const display = active ? Math.min(Math.round(progress), 85) : Math.round(progress)
-      textRef.current.textContent = `${display}%`
+      textRef.current.textContent = `${progress}%`
     }
-  }, [progress, active])
+  }, [progress])
 
-  // Trigger exit animation when loading completes
+  // Trigger exit animation only on STABLE completion (all waves done + quiet)
   useEffect(() => {
-    if (!active && progress >= 100 && !exitedRef.current) {
+    if (complete && !exitedRef.current) {
       exitedRef.current = true
       const container = containerRef.current
       const left = leftRef.current
       const right = rightRef.current
       if (!container || !left || !right) return
 
+      console.info('[LabLoader] all textures loaded — playing tear exit')
       setShowSlowHint(false)
       const tl = gsap.timeline({
         onComplete: () => gsap.set(container, { display: 'none' }),
@@ -64,12 +66,11 @@ export function LabLoader() {
       tl.to(right,     { xPercent: 100,  rotation: 2,  duration: 1.8, ease: 'power3.inOut' }, 0)
       tl.to(container, { opacity: 0, duration: 0.4 }, 1.4)
     }
-  }, [active, progress])
+  }, [complete])
 
   const radius = 36
   const circumference = 2 * Math.PI * radius
-  const displayProgress = active ? Math.min(progress, 85) : progress
-  const offset = circumference - (displayProgress / 100) * circumference
+  const offset = circumference - (progress / 100) * circumference
 
   return (
     <div

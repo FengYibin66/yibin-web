@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { GalleryClient } from '@/components/gallery/GalleryClient'
 import { GalleryBackButton } from '@/components/gallery/GalleryBackButton'
-import { GalleryFooter } from '@/components/gallery/GalleryFooter'
 
 export const metadata: Metadata = {
   title: 'Gallery — Yibin Feng',
@@ -13,7 +12,6 @@ export default function GalleryPage() {
     <main style={{ background: '#f0ece4', minHeight: '100vh' }}>
       <GalleryBackButton />
       <GalleryClient />
-      <GalleryFooter />
     </main>
   )
 }

@@ -244,6 +244,36 @@ describe('PublicationCard interaction', () => {
     expect(document.body.style.cursor).toBe('auto')
   })
 
+  it('keeps the cursor while another card still owns hover', () => {
+    const renderCards = (showSecond: boolean, secondLocked = false) => (
+      <>
+        <PublicationCard key="first" {...BASE_PROPS} index={0} />
+        {showSecond && (
+          <PublicationCard
+            key="second"
+            {...BASE_PROPS}
+            index={1}
+            isLocked={secondLocked}
+          />
+        )}
+      </>
+    )
+    const { container, rerender } = render(renderCards(true))
+    const firstCard = container.querySelector(
+      '[name="publication-card-0"]',
+    )
+    fireEvent.pointerOver(firstCard!, { pointerType: 'mouse' })
+
+    rerender(renderCards(true, true))
+    expect(document.body.style.cursor).toBe('pointer')
+
+    rerender(renderCards(false))
+    expect(document.body.style.cursor).toBe('pointer')
+
+    fireEvent.pointerOut(firstCard!, { pointerType: 'mouse' })
+    expect(document.body.style.cursor).toBe('auto')
+  })
+
   it.each([
     { isSelected: true, isLocked: false },
     { isSelected: false, isLocked: true },

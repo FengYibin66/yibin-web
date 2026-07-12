@@ -29,6 +29,7 @@ const WIND_Y_FREQUENCY = 2
 const BEND_WIND_MULTIPLIER = 3
 const SURFACE_BASE_Z_KEY = 'publicationSurfaceBaseZ'
 const SURFACE_BASE_ROTATION_X_KEY = 'publicationSurfaceBaseRotationX'
+const CURSOR_HOVER_OWNERS = new Set<object>()
 
 export interface PublicationCardProps {
   publication: PublicationRoomItem
@@ -125,6 +126,16 @@ function isTouchPointer(event: ThreeEvent<PointerEvent>): boolean {
   return event.pointerType === 'touch'
 }
 
+function addCursorHoverOwner(owner: object): void {
+  CURSOR_HOVER_OWNERS.add(owner)
+  document.body.style.cursor = 'pointer'
+}
+
+function removeCursorHoverOwner(owner: object): void {
+  CURSOR_HOVER_OWNERS.delete(owner)
+  document.body.style.cursor = CURSOR_HOVER_OWNERS.size > 0 ? 'pointer' : 'auto'
+}
+
 export const PublicationCard = forwardRef<
   PublicationCardHandle,
   PublicationCardProps
@@ -142,6 +153,7 @@ export const PublicationCard = forwardRef<
   const frontRef = useRef<THREE.Group>(null)
   const backRef = useRef<THREE.Group>(null)
   const hoveredRef = useRef(false)
+  const cursorOwnerRef = useRef<object>({})
   const motion = usePublicationCardMotion()
 
   useImperativeHandle(ref, () => ({
@@ -151,18 +163,17 @@ export const PublicationCard = forwardRef<
   }), [motion.cancel, motion.close, motion.open])
 
   useEffect(() => {
-    document.body.style.cursor = 'auto'
-    if (!isSelected && !isLocked) {
-      const shouldReveal = canHover && hoveredRef.current
-      if (motion.materialRef.current) {
-        motion.materialRef.current.uProgress = shouldReveal ? 1 : 0
-      }
-      if (shouldReveal) {
-        document.body.style.cursor = 'pointer'
-      }
+    const shouldReveal = canHover && hoveredRef.current
+    if (!isSelected && !isLocked && motion.materialRef.current) {
+      motion.materialRef.current.uProgress = shouldReveal ? 1 : 0
+    }
+    if (shouldReveal && !isSelected && !isLocked) {
+      addCursorHoverOwner(cursorOwnerRef.current)
+    } else {
+      removeCursorHoverOwner(cursorOwnerRef.current)
     }
     return () => {
-      document.body.style.cursor = 'auto'
+      removeCursorHoverOwner(cursorOwnerRef.current)
     }
   }, [canHover, isLocked, isSelected, motion.materialRef])
 
@@ -210,14 +221,14 @@ export const PublicationCard = forwardRef<
     if (motion.materialRef.current) {
       motion.materialRef.current.uProgress = 1
     }
-    document.body.style.cursor = 'pointer'
+    addCursorHoverOwner(cursorOwnerRef.current)
   }, [canHover, isLocked, isSelected, motion.materialRef])
 
   const handlePointerOut = useCallback((
     event: ThreeEvent<PointerEvent>,
   ): void => {
     hoveredRef.current = false
-    document.body.style.cursor = 'auto'
+    removeCursorHoverOwner(cursorOwnerRef.current)
     if (isTouchPointer(event) || isSelected || isLocked) {
       return
     }

@@ -44,7 +44,7 @@ export interface PublicationCardProps {
 export interface PublicationCardHandle {
   open: (target: THREE.Vector3) => Promise<void>
   close: () => Promise<void>
-  cancel: () => void
+  cancel: (restoreSnapshot?: boolean) => void
 }
 
 export interface PaperSurfaceTransform {

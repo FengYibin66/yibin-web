@@ -57,7 +57,7 @@ const mocks = vi.hoisted(() => ({
     teleportPhase: null as 'closing' | 'teleporting' | 'opening' | null,
   },
   paint: {
-    isRevealing: true,
+    isRevealing: false,
     paint: { opacity: 1, onBeforeCompile: vi.fn() },
     reveal: vi.fn(() => Promise.resolve()),
     complete: vi.fn(),
@@ -168,11 +168,20 @@ function renderRoom(
   return render(<PublicationsRoom {...props} />)
 }
 
+async function settleNormalReveal(
+  view: ReturnType<typeof renderRoom>,
+): Promise<void> {
+  await act(async () => {
+    await Promise.resolve()
+  })
+  view.rerender(<PublicationsRoom showRoom isExiting={false} />)
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.scene.isTeleporting = false
   mocks.scene.teleportPhase = null
-  mocks.paint.isRevealing = true
+  mocks.paint.isRevealing = false
   mocks.carouselOptions.length = 0
   mocks.clotheslineProps.length = 0
   mocks.sceneryProps.length = 0
@@ -187,15 +196,14 @@ beforeEach(() => {
 })
 
 describe('PublicationsRoom paint reveal', () => {
-  it('starts one normal reveal and locks browsing until it finishes', () => {
+  it('locks the first normal frame before starting one reveal', async () => {
     const view = renderRoom()
 
     expect(mocks.paint.reveal).toHaveBeenCalledOnce()
     expect(mocks.carouselOptions.at(-1)).toMatchObject({ locked: true })
     expect(latestClotheslineProps().isInteractionLocked).toBe(true)
 
-    mocks.paint.isRevealing = false
-    view.rerender(<PublicationsRoom showRoom isExiting={false} />)
+    await settleNormalReveal(view)
 
     expect(mocks.paint.reveal).toHaveBeenCalledOnce()
     expect(mocks.carouselOptions.at(-1)).toMatchObject({ locked: false })
@@ -205,14 +213,23 @@ describe('PublicationsRoom paint reveal', () => {
     })
   })
 
-  it('completes paint immediately when mounted during fast teleport', () => {
+  it('keeps fast-teleport paint complete after opening finishes', () => {
     mocks.scene.isTeleporting = true
     mocks.scene.teleportPhase = 'opening'
 
-    renderRoom()
+    const view = renderRoom()
 
     expect(mocks.paint.complete).toHaveBeenCalledOnce()
     expect(mocks.paint.reveal).not.toHaveBeenCalled()
+
+    mocks.scene.isTeleporting = false
+    mocks.scene.teleportPhase = null
+    view.rerender(<PublicationsRoom showRoom isExiting={false} />)
+
+    expect(mocks.paint.complete).toHaveBeenCalledOnce()
+    expect(mocks.paint.reveal).not.toHaveBeenCalled()
+    expect(mocks.carouselOptions.at(-1)).toMatchObject({ locked: false })
+    expect(latestClotheslineProps().isInteractionLocked).toBe(false)
   })
 
   it('restarts a reveal interrupted by StrictMode effect replay', () => {
@@ -233,13 +250,26 @@ describe('PublicationsRoom paint reveal', () => {
 })
 
 describe('PublicationsRoom card orchestration', () => {
+  it('locks carousel and selection throughout teleport', () => {
+    mocks.scene.isTeleporting = true
+    mocks.scene.teleportPhase = 'teleporting'
+    renderRoom()
+
+    expect(mocks.carouselOptions.at(-1)).toMatchObject({ locked: true })
+    expect(latestClotheslineProps().isInteractionLocked).toBe(true)
+    fireEvent.click(document.querySelectorAll('button')[1])
+    expect(mocks.carousel.centerItem).not.toHaveBeenCalled()
+    expect(mocks.cardHandles.get('paper-b')?.open).not.toHaveBeenCalled()
+  })
+
   it('waits for A to close before centering and opening B', async () => {
     mocks.paint.isRevealing = false
     const closeA = createDeferred()
     const handleA = mocks.cardHandles.get('paper-a')!
     const handleB = mocks.cardHandles.get('paper-b')!
     vi.mocked(handleA.close).mockReturnValue(closeA.promise)
-    renderRoom()
+    const view = renderRoom()
+    await settleNormalReveal(view)
 
     fireEvent.click(document.querySelector('button')!)
     await waitFor(() => expect(handleA.open).toHaveBeenCalledOnce())
@@ -268,6 +298,7 @@ describe('PublicationsRoom cancellation', () => {
     mocks.paint.isRevealing = false
     const handleA = mocks.cardHandles.get('paper-a')!
     const view = renderRoom()
+    await settleNormalReveal(view)
     fireEvent.click(document.querySelector('button')!)
     await waitFor(() => expect(handleA.open).toHaveBeenCalledOnce())
     await waitFor(() => expect(latestClotheslineProps().motion.phase).toBe('open'))
@@ -278,15 +309,14 @@ describe('PublicationsRoom cancellation', () => {
     )
 
     await waitFor(() => expect(mocks.paint.cancel).toHaveBeenCalled())
-    expect(handleA.cancel).toHaveBeenCalled()
+    expect(handleA.cancel).toHaveBeenCalledWith(true)
     expect(mocks.hidePopup).toHaveBeenCalled()
     expect(latestClotheslineProps().motion).toMatchObject({
       phase: 'hanging',
       selectedId: null,
       pendingId: null,
     })
-    expect(mocks.carouselOptions.at(-1)).toMatchObject({
-      locked: next.isExiting,
-    })
+    expect(mocks.carouselOptions.at(-1)).toMatchObject({ locked: true })
+    expect(latestClotheslineProps().isInteractionLocked).toBe(true)
   })
 })

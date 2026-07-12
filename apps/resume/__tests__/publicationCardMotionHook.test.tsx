@@ -338,6 +338,40 @@ describe('usePublicationCardMotion close sequence', () => {
 })
 
 describe('usePublicationCardMotion lifecycle', () => {
+  it('restores the hanging snapshot when cleanup cancels an opened card', async () => {
+    const { result } = renderHook(() => usePublicationCardMotion())
+    const { paper, material } = attachRefs(result.current, {
+      position: new THREE.Vector3(1, -1.1, 2),
+      rotation: new THREE.Euler(0.1, 0.2, 0.3),
+      scale: new THREE.Vector3(0.9, 0.8, 0.7),
+      bend: 0.2,
+      windStrength: 0.07,
+      uProgress: 0.35,
+    })
+    const openPromise = result.current.open(new THREE.Vector3(4, 5, 6))
+    completeTimeline(mocks.timelines[0])
+    await openPromise
+    paper.position.set(4, 5, 6)
+    paper.rotation.set(Math.PI, 0, 0)
+    paper.scale.setScalar(1.1)
+    material.bend = 0
+    material.windStrength = 0
+    material.uProgress = 1
+
+    act(() => {
+      result.current.cancel(true)
+    })
+
+    expect(paper.position.toArray()).toEqual([1, -1.1, 2])
+    expect(paper.rotation.toArray().slice(0, 3)).toEqual([0.1, 0.2, 0.3])
+    expect(paper.scale.toArray()).toEqual([0.9, 0.8, 0.7])
+    expect(material).toMatchObject({
+      bend: 0.2,
+      windStrength: 0.07,
+      uProgress: 0.35,
+    })
+  })
+
   it('kills and settles an action replaced by a new action', async () => {
     const { result } = renderHook(() => usePublicationCardMotion())
     attachRefs(result.current)

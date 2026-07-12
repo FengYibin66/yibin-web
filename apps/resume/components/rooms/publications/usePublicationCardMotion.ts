@@ -27,7 +27,7 @@ export interface PublicationCardMotionApi {
   materialRef: RefObject<PaperMaterialHandle | null>
   open: (target: THREE.Vector3) => Promise<void>
   close: () => Promise<void>
-  cancel: () => void
+  cancel: (restoreSnapshot?: boolean) => void
 }
 
 function captureSnapshot(
@@ -42,6 +42,19 @@ function captureSnapshot(
     windStrength: material.windStrength,
     uProgress: material.uProgress,
   }
+}
+
+function restoreCardSnapshot(
+  paper: THREE.Group,
+  material: PaperMaterialHandle,
+  snapshot: PublicationCardSnapshot,
+): void {
+  paper.position.copy(snapshot.position)
+  paper.rotation.copy(snapshot.rotation)
+  paper.scale.copy(snapshot.scale)
+  material.bend = snapshot.bend
+  material.windStrength = snapshot.windStrength
+  material.uProgress = snapshot.uProgress
 }
 
 function toParentSpace(paper: THREE.Group, worldTarget: THREE.Vector3): THREE.Vector3 {
@@ -221,14 +234,21 @@ export function usePublicationCardMotion(): PublicationCardMotionApi {
     return true
   }, [])
 
-  const cancel = useCallback((): void => {
+  const cancel = useCallback((restoreSnapshot = false): void => {
     const action = activeActionRef.current
-    if (!action) {
-      return
+    if (action) {
+      activeActionRef.current = null
+      action.timeline?.kill()
+      settleAction(action)
     }
-    activeActionRef.current = null
-    action.timeline?.kill()
-    settleAction(action)
+
+    const paper = paperRef.current
+    const material = materialRef.current
+    const snapshot = snapshotRef.current
+    if (restoreSnapshot && paper && material && snapshot) {
+      restoreCardSnapshot(paper, material, snapshot)
+      snapshotRef.current = null
+    }
   }, [settleAction])
 
   const open = useCallback((worldTarget: THREE.Vector3): Promise<void> => {
@@ -277,7 +297,7 @@ export function usePublicationCardMotion(): PublicationCardMotionApi {
     })
   }, [cancel, settleAction])
 
-  useEffect(() => cancel, [cancel])
+  useEffect(() => () => cancel(true), [cancel])
 
   return useMemo(
     () => ({ paperRef, materialRef, open, close, cancel }),

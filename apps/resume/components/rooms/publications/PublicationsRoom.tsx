@@ -29,6 +29,7 @@ import { usePublicationCarousel } from './usePublicationCarousel'
 
 const PUBLICATION_TUTORIAL_ID = 'publications_read'
 const CARD_OPEN_WORLD_TARGET = new THREE.Vector3(0, 1.3, -0.5)
+type PaintEntryPhase = 'idle' | 'revealing' | 'complete'
 
 export interface PublicationsRoomProps {
   showRoom: boolean
@@ -56,11 +57,20 @@ export function PublicationsRoom({
   )
   const cardHandlesRef = useRef(new Map<string, PublicationCardHandle>())
   const sequenceRef = useRef(0)
-  const entryStartedRef = useRef(false)
+  const paintEntryPhaseRef = useRef<PaintEntryPhase>('idle')
+  const teleportActive = isTeleporting || teleportPhase !== null
+  const needsInitialReveal = (
+    showRoom
+    && !isExiting
+    && !teleportActive
+    && paintEntryPhaseRef.current === 'idle'
+  )
+  const revealLocked = paint.isRevealing || needsInitialReveal
+  const sceneLocked = isExiting || teleportActive
   const carouselLocked = (
     !canBrowse(motion)
-    || paint.isRevealing
-    || isExiting
+    || revealLocked
+    || sceneLocked
   )
   const carousel = usePublicationCarousel({
     active: showRoom,
@@ -132,47 +142,58 @@ export function PublicationsRoom({
 
   useEffect(() => {
     if (!showRoom) {
-      entryStartedRef.current = false
+      paintEntryPhaseRef.current = 'idle'
       paint.reset()
       return
     }
-    if (isExiting || entryStartedRef.current) return
-
-    entryStartedRef.current = true
-    if (isTeleporting || teleportPhase !== null) {
-      paint.complete()
-    } else {
-      void paint.reveal()
+    if (isExiting) return
+    if (teleportActive) {
+      if (paintEntryPhaseRef.current === 'idle') {
+        paintEntryPhaseRef.current = 'complete'
+        paint.complete()
+      }
+      return
     }
+    if (paintEntryPhaseRef.current !== 'idle') return
+
+    paintEntryPhaseRef.current = 'revealing'
+    let effectActive = true
+    void paint.reveal().then(() => {
+      if (effectActive && paintEntryPhaseRef.current === 'revealing') {
+        paintEntryPhaseRef.current = 'complete'
+      }
+    })
     return () => {
-      entryStartedRef.current = false
-      paint.cancel()
+      effectActive = false
+      if (paintEntryPhaseRef.current === 'revealing') {
+        paintEntryPhaseRef.current = 'idle'
+        paint.cancel()
+      }
     }
   }, [
     isExiting,
-    isTeleporting,
     paint.complete,
     paint.reset,
     paint.reveal,
     showRoom,
-    teleportPhase,
+    teleportActive,
   ])
 
   useEffect(() => {
-    if (showRoom && !isExiting && !isTeleporting) return
+    if (showRoom && !isExiting && !teleportActive) return
 
     sequenceRef.current += 1
     paint.cancel()
-    cardHandlesRef.current.forEach(handle => handle.cancel())
+    cardHandlesRef.current.forEach(handle => handle.cancel(true))
     hidePopup()
     sendMotion({ type: 'CANCEL' })
   }, [
     hidePopup,
     isExiting,
-    isTeleporting,
     paint.cancel,
     sendMotion,
     showRoom,
+    teleportActive,
   ])
 
   if (!showRoom) return null
@@ -181,13 +202,13 @@ export function PublicationsRoom({
     <group ref={paint.setRoomOrigin}>
       <PublicationsScenery
         paint={paint.paint}
-        ambienceEnabled={!isExiting && !isTeleporting}
+        ambienceEnabled={!sceneLocked}
       >
         <PublicationClothesline
           publications={publications}
           carousel={carousel}
           motion={motion}
-          isInteractionLocked={paint.isRevealing || isExiting}
+          isInteractionLocked={revealLocked || sceneLocked}
           onSelect={handleSelect}
           onCardReady={handleCardReady}
         />

@@ -373,33 +373,49 @@ describe('usePublicationCarousel pointer input', () => {
 })
 
 describe('usePublicationCarousel animation', () => {
-  it.each([
-    { active: false, locked: false },
-    { active: true, locked: true },
-  ])(
-    'cancels center and clears drag when interaction changes to %o',
-    async disabledOptions => {
-      const target = mocks.canvas!
-      const { result, rerender } = renderHook(
-        (options: typeof DEFAULT_OPTIONS) =>
-          usePublicationCarousel(options),
-        { initialProps: DEFAULT_OPTIONS },
-      )
-      const promise = result.current.centerItem(1)
-      const call = mocks.tweenCalls[0]
-      dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+  it('cancels center and clears drag when the carousel becomes inactive', async () => {
+    const target = mocks.canvas!
+    const { result, rerender } = renderHook(
+      (options: typeof DEFAULT_OPTIONS) =>
+        usePublicationCarousel(options),
+      { initialProps: DEFAULT_OPTIONS },
+    )
+    const promise = result.current.centerItem(1)
+    const call = mocks.tweenCalls[0]
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
 
-      rerender({ ...DEFAULT_OPTIONS, ...disabledOptions })
-      await promise
-      call.vars.onComplete()
-      rerender(DEFAULT_OPTIONS)
-      dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
-      runFrame(100)
+    rerender({ ...DEFAULT_OPTIONS, active: false })
+    await promise
+    call.vars.onComplete()
+    rerender(DEFAULT_OPTIONS)
+    dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
+    runFrame(100)
 
-      expect(call.tween.kill).toHaveBeenCalledOnce()
-      expect(result.current.currentScroll.current).toBe(0)
-    },
-  )
+    expect(call.tween.kill).toHaveBeenCalledOnce()
+    expect(result.current.currentScroll.current).toBe(0)
+  })
+
+  it('keeps programmatic centering alive while user input is locked', async () => {
+    const target = mocks.canvas!
+    const { result, rerender } = renderHook(
+      (options: typeof DEFAULT_OPTIONS) =>
+        usePublicationCarousel(options),
+      { initialProps: DEFAULT_OPTIONS },
+    )
+    const promise = result.current.centerItem(1)
+    const call = mocks.tweenCalls[0]
+    dispatchPointer(target, 'pointerdown', { clientX: 100, clientY: 100 })
+
+    rerender({ ...DEFAULT_OPTIONS, locked: true })
+    call.vars.onComplete()
+    await promise
+    rerender(DEFAULT_OPTIONS)
+    dispatchPointer(target, 'pointermove', { clientX: 50, clientY: 100 })
+    runFrame(100)
+
+    expect(call.tween.kill).not.toHaveBeenCalled()
+    expect(result.current.currentScroll.current).toBe(2.5)
+  })
 
   it.each([
     { itemCount: 5 },

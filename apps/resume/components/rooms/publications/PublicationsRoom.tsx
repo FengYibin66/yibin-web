@@ -109,6 +109,16 @@ export function PublicationsRoom({
 
     await carousel.centerItem(index)
     if (sequence !== sequenceRef.current) return
+
+    const phase = motionRef.current.phase
+    if (phase === 'hanging') {
+      sendMotion({ type: 'CLICK', id })
+    } else if (
+      phase !== 'centering'
+      || motionRef.current.selectedId !== id
+    ) {
+      return
+    }
     sendMotion({ type: 'CENTERED' })
     sendMotion({ type: 'DETACHED' })
     await cardHandlesRef.current.get(id)?.open(CARD_OPEN_WORLD_TARGET)
@@ -136,7 +146,6 @@ export function PublicationsRoom({
       return
     }
 
-    sendMotion({ type: 'CLICK', id })
     await openPublication(id, sequence)
   }, [openPublication, sendMotion, unlockAchievement])
 

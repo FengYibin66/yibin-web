@@ -215,8 +215,10 @@ export function usePublicationCarousel(
       previousOptions.itemGap !== options.itemGap
     previousOptionsRef.current = options
 
-    if (!options.active || options.locked || geometryChanged) {
+    if (!options.active || geometryChanged) {
       cancelActiveTween()
+      clearDrag(true)
+    } else if (options.locked) {
       clearDrag(true)
     }
     if (options.active && !options.locked) {

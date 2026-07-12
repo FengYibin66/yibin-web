@@ -262,6 +262,24 @@ describe('PublicationsRoom card orchestration', () => {
     expect(mocks.cardHandles.get('paper-b')?.open).not.toHaveBeenCalled()
   })
 
+  it('centers before entering the centering motion phase on first select', async () => {
+    mocks.paint.isRevealing = false
+    const handleA = mocks.cardHandles.get('paper-a')!
+    const phasesDuringCenter: string[] = []
+    vi.mocked(mocks.carousel.centerItem).mockImplementation(async () => {
+      phasesDuringCenter.push(latestClotheslineProps().motion.phase)
+    })
+    const view = renderRoom()
+    await settleNormalReveal(view)
+
+    fireEvent.click(document.querySelector('button')!)
+
+    await waitFor(() => expect(mocks.carousel.centerItem).toHaveBeenCalledOnce())
+    expect(phasesDuringCenter).toEqual(['hanging'])
+    await waitFor(() => expect(handleA.open).toHaveBeenCalledOnce())
+    await waitFor(() => expect(latestClotheslineProps().motion.phase).toBe('open'))
+  })
+
   it('waits for A to close before centering and opening B', async () => {
     mocks.paint.isRevealing = false
     const closeA = createDeferred()

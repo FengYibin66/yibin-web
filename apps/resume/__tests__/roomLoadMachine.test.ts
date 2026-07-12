@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { SceneProvider, useScene } from '@/context/SceneContext'
 import {
   INITIAL_ROOM_LOAD_STATE,
+  isDoorEntryOwner,
   roomLoadReducer,
   type RoomLoadEvent,
   type RoomLoadPhase,
@@ -14,6 +15,7 @@ import {
 const PUBLICATIONS_LOADING_STATE: RoomLoadState = {
   phase: 'loading',
   roomId: 'publications',
+  segmentIndex: 0,
   attempt: 1,
   error: null,
 }
@@ -30,7 +32,7 @@ const ROOM_LOAD_PHASES: RoomLoadPhase[] = [
 ]
 
 const ROOM_LOAD_EVENTS: RoomLoadEvent[] = [
-  { type: 'BEGIN', roomId: 'publications' },
+  { type: 'BEGIN', roomId: 'publications', segmentIndex: 0 },
   { type: 'ALIGNED' },
   { type: 'READY' },
   { type: 'OPENING' },
@@ -67,6 +69,7 @@ function createStateForPhase(phase: RoomLoadPhase): RoomLoadState {
   return {
     phase,
     roomId: phase === 'idle' ? null : 'publications',
+    segmentIndex: phase === 'idle' ? null : 0,
     attempt: phase === 'idle' ? 0 : 1,
     error: phase === 'failed' ? 'failed' : null,
   }
@@ -77,6 +80,7 @@ describe('roomLoadReducer', () => {
     expect(INITIAL_ROOM_LOAD_STATE).toEqual({
       phase: 'idle',
       roomId: null,
+      segmentIndex: null,
       attempt: 0,
       error: null,
     })
@@ -86,10 +90,12 @@ describe('roomLoadReducer', () => {
     const aligning = roomLoadReducer(INITIAL_ROOM_LOAD_STATE, {
       type: 'BEGIN',
       roomId: 'publications',
+      segmentIndex: 2,
     })
     expect(aligning).toEqual({
       phase: 'aligning',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -98,6 +104,7 @@ describe('roomLoadReducer', () => {
     expect(loading).toEqual({
       phase: 'loading',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -106,6 +113,7 @@ describe('roomLoadReducer', () => {
     expect(ready).toEqual({
       phase: 'ready',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -114,6 +122,7 @@ describe('roomLoadReducer', () => {
     expect(opening).toEqual({
       phase: 'opening',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -122,6 +131,7 @@ describe('roomLoadReducer', () => {
     expect(entered).toEqual({
       phase: 'entered',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -130,6 +140,7 @@ describe('roomLoadReducer', () => {
     expect(exiting).toEqual({
       phase: 'exiting',
       roomId: 'publications',
+      segmentIndex: 2,
       attempt: 1,
       error: null,
     })
@@ -148,6 +159,7 @@ describe('roomLoadReducer', () => {
     ).toEqual({
       phase: 'failed',
       roomId: 'publications',
+      segmentIndex: 0,
       attempt: 1,
       error: message,
     })
@@ -157,6 +169,7 @@ describe('roomLoadReducer', () => {
     const failed: RoomLoadState = {
       phase: 'failed',
       roomId: 'publications',
+      segmentIndex: 0,
       attempt: 2,
       error: 'Loading timed out',
     }
@@ -164,6 +177,7 @@ describe('roomLoadReducer', () => {
     expect(roomLoadReducer(failed, { type: 'RETRY' })).toEqual({
       phase: 'loading',
       roomId: 'publications',
+      segmentIndex: 0,
       attempt: 3,
       error: null,
     })
@@ -173,6 +187,7 @@ describe('roomLoadReducer', () => {
     const failed: RoomLoadState = {
       phase: 'failed',
       roomId: 'publications',
+      segmentIndex: 0,
       attempt: 1,
       error: 'Loading timed out',
     }
@@ -190,6 +205,18 @@ describe('roomLoadReducer', () => {
       )
     },
   )
+
+  it('identifies the owning door by room and segment', () => {
+    const aligning = roomLoadReducer(INITIAL_ROOM_LOAD_STATE, {
+      type: 'BEGIN',
+      roomId: 'publications',
+      segmentIndex: 2,
+    })
+
+    expect(isDoorEntryOwner(aligning, 'publications', 2)).toBe(true)
+    expect(isDoorEntryOwner(aligning, 'publications', 0)).toBe(false)
+    expect(isDoorEntryOwner(aligning, 'projects', 2)).toBe(false)
+  })
 })
 
 function SceneWrapper({ children }: { children: ReactNode }) {
@@ -280,8 +307,16 @@ describe('SceneContext room loading', () => {
     expect(result.current.isRoomLoading).toBe(false)
 
     act(() => {
-      expect(result.current.beginRoomLoad('publications')).toBe(true)
-      expect(result.current.beginRoomLoad('publications')).toBe(false)
+      expect(result.current.dispatchDoorEntry({
+        type: 'CLICK',
+        roomId: 'publications',
+        segmentIndex: 0,
+      })).not.toBeNull()
+      expect(result.current.dispatchDoorEntry({
+        type: 'CLICK',
+        roomId: 'publications',
+        segmentIndex: 1,
+      })).toBeNull()
     })
     expect(result.current.roomLoadState.phase).toBe('aligning')
     expect(result.current.isRoomLoading).toBe(true)

@@ -1,4 +1,3 @@
-import type { RefObject } from 'react'
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -8,6 +7,7 @@ import type { RoomLoadState } from '@/lib/lab/roomLoadMachine'
 const READY_STATE: RoomLoadState = {
   phase: 'ready',
   roomId: 'publications',
+  segmentIndex: 0,
   attempt: 1,
   error: null,
 }
@@ -18,7 +18,7 @@ const LOADING_STATE: RoomLoadState = {
 }
 
 interface HarnessProps {
-  activeEntryRef: RefObject<boolean>
+  isEntryOwner: boolean
   state: RoomLoadState
   markRoomOpening: () => void
   timeoutRoomLoad: (message: string) => void
@@ -29,8 +29,9 @@ interface HarnessProps {
 function OrchestratorHarness(props: HarnessProps) {
   useDoorEntryOrchestrator({
     roomId: 'publications',
+    segmentIndex: 0,
     roomLoadState: props.state,
-    activeEntryRef: props.activeEntryRef,
+    isEntryOwner: props.isEntryOwner,
     isFastTeleport: false,
     markRoomOpening: props.markRoomOpening,
     timeoutRoomLoad: props.timeoutRoomLoad,
@@ -42,21 +43,17 @@ function OrchestratorHarness(props: HarnessProps) {
 }
 
 function createHarnessProps(
-  activeEntryRef: RefObject<boolean>,
+  isEntryOwner: boolean,
   state: RoomLoadState,
 ): HarnessProps {
   return {
-    activeEntryRef,
+    isEntryOwner,
     state,
     markRoomOpening: vi.fn(),
     timeoutRoomLoad: vi.fn(),
     openDoorPanels: vi.fn(),
     onFailureReset: vi.fn(),
   }
-}
-
-function createActiveRef(current: boolean): RefObject<boolean> {
-  return { current }
 }
 
 describe('useDoorEntryOrchestrator', () => {
@@ -69,10 +66,8 @@ describe('useDoorEntryOrchestrator', () => {
   })
 
   it('lets only the active duplicate open once when ready', () => {
-    const activeRef = createActiveRef(true)
-    const inactiveRef = createActiveRef(false)
-    const active = createHarnessProps(activeRef, READY_STATE)
-    const inactive = createHarnessProps(inactiveRef, READY_STATE)
+    const active = createHarnessProps(true, READY_STATE)
+    const inactive = createHarnessProps(false, READY_STATE)
 
     const view = render(
       <>
@@ -94,10 +89,8 @@ describe('useDoorEntryOrchestrator', () => {
   })
 
   it('times out only the active duplicate without opening either door', () => {
-    const activeRef = createActiveRef(true)
-    const inactiveRef = createActiveRef(false)
-    const active = createHarnessProps(activeRef, LOADING_STATE)
-    const inactive = createHarnessProps(inactiveRef, LOADING_STATE)
+    const active = createHarnessProps(true, LOADING_STATE)
+    const inactive = createHarnessProps(false, LOADING_STATE)
 
     render(
       <>
@@ -116,13 +109,12 @@ describe('useDoorEntryOrchestrator', () => {
   })
 
   it('restarts the active timeout after retry', () => {
-    const activeRef = createActiveRef(true)
     const failed: RoomLoadState = {
       ...LOADING_STATE,
       phase: 'failed',
       error: 'Room loading timed out',
     }
-    const props = createHarnessProps(activeRef, failed)
+    const props = createHarnessProps(true, failed)
     const view = render(<OrchestratorHarness {...props} />)
 
     view.rerender(
@@ -139,15 +131,16 @@ describe('useDoorEntryOrchestrator', () => {
   })
 
   it('runs failed-to-idle cleanup only for the active duplicate', () => {
-    const activeRef = createActiveRef(true)
-    const inactiveRef = createActiveRef(false)
-    const failed: RoomLoadState = {
+    const active = createHarnessProps(true, {
       ...LOADING_STATE,
       phase: 'failed',
       error: 'Room loading timed out',
-    }
-    const active = createHarnessProps(activeRef, failed)
-    const inactive = createHarnessProps(inactiveRef, failed)
+    })
+    const inactive = createHarnessProps(false, {
+      ...LOADING_STATE,
+      phase: 'failed',
+      error: 'Room loading timed out',
+    })
     const view = render(
       <>
         <OrchestratorHarness {...active} />
@@ -159,11 +152,11 @@ describe('useDoorEntryOrchestrator', () => {
       <>
         <OrchestratorHarness
           {...active}
-          state={{ ...failed, phase: 'idle', roomId: null, attempt: 0, error: null }}
+          state={{ phase: 'idle', roomId: null, segmentIndex: null, attempt: 0, error: null }}
         />
         <OrchestratorHarness
           {...inactive}
-          state={{ ...failed, phase: 'idle', roomId: null, attempt: 0, error: null }}
+          state={{ phase: 'idle', roomId: null, segmentIndex: null, attempt: 0, error: null }}
         />
       </>,
     )

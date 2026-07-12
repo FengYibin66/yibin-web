@@ -8,6 +8,7 @@ const sceneMocks = vi.hoisted(() => ({
   roomLoadState: {
     phase: 'idle',
     roomId: null,
+    segmentIndex: null,
     attempt: 0,
     error: null,
   } as RoomLoadState,
@@ -99,6 +100,7 @@ import { RoomLoadingIndicator } from '@/components/lab/RoomLoadingIndicator'
 const LOADING_STATE: RoomLoadState = {
   phase: 'loading',
   roomId: 'publications',
+  segmentIndex: 0,
   attempt: 1,
   error: null,
 }
@@ -106,6 +108,7 @@ const LOADING_STATE: RoomLoadState = {
 const FAILED_STATE: RoomLoadState = {
   phase: 'failed',
   roomId: 'publications',
+  segmentIndex: 0,
   attempt: 1,
   error: 'Room assets timed out',
 }

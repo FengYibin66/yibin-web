@@ -1,9 +1,10 @@
+import type { RoomId } from '@/context/SceneContext'
+
 import {
   roomLoadReducer,
   type RoomLoadEvent,
   type RoomLoadState,
 } from './roomLoadMachine'
-import type { RoomId } from '@/context/SceneContext'
 
 export type DoorEntryCommand =
   | 'ALIGN_CAMERA'
@@ -19,7 +20,7 @@ export type DoorEntryCommand =
   | 'RELEASE_CAMERA_OVERRIDE'
 
 export type DoorEntrySignal =
-  | { type: 'CLICK'; roomId: RoomId }
+  | { type: 'CLICK'; roomId: RoomId; segmentIndex: number }
   | { type: 'CAMERA_ALIGNED' }
   | { type: 'ROOM_READY' }
   | { type: 'READY_OBSERVED' }
@@ -74,7 +75,11 @@ const SIMPLE_DECISIONS: Record<SimpleSignalType, DoorEntryDecision> = {
 export function decideDoorEntry(signal: DoorEntrySignal): DoorEntryDecision {
   if (signal.type === 'CLICK') {
     return {
-      event: { type: 'BEGIN', roomId: signal.roomId },
+      event: {
+        type: 'BEGIN',
+        roomId: signal.roomId,
+        segmentIndex: signal.segmentIndex,
+      },
       commands: ['ALIGN_CAMERA'],
     }
   }
@@ -85,13 +90,30 @@ export function decideDoorEntry(signal: DoorEntrySignal): DoorEntryDecision {
   return SIMPLE_DECISIONS[signal.type]
 }
 
+export function tryAdvanceDoorEntryFlow(
+  state: RoomLoadState,
+  signal: DoorEntrySignal,
+): DoorEntryFlowResult | null {
+  const decision = decideDoorEntry(signal)
+  try {
+    return {
+      state: roomLoadReducer(state, decision.event),
+      commands: decision.commands,
+    }
+  } catch {
+    return null
+  }
+}
+
 export function advanceDoorEntryFlow(
   state: RoomLoadState,
   signal: DoorEntrySignal,
 ): DoorEntryFlowResult {
-  const decision = decideDoorEntry(signal)
-  return {
-    state: roomLoadReducer(state, decision.event),
-    commands: decision.commands,
+  const result = tryAdvanceDoorEntryFlow(state, signal)
+  if (!result) {
+    throw new Error(
+      `Invalid door entry signal ${signal.type} while room load phase is ${state.phase}`,
+    )
   }
+  return result
 }

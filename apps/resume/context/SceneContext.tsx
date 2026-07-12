@@ -11,13 +11,33 @@ import {
 } from 'react'
 
 import {
+  tryAdvanceDoorEntryFlow,
+  type DoorEntryFlowResult,
+  type DoorEntrySignal,
+} from '@/lib/lab/doorEntryFlow'
+import {
   INITIAL_ROOM_LOAD_STATE,
   roomLoadReducer,
+  type RoomLoadEvent,
   type RoomLoadState,
 } from '@/lib/lab/roomLoadMachine'
 
 export type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact'
 export type TeleportPhase = 'closing' | 'teleporting' | 'opening' | null
+
+type RoomLoadAction =
+  | { type: 'SIGNAL'; signal: DoorEntrySignal }
+  | { type: 'EVENT'; event: RoomLoadEvent }
+
+function sceneRoomLoadReducer(
+  state: RoomLoadState,
+  action: RoomLoadAction,
+): RoomLoadState {
+  if (action.type === 'SIGNAL') {
+    return tryAdvanceDoorEntryFlow(state, action.signal)?.state ?? state
+  }
+  return roomLoadReducer(state, action.event)
+}
 
 export interface SceneState {
   currentRoom: RoomId | null
@@ -33,7 +53,8 @@ export interface SceneState {
 
   roomLoadState: RoomLoadState
   isRoomLoading: boolean
-  beginRoomLoad: (roomId: RoomId) => boolean
+  dispatchDoorEntry: (signal: DoorEntrySignal) => DoorEntryFlowResult | null
+  beginRoomLoad: (roomId: RoomId, segmentIndex?: number) => boolean
   markRoomAligned: () => void
   markRoomReady: () => void
   markRoomOpening: () => void
@@ -80,62 +101,71 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   const [pendingDoorClick, setPendingDoorClick] = useState<RoomId | null>(null)
   const [isFastTeleport, setIsFastTeleport] = useState(false)
   const [roomLoadState, dispatchRoomLoad] = useReducer(
-    roomLoadReducer,
+    sceneRoomLoadReducer,
     INITIAL_ROOM_LOAD_STATE,
   )
-  const roomLoadPhaseRef = useRef(roomLoadState.phase)
+  const roomLoadStateRef = useRef(roomLoadState)
   const isTeleportingRef = useRef(isTeleporting)
-  roomLoadPhaseRef.current = roomLoadState.phase
+  roomLoadStateRef.current = roomLoadState
   isTeleportingRef.current = isTeleporting
 
   const isRoomLoading =
     roomLoadState.phase === 'aligning' || roomLoadState.phase === 'loading'
 
-  const beginRoomLoad = useCallback((roomId: RoomId): boolean => {
-    if (roomLoadPhaseRef.current !== 'idle') {
-      return false
-    }
-    roomLoadPhaseRef.current = 'aligning'
-    dispatchRoomLoad({ type: 'BEGIN', roomId })
-    return true
+  const dispatchDoorEntry = useCallback((signal: DoorEntrySignal): DoorEntryFlowResult | null => {
+    const preview = tryAdvanceDoorEntryFlow(roomLoadStateRef.current, signal)
+    if (!preview) return null
+    roomLoadStateRef.current = preview.state
+    dispatchRoomLoad({ type: 'SIGNAL', signal })
+    return preview
   }, [])
+
+  const applyRoomLoadEvent = useCallback((event: RoomLoadEvent) => {
+    const nextState = roomLoadReducer(roomLoadStateRef.current, event)
+    roomLoadStateRef.current = nextState
+    dispatchRoomLoad({ type: 'EVENT', event })
+  }, [])
+
+  const beginRoomLoad = useCallback((roomId: RoomId, segmentIndex = 0): boolean => {
+    return dispatchDoorEntry({ type: 'CLICK', roomId, segmentIndex }) !== null
+  }, [dispatchDoorEntry])
 
   const markRoomAligned = useCallback(() => {
-    dispatchRoomLoad({ type: 'ALIGNED' })
-  }, [])
+    dispatchDoorEntry({ type: 'CAMERA_ALIGNED' })
+  }, [dispatchDoorEntry])
 
   const markRoomReady = useCallback(() => {
-    dispatchRoomLoad({ type: 'READY' })
-  }, [])
+    dispatchDoorEntry({ type: 'ROOM_READY' })
+  }, [dispatchDoorEntry])
 
   const markRoomOpening = useCallback(() => {
-    dispatchRoomLoad({ type: 'OPENING' })
-  }, [])
+    dispatchDoorEntry({ type: 'READY_OBSERVED' })
+  }, [dispatchDoorEntry])
 
   const markRoomEntered = useCallback(() => {
-    dispatchRoomLoad({ type: 'OPENED' })
-  }, [])
+    dispatchDoorEntry({ type: 'ENTRY_COMPLETED' })
+  }, [dispatchDoorEntry])
 
   const timeoutRoomLoad = useCallback((message: string) => {
-    dispatchRoomLoad({ type: 'TIMEOUT', message })
-  }, [])
+    dispatchDoorEntry({ type: 'TIMEOUT', message })
+  }, [dispatchDoorEntry])
 
   const failRoomLoad = useCallback((message: string) => {
-    dispatchRoomLoad({ type: 'FAIL', message })
-  }, [])
+    dispatchDoorEntry({ type: 'ROOM_ERROR', message })
+  }, [dispatchDoorEntry])
 
   const retryRoomLoad = useCallback(() => {
-    dispatchRoomLoad({ type: 'RETRY' })
-  }, [])
+    dispatchDoorEntry({ type: 'RETRY' })
+  }, [dispatchDoorEntry])
 
   const resetRoomLoad = useCallback(() => {
-    dispatchRoomLoad({ type: 'RESET' })
-  }, [])
+    applyRoomLoadEvent({ type: 'RESET' })
+  }, [applyRoomLoadEvent])
 
   const resetRoomLoadForTeleport = useCallback(() => {
-    if (roomLoadPhaseRef.current !== 'entered' || !isTeleportingRef.current) return
-    dispatchRoomLoad({ type: 'TELEPORT_RESET' })
-  }, [])
+    if (roomLoadStateRef.current.phase !== 'entered' || !isTeleportingRef.current) return
+    applyRoomLoadEvent({ type: 'TELEPORT_RESET' })
+  }, [applyRoomLoadEvent])
 
   const enterRoom = useCallback((roomId: RoomId) => {
     setCurrentRoom(roomId)
@@ -151,10 +181,10 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const requestExit = useCallback(() => {
-    if (roomLoadPhaseRef.current !== 'entered' || isTeleportingRef.current) return
-    dispatchRoomLoad({ type: 'EXIT' })
+    if (roomLoadStateRef.current.phase !== 'entered' || isTeleportingRef.current) return
+    dispatchDoorEntry({ type: 'EXIT' })
     setExitRequested(true)
-  }, [])
+  }, [dispatchDoorEntry])
 
   const clearExitRequest = useCallback(() => {
     setExitRequested(false)
@@ -165,7 +195,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const teleportTo = useCallback((roomId: RoomId) => {
-    const roomPhase = roomLoadPhaseRef.current
+    const roomPhase = roomLoadStateRef.current.phase
     if (roomPhase !== 'idle' && roomPhase !== 'entered') return
     if (isTeleporting || roomId === currentRoom) return
 
@@ -221,6 +251,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     isFastTeleport,
     roomLoadState,
     isRoomLoading,
+    dispatchDoorEntry,
     beginRoomLoad,
     markRoomAligned,
     markRoomReady,
@@ -254,6 +285,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     isFastTeleport,
     roomLoadState,
     isRoomLoading,
+    dispatchDoorEntry,
     beginRoomLoad,
     markRoomAligned,
     markRoomReady,

@@ -13,12 +13,13 @@ export type RoomLoadPhase =
 export interface RoomLoadState {
   phase: RoomLoadPhase
   roomId: RoomId | null
+  segmentIndex: number | null
   attempt: number
   error: string | null
 }
 
 export type RoomLoadEvent =
-  | { type: 'BEGIN'; roomId: RoomId }
+  | { type: 'BEGIN'; roomId: RoomId; segmentIndex: number }
   | { type: 'ALIGNED' }
   | { type: 'READY' }
   | { type: 'OPENING' }
@@ -33,8 +34,21 @@ export type RoomLoadEvent =
 export const INITIAL_ROOM_LOAD_STATE: RoomLoadState = {
   phase: 'idle',
   roomId: null,
+  segmentIndex: null,
   attempt: 0,
   error: null,
+}
+
+export function isDoorEntryOwner(
+  state: RoomLoadState,
+  roomId: RoomId,
+  segmentIndex: number,
+): boolean {
+  return (
+    state.phase !== 'idle'
+    && state.roomId === roomId
+    && state.segmentIndex === segmentIndex
+  )
 }
 
 export function roomLoadReducer(
@@ -45,6 +59,7 @@ export function roomLoadReducer(
     return {
       phase: 'aligning',
       roomId: event.roomId,
+      segmentIndex: event.segmentIndex,
       attempt: 1,
       error: null,
     }

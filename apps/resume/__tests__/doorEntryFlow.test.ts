@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   advanceDoorEntryFlow,
+  tryAdvanceDoorEntryFlow,
   type DoorEntryCommand,
 } from '@/lib/lab/doorEntryFlow'
 import { INITIAL_ROOM_LOAD_STATE } from '@/lib/lab/roomLoadMachine'
@@ -13,22 +14,35 @@ function expectCommands(
   expect(commands).toEqual(expected)
 }
 
+const CLICK_PUBLICATIONS = {
+  type: 'CLICK' as const,
+  roomId: 'publications' as const,
+  segmentIndex: 0,
+}
+
 describe('door entry flow controller', () => {
   it('begins alignment after a corridor door click', () => {
-    const result = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, {
-      type: 'CLICK',
-      roomId: 'publications',
-    })
+    const result = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, CLICK_PUBLICATIONS)
 
     expect(result.state.phase).toBe('aligning')
+    expect(result.state.segmentIndex).toBe(0)
     expectCommands(result.commands, ['ALIGN_CAMERA'])
   })
 
+  it('ignores duplicate clicks while an entry is already in progress', () => {
+    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, CLICK_PUBLICATIONS).state
+
+    expect(
+      tryAdvanceDoorEntryFlow(aligning, {
+        type: 'CLICK',
+        roomId: 'publications',
+        segmentIndex: 1,
+      }),
+    ).toBeNull()
+  })
+
   it('mounts the room after real camera alignment while keeping the door closed', () => {
-    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, {
-      type: 'CLICK',
-      roomId: 'publications',
-    }).state
+    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, CLICK_PUBLICATIONS).state
     const result = advanceDoorEntryFlow(aligning, { type: 'CAMERA_ALIGNED' })
 
     expect(result.state.phase).toBe('loading')
@@ -37,10 +51,7 @@ describe('door entry flow controller', () => {
   })
 
   it('opens the door only after readiness is observed', () => {
-    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, {
-      type: 'CLICK',
-      roomId: 'publications',
-    }).state
+    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, CLICK_PUBLICATIONS).state
     const loading = advanceDoorEntryFlow(aligning, {
       type: 'CAMERA_ALIGNED',
     }).state
@@ -57,10 +68,7 @@ describe('door entry flow controller', () => {
   })
 
   it('fails on timeout without opening the door', () => {
-    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, {
-      type: 'CLICK',
-      roomId: 'publications',
-    }).state
+    const aligning = advanceDoorEntryFlow(INITIAL_ROOM_LOAD_STATE, CLICK_PUBLICATIONS).state
     const loading = advanceDoorEntryFlow(aligning, {
       type: 'CAMERA_ALIGNED',
     }).state
@@ -78,6 +86,7 @@ describe('door entry flow controller', () => {
     const failed = {
       phase: 'failed' as const,
       roomId: 'publications' as const,
+      segmentIndex: 0,
       attempt: 2,
       error: 'Room loading timed out',
     }
@@ -92,6 +101,7 @@ describe('door entry flow controller', () => {
     const failed = {
       phase: 'failed' as const,
       roomId: 'publications' as const,
+      segmentIndex: 0,
       attempt: 1,
       error: 'Room loading timed out',
     }
@@ -111,6 +121,7 @@ describe('door entry flow controller', () => {
     const entered = {
       phase: 'entered' as const,
       roomId: 'publications' as const,
+      segmentIndex: 0,
       attempt: 1,
       error: null,
     }

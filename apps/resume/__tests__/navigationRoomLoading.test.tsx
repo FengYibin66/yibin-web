@@ -8,6 +8,7 @@ const sceneMocks = vi.hoisted(() => ({
   roomLoadState: {
     phase: 'idle',
     roomId: null,
+    segmentIndex: null,
     attempt: 0,
     error: null,
   } as RoomLoadState,
@@ -69,6 +70,7 @@ function setRoomLoadPhase(phase: RoomLoadPhase): void {
   sceneMocks.roomLoadState = {
     phase,
     roomId: phase === 'idle' ? null : 'publications',
+    segmentIndex: phase === 'idle' ? null : 0,
     attempt: phase === 'idle' ? 0 : 1,
     error: phase === 'failed' ? 'failed' : null,
   }

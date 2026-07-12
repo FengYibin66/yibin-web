@@ -2,6 +2,34 @@ import { act, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const roomRenderMock = vi.hoisted(() => vi.fn())
+const sceneActionMocks = vi.hoisted(() => ({
+  markRoomAligned: vi.fn(),
+  markRoomReady: vi.fn(),
+  failRoomLoad: vi.fn(),
+}))
+
+vi.mock('@/context/SceneContext', () => ({
+  useScene: () => ({
+    roomLoadState: { phase: 'aligning', attempt: 7 },
+    ...sceneActionMocks,
+  }),
+}))
+
+vi.mock('@/components/rooms/AboutRoom', () => ({
+  AboutRoom: (props: unknown) => roomRenderMock(props),
+}))
+vi.mock('@/components/rooms/ProjectsRoom', () => ({
+  ProjectsRoom: () => null,
+}))
+vi.mock('@/components/rooms/PublicationsRoom', () => ({
+  PublicationsRoom: () => null,
+}))
+vi.mock('@/components/rooms/ContactRoom', () => ({
+  ContactRoom: () => null,
+}))
+
+import { RoomInterior } from '@/components/lab/RoomInterior'
 import { RoomReadyBoundary } from '@/components/lab/RoomReadyBoundary'
 
 interface Deferred {
@@ -37,9 +65,20 @@ function ThrowingChild({ message }: { message: string }): ReactNode {
   throw new Error(message)
 }
 
+function RecoverableChild({ shouldThrow }: { shouldThrow: boolean }) {
+  if (shouldThrow) {
+    throw new Error('Initial room render failed')
+  }
+
+  return <div>Recovered room</div>
+}
+
 describe('RoomReadyBoundary', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    roomRenderMock.mockReset()
+    roomRenderMock.mockReturnValue(null)
+    Object.values(sceneActionMocks).forEach((action) => action.mockReset())
   })
 
   afterEach(() => {
@@ -150,5 +189,90 @@ describe('RoomReadyBoundary', () => {
     )
 
     expect(onError).toHaveBeenCalledWith('Texture preload failed')
+  })
+
+  it('resets an error and reports ready after attempt changes', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const onReady = vi.fn()
+    const props = {
+      onLoading: vi.fn(),
+      onReady,
+      onError: vi.fn(),
+    }
+    const { rerender } = render(
+      <RoomReadyBoundary attempt={1} {...props}>
+        <RecoverableChild shouldThrow />
+      </RoomReadyBoundary>,
+    )
+
+    expect(props.onError).toHaveBeenCalledWith('Initial room render failed')
+
+    rerender(
+      <RoomReadyBoundary attempt={2} {...props}>
+        <RecoverableChild shouldThrow={false} />
+      </RoomReadyBoundary>,
+    )
+    expect(screen.getByText('Recovered room')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersToNextFrame()
+      vi.advanceTimersToNextFrame()
+    })
+    expect(onReady).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('RoomInterior boundary callbacks', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    roomRenderMock.mockReset()
+    Object.values(sceneActionMocks).forEach((action) => action.mockReset())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('forwards Suspense loading without advancing SceneContext', () => {
+    const pendingAsset = new Promise<void>(() => {})
+    roomRenderMock.mockImplementation(() => {
+      throw pendingAsset
+    })
+    const onLoading = vi.fn()
+
+    render(
+      <RoomInterior
+        roomId="about"
+        showRoom
+        onReady={vi.fn()}
+        onLoading={onLoading}
+        isExiting={false}
+      />,
+    )
+
+    expect(onLoading).toHaveBeenCalledTimes(1)
+    expect(sceneActionMocks.markRoomAligned).not.toHaveBeenCalled()
+  })
+
+  it('forwards render errors without failing SceneContext directly', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    roomRenderMock.mockImplementation(() => {
+      throw new Error('Room render failed')
+    })
+    const onError = vi.fn()
+
+    render(
+      <RoomInterior
+        roomId="about"
+        showRoom
+        onReady={vi.fn()}
+        onError={onError}
+        isExiting={false}
+      />,
+    )
+
+    expect(onError).toHaveBeenCalledWith('Room render failed')
+    expect(sceneActionMocks.failRoomLoad).not.toHaveBeenCalled()
   })
 })

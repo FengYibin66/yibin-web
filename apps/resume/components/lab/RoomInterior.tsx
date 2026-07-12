@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { RoomId } from '@/context/SceneContext'
 import { useScene } from '@/context/SceneContext'
 import { AboutRoom } from '@/components/rooms/AboutRoom'
@@ -13,10 +13,14 @@ interface RoomInteriorProps {
   roomId: RoomId
   showRoom: boolean
   onReady: () => void
+  onLoading?: () => void
+  onError?: (message: string) => void
   isExiting: boolean
 }
 
 type RoomProps = Pick<RoomInteriorProps, 'showRoom' | 'onReady' | 'isExiting'>
+
+const NOOP = () => {}
 
 function renderRoom(roomId: RoomId, props: RoomProps): ReactNode {
   switch (roomId) {
@@ -34,35 +38,24 @@ function renderRoom(roomId: RoomId, props: RoomProps): ReactNode {
   }
 }
 
-export function RoomInterior({ roomId, showRoom, onReady, isExiting }: RoomInteriorProps) {
-  const {
-    roomLoadState,
-    markRoomAligned,
-    markRoomReady,
-    failRoomLoad,
-  } = useScene()
+export function RoomInterior({
+  roomId,
+  showRoom,
+  onReady,
+  onLoading = NOOP,
+  onError = NOOP,
+  isExiting,
+}: RoomInteriorProps) {
+  const { roomLoadState: { attempt } } = useScene()
   const props = { showRoom, onReady, isExiting }
-
-  const handleLoading = useCallback(() => {
-    if (roomLoadState.phase === 'aligning') {
-      markRoomAligned()
-    }
-  }, [markRoomAligned, roomLoadState.phase])
-
-  const handleReady = useCallback(() => {
-    if (roomLoadState.phase === 'loading') {
-      markRoomReady()
-    }
-    onReady()
-  }, [markRoomReady, onReady, roomLoadState.phase])
 
   return (
     <RoomReadyBoundary
-      key={`${roomId}:${roomLoadState.attempt}`}
-      attempt={roomLoadState.attempt}
-      onLoading={handleLoading}
-      onReady={handleReady}
-      onError={failRoomLoad}
+      key={`${roomId}:${attempt}`}
+      attempt={attempt}
+      onLoading={onLoading}
+      onReady={onReady}
+      onError={onError}
     >
       {renderRoom(roomId, props)}
     </RoomReadyBoundary>

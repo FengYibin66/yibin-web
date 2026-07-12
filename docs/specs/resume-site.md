@@ -457,6 +457,54 @@ EXPOSE 80
 
 ### 内容
 - [ ] 7 个 Section 英文内容全部正确渲染
+
+---
+
+## 17. 架构决策：Gallery 独立路由 (2026-07-12)
+
+### 背景
+
+Gallery（欧式沉浸画廊）原本设计为首页 `/` 内嵌的 scroll-triggered 水平滚动区域。后因需要与 Lab 走廊集成（二级入口），遂改为 `/gallery` 独立页面。
+
+### 技术约束
+
+Gallery 使用 GSAP ScrollTrigger (`pin: true, scrub: 1.2`) 实现水平滚动——这要求真实的 window scroll 高度。在 SPA 单页应用中，由于只有一个全屏 viewport，无法产生足够的滚动高度供 ScrollTrigger 计算，导致 gallery 卡顿或不响应。
+
+### 方案
+
+**Gallery 作为 Next.js App Router 的独立页面 (`/gallery`)**，而非 `/` 内的嵌入区域。
+
+**进入 Gallery**（从首页）：
+- 首页 Section 中链接 `href="/gallery"`，触发页面导航
+
+**返回首页**（从 Gallery）：
+- Gallery 顶部导航 Back 按钮 → `router.push('/')`
+
+**进入 Gallery**（从 Lab 走廊）：
+- Lab 走廊 Gallery 门 → `DoorSection.tsx` 调 `router.push('/gallery?from=lab')`
+- 关键：早期导航（相机对齐 onComplete 时），不执行 fly-in + enterRoom 流程
+
+**返回走廊**（从 Gallery）：
+- 检查 `?from=lab` query 参数，若存在则显示"← Back to Corridor"按钮
+- 点击按钮 → `router.push('/lab')`
+
+### 关键实现
+
+| 文件 | 职责 |
+|------|------|
+| `app/gallery/page.tsx` | 独立页面入口，顶部导航 + GalleryClient |
+| `components/gallery/GalleryClient.tsx` | 画廊内容（Framer Motion + GSAP 动画） |
+| `components/gallery/GalleryBackButton.tsx` | Back 按钮（根据 from 参数条件渲染） |
+| `components/lab/DoorSection.tsx:176-190` | Gallery 门早期路由导航 |
+| `hooks/useWheelRouter.tsx` | 走廊/Gallery wheel 事件互斥（activate/deactivate） |
+
+### 优势
+
+✅ **真实 scroll 高度**：独立页面有完整 viewport，ScrollTrigger 获得真实滚动空间  
+✅ **生命周期清晰**：页面加载 = Gallery 挂载，页面卸载 = Gallery 清理，无组件残留  
+✅ **浏览器后退**：支持原生浏览器后退按钮返回首页或走廊  
+✅ **SEO / 分享**：Gallery 有独立 URL 和 metadata，可单独分享  
+✅ **性能隔离**：Gallery 和首页独立代码分割，首页加载不受 Gallery 影响
 - [ ] 切换中文后 7 个 Section 内容正确
 - [ ] 所有外链 `target="_blank" rel="noopener noreferrer"`
 - [ ] Email 复制到剪贴板功能有效

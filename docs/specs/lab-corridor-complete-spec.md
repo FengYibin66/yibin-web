@@ -79,3 +79,48 @@ itomdev 的核心 shader 逻辑（从 RevealMaterial.jsx 提取）：
 - [ ] 走廊门底部有踢脚线
 - [ ] type-check 0 errors
 - [ ] Playwright 4 路由零报错
+
+---
+
+## 架构决策：Gallery 路由导航 (2026-07-12)
+
+### 问题
+
+Gallery（画廊）原设计为 R3F Canvas 内的 overlay React 组件，使用 GSAP ScrollTrigger 实现水平滚动。遇到根本问题：
+
+- GSAP ScrollTrigger 的 `pin: true` 需要真实的 window scroll 高度。Canvas 内 fixed 定位的 overlay 无法产生真实 viewport 滚动，导致 ScrollTrigger 无法正确计算进度
+- 尝试通过 `createPortal` 到 body 和 imperative `createRoot` 绕过问题，但 React StrictMode 的双重渲染导致 `removeChild` 竞争崩溃
+
+### 方案
+
+**Gallery 使用 Next.js 路由导航，而非 Canvas 内 overlay**
+
+从走廊进入 Gallery：
+1. 玩家靠近 Gallery 门，点击进入
+2. DoorSection 执行相机对齐动画
+3. 相机对齐 onComplete 时调用 `router.push('/gallery?from=lab')`，直接跳转到 `/gallery` 页面
+4. 走廊不再执行 fly-in + enterRoom 流程
+
+返回走廊：
+1. Gallery 页面顶部显示"← Back to Corridor"按钮（检查 `?from=lab` query 参数）
+2. 点击按钮调用 `router.push('/lab')`，返回走廊
+
+Wheel 事件管理：
+- WheelRouter 在 Gallery 挂载/卸载时调用 `activate/deactivate` API，保证走廊和 Gallery 轮盘事件互斥
+- Gallery 卸载时自动恢复走廊轮盘响应
+
+### 关键文件
+
+| 文件 | 职责 |
+|------|------|
+| `components/lab/DoorSection.tsx:176-190` | Gallery 门早期导航：相机对齐后直接 `router.push('/gallery?from=lab')` |
+| `components/gallery/GalleryBackButton.tsx` | 检查 `?from=lab` query 参数，显示 Back 按钮 |
+| `app/gallery/page.tsx` | Gallery 独立页面 |
+| `hooks/useWheelRouter.tsx` | 事件互斥 API：`subscribe/activate/deactivate` |
+
+### 优势
+
+✅ GSAP ScrollTrigger 获得真实 window scroll，pin/scrub 动画流畅  
+✅ React 生命周期清晰：页面加载 = Gallery 挂载，页面卸载 = Gallery 卸载  
+✅ 无 StrictMode 竞争，无 removeChild 崩溃  
+✅ 支持浏览器后退按钮返回走廊

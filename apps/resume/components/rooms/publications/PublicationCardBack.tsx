@@ -12,6 +12,11 @@ import {
 import {
   getPublicationFonts,
 } from './publicationFonts'
+import {
+  PUBLICATION_BODY_MAX_WIDTH,
+  PUBLICATION_TEXT_OVERFLOW_WRAP,
+  PUBLICATION_TITLE_MAX_WIDTH,
+} from './publicationTextLayout'
 import type { PublicationCardFaceProps } from './publicationTypes'
 
 const CTA_WIDTH = 1.05
@@ -52,14 +57,16 @@ export function PublicationCardBack({
         depthTest={depthTest}
         renderOrder={renderOrder}
         position={[0, 0.82, 0.02]}
-        fontSize={locale === 'zh' ? 0.07 : 0.075}
+        fontSize={locale === 'zh' ? 0.065 : 0.075}
         color="#1c1c1c"
         fillOpacity={opacity}
         font={fonts.bold}
         anchorX="center"
         anchorY="top"
-        maxWidth={1.28}
-        lineHeight={1.18}
+        maxWidth={PUBLICATION_TITLE_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
+        lineHeight={1.2}
         raycast={disableRaycast}
       >
         {front.title}
@@ -75,7 +82,9 @@ export function PublicationCardBack({
         font={fonts.latinBold}
         anchorX="center"
         anchorY="middle"
-        maxWidth={1.28}
+        maxWidth={PUBLICATION_BODY_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
         raycast={disableRaycast}
       >
         {front.venueAndYear}
@@ -106,7 +115,9 @@ export function PublicationCardBack({
         font={fonts.regular}
         anchorX="center"
         anchorY="top"
-        maxWidth={1.28}
+        maxWidth={PUBLICATION_BODY_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
         lineHeight={1.35}
         raycast={disableRaycast}
       >
@@ -123,7 +134,9 @@ export function PublicationCardBack({
         font={fonts.regular}
         anchorX="center"
         anchorY="top"
-        maxWidth={1.28}
+        maxWidth={PUBLICATION_BODY_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
         lineHeight={1.25}
         raycast={disableRaycast}
       >

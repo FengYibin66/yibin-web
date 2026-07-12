@@ -6,11 +6,16 @@ import type { Mesh } from 'three'
 import { useLocale } from '@/hooks/useLocale'
 import { createPublicationCardFrontViewModel } from './publicationCardViewModel'
 import { getPublicationFonts } from './publicationFonts'
+import {
+  PUBLICATION_BODY_MAX_WIDTH,
+  PUBLICATION_TEXT_OVERFLOW_WRAP,
+  PUBLICATION_TITLE_MAX_WIDTH,
+} from './publicationTextLayout'
 import type { PublicationCardFaceProps } from './publicationTypes'
 
 const disableRaycast: Mesh['raycast'] = () => undefined
 const IMAGE_WIDTH = 1.25
-const IMAGE_HEIGHT = 0.85
+const IMAGE_HEIGHT = 0.78
 
 /**
  * Hanging preview stack (top → bottom):
@@ -27,28 +32,31 @@ export function PublicationCardFront({
   const viewModel = createPublicationCardFrontViewModel(publication)
   const cover = useTexture(publication.image ?? '/publications-cscw-cover.png')
   cover.colorSpace = THREE.SRGBColorSpace
+  const isZh = locale === 'zh'
 
   return (
     <group>
       <Text
         depthTest={depthTest}
         renderOrder={renderOrder + 1}
-        position={[0, 0.78, 0.03]}
-        fontSize={locale === 'zh' ? 0.075 : 0.08}
+        position={[0, 0.82, 0.03]}
+        fontSize={isZh ? 0.068 : 0.08}
         color="#1c1c1c"
         fillOpacity={opacity}
         font={fonts.bold}
         anchorX="center"
         anchorY="top"
-        maxWidth={1.3}
-        lineHeight={1.15}
+        maxWidth={PUBLICATION_TITLE_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
+        lineHeight={1.2}
         raycast={disableRaycast}
       >
         {viewModel.title}
       </Text>
 
       <mesh
-        position={[0, 0.02, 0.025]}
+        position={[0, -0.02, 0.025]}
         renderOrder={renderOrder}
         raycast={disableRaycast}
       >
@@ -73,7 +81,9 @@ export function PublicationCardFront({
         font={fonts.latinBold}
         anchorX="center"
         anchorY="middle"
-        maxWidth={1.3}
+        maxWidth={PUBLICATION_BODY_MAX_WIDTH}
+        overflowWrap={PUBLICATION_TEXT_OVERFLOW_WRAP}
+        whiteSpace="normal"
         raycast={disableRaycast}
       >
         {viewModel.venueAndYear}

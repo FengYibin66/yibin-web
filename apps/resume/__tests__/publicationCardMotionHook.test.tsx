@@ -162,6 +162,7 @@ describe('usePublicationCardMotion open sequence', () => {
       position: '<',
       vars: { x: Math.PI * PUBLICATION_CARD_MOTION.open.flipRatio },
     })
+    expect(call.steps[4].vars).not.toHaveProperty('y')
     expect(call.steps[5]).toMatchObject({
       target: material,
       position: '<',
@@ -253,12 +254,25 @@ describe('usePublicationCardMotion close sequence', () => {
     expect(call.steps[3]).toMatchObject({
       target: paper.rotation,
       position: '<',
-      vars: { x: Math.PI * PUBLICATION_CARD_MOTION.open.flipRatio },
+      vars: {
+        x: Math.PI * PUBLICATION_CARD_MOTION.open.flipRatio,
+        y: snapshot.rotation.y,
+        z: PUBLICATION_CARD_MOTION.open.detachRotationZ,
+      },
     })
     expect(call.steps[5]).toMatchObject({
       target: paper.position,
       vars: {
         y: snapshot.position.y - PUBLICATION_CARD_MOTION.open.detachY,
+      },
+    })
+    expect(call.steps[6]).toMatchObject({
+      target: paper.rotation,
+      position: '<',
+      vars: {
+        x: PUBLICATION_CARD_MOTION.open.detachRotationX,
+        y: snapshot.rotation.y,
+        z: PUBLICATION_CARD_MOTION.open.detachRotationZ,
       },
     })
     expect(call.steps[8]).toMatchObject({

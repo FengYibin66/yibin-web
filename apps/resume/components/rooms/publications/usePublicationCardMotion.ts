@@ -153,8 +153,8 @@ function addCloseSteps(
     })
     .to(paper.rotation, {
       x: Math.PI * open.flipRatio,
-      y: open.centerRotationY,
-      z: open.centerRotationZ,
+      y: snapshot.rotation.y,
+      z: open.detachRotationZ,
       duration: close.centerDuration,
       ease: close.centerEase,
     }, '<')
@@ -170,6 +170,7 @@ function addCloseSteps(
     })
     .to(paper.rotation, {
       x: open.detachRotationX,
+      y: snapshot.rotation.y,
       z: open.detachRotationZ,
       duration: close.lowerDuration,
       ease: close.lowerEase,

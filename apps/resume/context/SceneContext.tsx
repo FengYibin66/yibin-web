@@ -1,6 +1,19 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useReducer,
+  useState,
+} from 'react'
+
+import {
+  INITIAL_ROOM_LOAD_STATE,
+  roomLoadReducer,
+  type RoomLoadState,
+} from '@/lib/lab/roomLoadMachine'
 
 export type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact'
 export type TeleportPhase = 'closing' | 'teleporting' | 'opening' | null
@@ -16,6 +29,17 @@ export interface SceneState {
   teleportPhase: TeleportPhase
   pendingDoorClick: RoomId | null
   isFastTeleport: boolean
+
+  roomLoadState: RoomLoadState
+  isRoomLoading: boolean
+  beginRoomLoad: (roomId: RoomId) => void
+  markRoomAligned: () => void
+  markRoomReady: () => void
+  markRoomOpening: () => void
+  markRoomEntered: () => void
+  failRoomLoad: (message: string) => void
+  retryRoomLoad: () => void
+  resetRoomLoad: () => void
 
   enterRoom: (roomId: RoomId) => void
   exitRoom: () => void
@@ -52,6 +76,45 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   const [teleportPhase, setTeleportPhase] = useState<TeleportPhase>(null)
   const [pendingDoorClick, setPendingDoorClick] = useState<RoomId | null>(null)
   const [isFastTeleport, setIsFastTeleport] = useState(false)
+  const [roomLoadState, dispatchRoomLoad] = useReducer(
+    roomLoadReducer,
+    INITIAL_ROOM_LOAD_STATE,
+  )
+
+  const isRoomLoading =
+    roomLoadState.phase === 'aligning' || roomLoadState.phase === 'loading'
+
+  const beginRoomLoad = useCallback((roomId: RoomId) => {
+    dispatchRoomLoad({ type: 'BEGIN', roomId })
+  }, [])
+
+  const markRoomAligned = useCallback(() => {
+    dispatchRoomLoad({ type: 'ALIGNED' })
+  }, [])
+
+  const markRoomReady = useCallback(() => {
+    dispatchRoomLoad({ type: 'READY' })
+  }, [])
+
+  const markRoomOpening = useCallback(() => {
+    dispatchRoomLoad({ type: 'OPENING' })
+  }, [])
+
+  const markRoomEntered = useCallback(() => {
+    dispatchRoomLoad({ type: 'OPENED' })
+  }, [])
+
+  const failRoomLoad = useCallback((message: string) => {
+    dispatchRoomLoad({ type: 'FAIL', message })
+  }, [])
+
+  const retryRoomLoad = useCallback(() => {
+    dispatchRoomLoad({ type: 'RETRY' })
+  }, [])
+
+  const resetRoomLoad = useCallback(() => {
+    dispatchRoomLoad({ type: 'RESET' })
+  }, [])
 
   const enterRoom = useCallback((roomId: RoomId) => {
     setCurrentRoom(roomId)
@@ -128,6 +191,16 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     teleportPhase,
     pendingDoorClick,
     isFastTeleport,
+    roomLoadState,
+    isRoomLoading,
+    beginRoomLoad,
+    markRoomAligned,
+    markRoomReady,
+    markRoomOpening,
+    markRoomEntered,
+    failRoomLoad,
+    retryRoomLoad,
+    resetRoomLoad,
     enterRoom,
     exitRoom,
     requestExit,
@@ -149,6 +222,16 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     teleportPhase,
     pendingDoorClick,
     isFastTeleport,
+    roomLoadState,
+    isRoomLoading,
+    beginRoomLoad,
+    markRoomAligned,
+    markRoomReady,
+    markRoomOpening,
+    markRoomEntered,
+    failRoomLoad,
+    retryRoomLoad,
+    resetRoomLoad,
     enterRoom,
     exitRoom,
     requestExit,

@@ -1,5 +1,8 @@
+import { createElement, type ReactNode } from 'react'
+import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import { SceneProvider, useScene } from '@/context/SceneContext'
 import {
   INITIAL_ROOM_LOAD_STATE,
   roomLoadReducer,
@@ -120,5 +123,62 @@ describe('roomLoadReducer', () => {
     expect(() => roomLoadReducer(state, event)).toThrow(
       new RegExp(`invalid room load transition.*${phase}.*${event.type}`, 'i'),
     )
+  })
+})
+
+function SceneWrapper({ children }: { children: ReactNode }) {
+  return createElement(SceneProvider, null, children)
+}
+
+describe('SceneContext room loading', () => {
+  it('drives room loading through reducer-backed context actions', () => {
+    const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+
+    expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
+    expect(result.current.isRoomLoading).toBe(false)
+
+    act(() => result.current.beginRoomLoad('publications'))
+    expect(result.current.roomLoadState.phase).toBe('aligning')
+    expect(result.current.isRoomLoading).toBe(true)
+
+    act(() => result.current.markRoomAligned())
+    expect(result.current.roomLoadState.phase).toBe('loading')
+    expect(result.current.isRoomLoading).toBe(true)
+
+    act(() => result.current.markRoomReady())
+    expect(result.current.roomLoadState.phase).toBe('ready')
+    expect(result.current.isRoomLoading).toBe(false)
+
+    act(() => result.current.markRoomOpening())
+    expect(result.current.roomLoadState.phase).toBe('opening')
+
+    act(() => result.current.markRoomEntered())
+    expect(result.current.roomLoadState.phase).toBe('entered')
+  })
+
+  it('exposes failure recovery actions without duplicating loading state', () => {
+    const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+
+    act(() => result.current.beginRoomLoad('publications'))
+    act(() => result.current.markRoomAligned())
+    act(() => result.current.failRoomLoad('Texture preload failed'))
+
+    expect(result.current.roomLoadState).toMatchObject({
+      phase: 'failed',
+      error: 'Texture preload failed',
+    })
+    expect(result.current.isRoomLoading).toBe(false)
+
+    act(() => result.current.retryRoomLoad())
+    expect(result.current.roomLoadState).toMatchObject({
+      phase: 'loading',
+      roomId: 'publications',
+      attempt: 2,
+      error: null,
+    })
+
+    act(() => result.current.failRoomLoad('Loading timed out'))
+    act(() => result.current.resetRoomLoad())
+    expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
   })
 })

@@ -209,6 +209,7 @@ export const en: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
         keywords: ['Multi-Agent', 'Social Influence', 'Human-AI Interaction'],
+        image: '/cscw-poster.png',
       },
       {
         title: 'Greater than the Sum of its Parts: Exploring Social Influence of Multi-Agents',
@@ -217,6 +218,7 @@ export const en: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
         keywords: ['Multi-Agent', 'Social Influence', 'CHI'],
+        image: '/cscw-poster.png',
       },
     ],
   },

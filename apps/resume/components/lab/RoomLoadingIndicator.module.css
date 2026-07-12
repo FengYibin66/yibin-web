@@ -1,0 +1,117 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 88px 24px 72px;
+  pointer-events: none;
+}
+
+.card {
+  isolation: isolate;
+  position: relative;
+  width: min(360px, calc(100vw - 48px));
+  overflow: hidden;
+  padding: 28px 30px;
+  color: #2a1f0e;
+  text-align: center;
+  background: rgba(250, 247, 239, 0.94);
+  border: 1px solid rgba(42, 31, 14, 0.16);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(42, 31, 14, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.card::before {
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  content: '';
+  background: url('/textures/paper-texture.webp') center / cover;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.ink {
+  width: 92px;
+  height: 52px;
+  margin-bottom: 14px;
+  color: rgba(42, 31, 14, 0.72);
+}
+
+.inkPath {
+  stroke-dasharray: 190;
+  stroke-dashoffset: 190;
+  animation: draw-ink 1.8s ease-in-out infinite;
+}
+
+.label {
+  margin: 0;
+  font-family: 'CabinSketch', var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.error {
+  margin: 10px 0 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(42, 31, 14, 0.68);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.button {
+  min-height: 40px;
+  padding: 9px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #2a1f0e;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(42, 31, 14, 0.24);
+  border-radius: 6px;
+}
+
+.button:hover {
+  background: #ffffff;
+  border-color: rgba(42, 31, 14, 0.5);
+}
+
+.button:focus-visible {
+  outline: 2px solid #2a1f0e;
+  outline-offset: 3px;
+}
+
+@keyframes draw-ink {
+  0% {
+    opacity: 0.3;
+    stroke-dashoffset: 190;
+  }
+
+  55% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    opacity: 0.3;
+    stroke-dashoffset: -190;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inkPath {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}

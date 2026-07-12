@@ -285,68 +285,6 @@ describe('wheel event showRoom guard', () => {
   })
 })
 
-// ─── isTeleporting hasSignaled 重置逻辑 ──────────────────────────────────────
-
-describe('hasSignaled reset on teleport', () => {
-  function simulateRoom() {
-    let hasSignaled = false
-    let frameCount = 0
-    let onReadyCalled = 0
-
-    function onReady() { onReadyCalled++ }
-
-    function frame() {
-      if (!hasSignaled) {
-        frameCount++
-        if (frameCount >= 10) {
-          hasSignaled = true
-          onReady()
-        }
-      }
-    }
-
-    function onTeleport() {
-      hasSignaled = false
-      frameCount = 0
-    }
-
-    return { frame, onTeleport, getOnReadyCalled: () => onReadyCalled }
-  }
-
-  it('首次进入：10帧后调用 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
-  })
-
-  it('进入后 onReady 不再重复调用', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 20; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
-  })
-
-  it('teleport 后 hasSignaled 重置，再次进入可触发 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)
-
-    room.onTeleport()  // 模拟传送
-
-    for (let i = 0; i < 10; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(2)
-  })
-
-  it('teleport 后未满 10 帧不触发 onReady', () => {
-    const room = simulateRoom()
-    for (let i = 0; i < 10; i++) room.frame()
-
-    room.onTeleport()
-
-    for (let i = 0; i < 5; i++) room.frame()
-    expect(room.getOnReadyCalled()).toBe(1)  // 还是 1，还没到 10 帧
-  })
-})
-
 // ─── GalleryRoomOverlay hasSignaled 逻辑 ────────────────────────────────────
 
 describe('GalleryRoomOverlay onReady timing', () => {

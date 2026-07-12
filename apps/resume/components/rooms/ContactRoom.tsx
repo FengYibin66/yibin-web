@@ -5,13 +5,12 @@ import { useFrame } from '@react-three/fiber'
 import { useTexture, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAchievements } from '@/context/AchievementsContext'
-import { useScene } from '@/context/SceneContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { SocialBarrel } from './contact/SocialBarrel'
 import { MessagePaper } from './contact/MessagePaper'
 
 interface ContactRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -28,12 +27,10 @@ const STATEK_SETTINGS = {
   scale: [3.35, 1.3] as [number, number],
 }
 
-export function ContactRoom({ showRoom, onReady, isExiting }: ContactRoomProps) {
-  const { isTeleporting } = useScene()
-  const { unlockAchievement, showTutorial } = useAchievements()
+export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
+  const { unlockAchievement } = useAchievements()
+  useRoomTutorial('contact_found')
 
-  const hasSignaled  = useRef(false)
-  const frameCount   = useRef(0)
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)
   const audioRef     = useRef<{ setVolume: (v: number) => void } | null>(null)
@@ -58,23 +55,7 @@ export function ContactRoom({ showRoom, onReady, isExiting }: ContactRoomProps) 
     }
   }, [seaTexture, moloTexture])
 
-  // Reset hasSignaled on teleport so onReady fires again on re-entry
-  useEffect(() => {
-    if (isTeleporting) {
-      hasSignaled.current = false
-      frameCount.current = 0
-    }
-  }, [isTeleporting])
-
-  useFrame((state, delta) => {
-    if (!hasSignaled.current) {
-      frameCount.current++
-      if (frameCount.current >= 10) {
-        hasSignaled.current = true
-        onReady()
-        setTimeout(() => showTutorial('contact_found'), 2000)
-      }
-    }
+  useFrame((state) => {
     if (isExiting) return
 
     const t = state.clock.getElapsedTime()

@@ -62,6 +62,56 @@ docker compose -f docker-compose.prod.yml exec mysql \
 
 ## Nginx Issues
 
+### Resume / Portal / Wechat return 403 or 404 after rebuild (stale bind mount)
+
+**Symptom (very common after `build-prod-assets` or `deploy-prod`):**
+
+```bash
+curl -I https://resume.yibinfeng.com/          # → 403 Forbidden
+curl -I https://resume.yibinfeng.com/gallery/  # → 404 Not Found
+```
+
+Host files look fine (`ls apps/resume/out/index.html` exists), but the site still fails.
+
+**Cause:** Nginx serves static frontends via **bind mounts**:
+
+```yaml
+# docker-compose.prod.yml
+./apps/portal/client/dist → /usr/share/nginx/html/portal
+./apps/resume/out         → /usr/share/nginx/html/resume
+./apps/auto-wechat/frontend/dist → /usr/share/nginx/html/wechat
+```
+
+`next build` / Vite **delete and recreate** `out/` / `dist/` as new directories (new inode).
+The running nginx container keeps the **old inode** — often an empty directory Docker created at first mount. Empty root → **403**; missing route index → **404**.
+
+`docker compose restart nginx` is **not enough** (same mount). Use **force-recreate**.
+
+**Fix (immediate):**
+
+```bash
+cd ~/yibin-web
+
+# Confirm host build output is real
+ls apps/resume/out/index.html apps/resume/out/gallery/index.html
+
+# Remount volumes (required)
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  up -d --force-recreate nginx
+
+sleep 3
+curl -I https://resume.yibinfeng.com/
+curl -I https://resume.yibinfeng.com/gallery/
+```
+
+**Prevention:** Prefer `./scripts/deploy-prod.sh`. As of `0ad071a` it always runs
+`--force-recreate nginx` after building static assets. If you only run
+`./scripts/build-prod-assets.sh`, you must recreate nginx yourself afterward.
+
+**Related (different bug):** `/gallery/` 403 when `out/gallery/` is a photo-asset
+folder without `index.html` — fixed by `trailingSlash: true` in `apps/resume/next.config.js`
+so the page exports as `gallery/index.html`.
+
 ### Nginx Returns 502 Bad Gateway
 
 **Cause:** Backend service not responding

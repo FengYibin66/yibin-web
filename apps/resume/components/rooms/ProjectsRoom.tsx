@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import '@/components/lab/shaders/RevealMaterial'
 
@@ -50,7 +51,6 @@ const PLATFORM_DIM: Record<Platform, [number, number, number]> = {
 
 interface ProjectsRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -63,15 +63,14 @@ interface MonitorItem {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ProjectsRoom({ showRoom, onReady, isExiting }: ProjectsRoomProps) {
-  const { isTeleporting } = useScene()
-  const { unlockAchievement, showTutorial } = useAchievements()
+export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
+  const { isTeleporting, roomLoadState } = useScene()
+  const { unlockAchievement } = useAchievements()
   const { camera } = useThree()
   const router = useWheelRouter()
+  useRoomTutorial('projects_inspect')
 
   const towerRef        = useRef<THREE.Group>(null)
-  const hasSignaled     = useRef(false)
-  const frameCount      = useRef(0)
   const showRoomRef     = useRef(showRoom)
   const isDraggingRef   = useRef(false)
   const lastXRef        = useRef(0)
@@ -107,15 +106,21 @@ export function ProjectsRoom({ showRoom, onReady, isExiting }: ProjectsRoomProps
   useEffect(() => { showRoomRef.current = showRoom }, [showRoom])
 
   useEffect(() => {
-    if (!showRoom) return
-    gsap.to(camera.position, { x: 3, y: CAMERA_Y_OFFSET, duration: 0.8, ease: 'power2.inOut' })
-  }, [showRoom, camera])
+    if (!showRoom || isExiting || roomLoadState.phase !== 'entered') return
+    const cameraTween = gsap.to(camera.position, {
+      x: 3,
+      y: CAMERA_Y_OFFSET,
+      duration: 0.8,
+      ease: 'power2.inOut',
+    })
+    return () => {
+      cameraTween.kill()
+    }
+  }, [camera, isExiting, roomLoadState.phase, showRoom])
 
 
   useEffect(() => {
     if (isTeleporting) {
-      hasSignaled.current  = false
-      frameCount.current   = 0
       rotVelocity.current  = 0
       autoRotSpeed.current = 0.12
       fallSpeed.current    = BASE_FALL_SPEED
@@ -123,9 +128,6 @@ export function ProjectsRoom({ showRoom, onReady, isExiting }: ProjectsRoomProps
   }, [isTeleporting])
 
   useFrame((_, delta) => {
-    if (!hasSignaled.current) {
-      if (++frameCount.current >= 10) { hasSignaled.current = true; onReady(); setTimeout(() => showTutorial('projects_inspect'), 2000) }
-    }
     if (isExiting || !towerRef.current) return
 
     towerRef.current.rotation.y += autoRotSpeed.current * delta + rotVelocity.current

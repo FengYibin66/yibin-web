@@ -209,6 +209,7 @@ export const zh: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
         keywords: ['多智能体', '社会影响', '人机交互'],
+        image: '/cscw-poster.png',
       },
       {
         title: '整体大于部分之和：探索多智能体的社会影响力',
@@ -217,6 +218,7 @@ export const zh: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
         keywords: ['多智能体', '社会影响', 'CHI'],
+        image: '/cscw-poster.png',
       },
     ],
   },

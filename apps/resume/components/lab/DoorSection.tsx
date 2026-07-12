@@ -10,8 +10,15 @@ import { useAudio } from '@/context/AudioContext'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
+import {
+  decideDoorEntry,
+  type DoorEntryCommand,
+} from '@/lib/lab/doorEntryFlow'
+import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
+import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
+import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'
 
 // ─── Geometry constants (itomdev DoorSection values) ──────────────────────────
 const WALL_X_OUTER    = 3.5
@@ -50,6 +57,22 @@ export interface DoorSectionProps {
   setCameraOverride: (active: boolean) => void
 }
 
+interface DoorEscapeState {
+  isInsideRoom: boolean
+  isAnimating: boolean
+  isTeleporting: boolean
+}
+
+export function handleDoorEscape(
+  event: KeyboardEvent,
+  state: DoorEscapeState,
+  requestExit: () => void,
+): void {
+  if (event.key !== 'Escape') return
+  if (!state.isInsideRoom || state.isAnimating || state.isTeleporting) return
+  requestExit()
+}
+
 export function DoorSection({
   position,
   side,
@@ -80,6 +103,13 @@ export function DoorSection({
     teleportPhase,
     currentRoom,
     signalRoomReady,
+    roomLoadState,
+    dispatchDoorEntry,
+    markRoomOpening,
+    timeoutRoomLoad,
+    resetRoomLoad,
+    resetRoomLoadForTeleport,
+    requestExit,
   } = useScene()
   const { camera } = useThree()
 
@@ -128,8 +158,9 @@ export function DoorSection({
   const isOpenRef        = useRef(false)
   const isTiltLockedRef  = useRef(false)
   const hideDelayRef     = useRef<gsap.core.Tween | null>(null)
-  const loadTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const roomReadyRef     = useRef(false)
+  const hasPreloadedNearbyRef = useRef(false)
+
+  const isEntryOwner = isDoorEntryOwner(roomLoadState, roomId, segmentIndex)
 
   // Camera state saved before entering (for exit reverse animation)
   const savedCameraState   = useRef({ x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0 })
@@ -149,6 +180,10 @@ export function DoorSection({
     if (!inner) return
 
     const dist = Math.abs(camera.position.z - position[2])
+    if (roomId !== 'gallery' && !hasPreloadedNearbyRef.current && dist < TILT_START) {
+      hasPreloadedNearbyRef.current = true
+      preloadRoomAssets(roomId)
+    }
 
     let targetTilt = BASE_TILT
     if (isTiltLockedRef.current) {
@@ -189,9 +224,6 @@ export function DoorSection({
   })
 
   // ─── Open door panels ────────────────────────────────────────────────────────
-  // For gallery: navigate as soon as door opens (during fly-in, not after)
-  const navigatingToGalleryRef = useRef(false)
-
   const openDoorPanels = useCallback((fastMode: boolean, onComplete: () => void) => {
     const door = doorRef.current
     if (!door) { onComplete(); return }
@@ -235,43 +267,50 @@ export function DoorSection({
     })
   }, [play])
 
-  // ─── Room ready handler ──────────────────────────────────────────────────────
-  const handleRoomReady = useCallback(() => {
-    if (roomReadyRef.current) return
-    if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current)
-    roomReadyRef.current = true
+  const finishRoomEntry = useCallback((useFastMode: boolean) => {
+    const result = dispatchDoorEntry({ type: 'ENTRY_COMPLETED' })
+    if (!result?.commands.includes('ENTER_ROOM')) return
+    enterRoom(roomId)
+    setIsAnimating(false)
+    setIsInsideRoom(true)
+    unlockAchievement('corridor_enter')
+    if (useFastMode) signalRoomReady()
+  }, [dispatchDoorEntry, enterRoom, roomId, signalRoomReady, unlockAchievement])
 
-    const useFastMode = isFastTeleport
-    openDoorPanels(useFastMode, () => {
-      // Fly camera forward through door
-      const direction = new THREE.Vector3()
-      camera.getWorldDirection(direction)
-      const targetX = camera.position.x + direction.x * enterDistance
-      const targetZ = camera.position.z + direction.z * enterDistance
-
-      const flyDur = useFastMode ? 0.01 : 1.5
-      gsap.to(camera.position, {
-        x: targetX, z: targetZ,
-        duration: flyDur,
-        ease: useFastMode ? 'none' : 'power2.inOut',
-        onComplete: () => {
-          setIsAnimating(false)
-          setIsInsideRoom(true)
-          setTimeout(() => {
-            enterRoom(roomId)
-            unlockAchievement('corridor_enter')
-            if (useFastMode) signalRoomReady()
-          }, 250)
-        }
-      })
+  const flyIntoRoom = useCallback((useFastMode: boolean) => {
+    const direction = new THREE.Vector3()
+    camera.getWorldDirection(direction)
+    const duration = useFastMode ? 0.01 : 1.5
+    gsap.to(camera.position, {
+      x: camera.position.x + direction.x * enterDistance,
+      z: camera.position.z + direction.z * enterDistance,
+      duration,
+      ease: useFastMode ? 'none' : 'power2.inOut',
+      onComplete: () => finishRoomEntry(useFastMode),
     })
-  }, [isFastTeleport, openDoorPanels, camera, enterDistance, enterRoom, roomId, signalRoomReady, unlockAchievement])
+  }, [camera, enterDistance, finishRoomEntry])
+
+  const handleRoomReady = useCallback(() => {
+    if (!isEntryOwner) return
+    if (roomLoadState.phase !== 'loading') return
+    dispatchDoorEntry({ type: 'ROOM_READY' })
+  }, [dispatchDoorEntry, isEntryOwner, roomLoadState.phase])
+
+  const handleRoomError = useCallback((message: string) => {
+    if (!isEntryOwner) return
+    if (roomLoadState.phase !== 'loading') return
+    dispatchDoorEntry({ type: 'ROOM_ERROR', message })
+  }, [dispatchDoorEntry, isEntryOwner, roomLoadState.phase])
 
   // ─── Main click / teleport handler ──────────────────────────────────────────
   const handleClick = useCallback((opts?: { isTeleport?: boolean }) => {
     if (isAnimating || isOpenRef.current) return
 
     const isTeleport = opts?.isTeleport ?? false
+    if (roomId !== 'gallery') {
+      const result = dispatchDoorEntry({ type: 'CLICK', roomId, segmentIndex })
+      if (!result?.commands.includes('ALIGN_CAMERA')) return
+    }
     setIsAnimating(true)
     setCameraOverride(true)
     isTiltLockedRef.current = true
@@ -337,43 +376,63 @@ export function DoorSection({
           return
         }
 
-        // Begin lazy loading room — door opens when onReady fires
-        roomReadyRef.current = false
+        const result = dispatchDoorEntry({ type: 'CAMERA_ALIGNED' })
+        if (!result?.commands.includes('MOUNT_ROOM')) return
         setShowRoom(true)
-
-        // Fallback: if room doesn't call onReady in 8s, open anyway
-        loadTimeoutRef.current = setTimeout(() => {
-          if (!roomReadyRef.current) {
-            roomReadyRef.current = true
-            openDoorPanels(useFastMode, () => {
-              const direction = new THREE.Vector3()
-              camera.getWorldDirection(direction)
-              const flyDur = useFastMode ? 0.01 : 1.5
-              gsap.to(camera.position, {
-                x: camera.position.x + direction.x * enterDistance,
-                z: camera.position.z + direction.z * enterDistance,
-                duration: flyDur,
-                ease: useFastMode ? 'none' : 'power2.inOut',
-                onComplete: () => {
-                  setIsAnimating(false)
-                  setIsInsideRoom(true)
-                  setTimeout(() => {
-                    enterRoom(roomId)
-                    unlockAchievement('corridor_enter')
-                    if (useFastMode) signalRoomReady()
-                  }, 250)
-                }
-              })
-            })
-          }
-        }, 8000)
       },
     })
-  }, [isAnimating, setCameraOverride, camera, side, position, isFastTeleport, openDoorPanels, enterDistance, enterRoom, roomId, signalRoomReady, router, unlockAchievement, setShowRoom])
+  }, [camera, dispatchDoorEntry, isAnimating, isFastTeleport, position, roomId, router, segmentIndex, setCameraOverride, side, unlockAchievement])
+
+  const restoreSavedCamera = useCallback(() => {
+    const saved = savedCameraState.current
+    gsap.killTweensOf(camera.position)
+    gsap.killTweensOf(camera.rotation)
+    camera.position.set(saved.x, saved.y, saved.z)
+    camera.rotation.set(saved.rotX, saved.rotY, saved.rotZ)
+  }, [camera])
+
+  const resetDoorVisuals = useCallback(() => {
+    hideDelayRef.current?.kill()
+    if (doorRef.current) {
+      gsap.killTweensOf(doorRef.current.rotation)
+      doorRef.current.rotation.y = 0
+    }
+    for (const ref of [doorRevealRef, handleRevealRef]) {
+      if (ref.current) ref.current.uProgress = 0
+    }
+    if (handlePaintedRef.current) handlePaintedRef.current.visible = false
+    if (doorPaintedRef.current) doorPaintedRef.current.visible = false
+    isOpenRef.current = false
+    isTiltLockedRef.current = false
+  }, [])
+
+  const executeFailureCleanup = useCallback((commands: DoorEntryCommand[]) => {
+    if (commands.includes('RESTORE_CAMERA')) restoreSavedCamera()
+    if (commands.includes('CLOSE_DOOR')) resetDoorVisuals()
+    if (commands.includes('RESET_LOCAL_STATE')) {
+      setIsInsideRoom(false)
+      setIsAnimating(false)
+      setShowRoom(false)
+    }
+    if (commands.includes('RELEASE_CAMERA_OVERRIDE')) setCameraOverride(false)
+  }, [resetDoorVisuals, restoreSavedCamera, setCameraOverride])
+
+  useDoorEntryOrchestrator({
+    roomId,
+    segmentIndex,
+    roomLoadState,
+    isEntryOwner,
+    isFastTeleport,
+    markRoomOpening,
+    timeoutRoomLoad,
+    openDoorPanels,
+    flyIntoRoom,
+    onFailureReset: executeFailureCleanup,
+  })
 
   // ─── Exit room handler ───────────────────────────────────────────────────────
   const exitRoom = useCallback(() => {
-    if (!isInsideRoom || isAnimating) return
+    if (!isEntryOwner || !isInsideRoom || isAnimating) return
     setIsAnimating(true)
 
     const saved    = savedCameraState.current
@@ -412,31 +471,40 @@ export function DoorSection({
                 setShowRoom(false)
                 contextExitRoom()
                 setCameraOverride(false)
+                resetRoomLoad()
               })
             })
           }
         })
       }
     })
-  }, [isInsideRoom, isAnimating, camera, closeDoorPanels, contextExitRoom, setCameraOverride])
+  }, [isEntryOwner, isInsideRoom, isAnimating, camera, closeDoorPanels, contextExitRoom, resetRoomLoad, setCameraOverride])
 
   // ─── ESC key listener ────────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isInsideRoom && !isAnimating) {
-        exitRoom()
-      }
+      handleDoorEscape(
+        e,
+        { isInsideRoom, isAnimating, isTeleporting },
+        requestExit,
+      )
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isInsideRoom, isAnimating, exitRoom])
+  }, [isAnimating, isInsideRoom, isTeleporting, requestExit])
 
   // ─── exitRequested listener ──────────────────────────────────────────────────
   useEffect(() => {
-    if (exitRequested && isInsideRoom && !isAnimating) {
+    if (
+      exitRequested
+      && roomLoadState.phase === 'exiting'
+      && isEntryOwner
+      && isInsideRoom
+      && !isAnimating
+    ) {
       exitRoom()
     }
-  }, [exitRequested, isInsideRoom, isAnimating, exitRoom])
+  }, [exitRequested, isEntryOwner, isInsideRoom, isAnimating, exitRoom, roomLoadState.phase])
 
   // ─── pendingDoorClick listener (teleport auto-click) ────────────────────────
   // Respond to the nearest segment's door so teleport works regardless of scroll depth.
@@ -451,26 +519,25 @@ export function DoorSection({
 
   // ─── Silent reset on teleport ────────────────────────────────────────────────
   useEffect(() => {
-    if (isTeleporting && teleportPhase === 'teleporting' && isInsideRoom && currentRoom === roomId) {
-      isOpenRef.current = false
-      isTiltLockedRef.current = false
-      roomReadyRef.current = false
+    if (
+      isEntryOwner
+      && isTeleporting
+      && teleportPhase === 'teleporting'
+      && isInsideRoom
+      && currentRoom === roomId
+    ) {
+      resetRoomLoadForTeleport()
+      contextExitRoom()
+      resetDoorVisuals()
       setIsInsideRoom(false)
       setIsAnimating(false)
       setShowRoom(false)
-      if (doorRef.current) { doorRef.current.rotation.y = 0 }
     }
-  }, [isTeleporting, teleportPhase, isInsideRoom, currentRoom, roomId])
-
-  // ─── Cleanup ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current)
-    }
-  }, [])
+  }, [contextExitRoom, currentRoom, isEntryOwner, isInsideRoom, isTeleporting, resetDoorVisuals, resetRoomLoadForTeleport, roomId, teleportPhase])
 
   // ─── Hover handlers ──────────────────────────────────────────────────────────
   const handlePointerEnter = useCallback(() => {
+    if (roomId !== 'gallery') preloadRoomAssets(roomId)
     if (isOpenRef.current || isAnimating) return
     play('door_hover')
     // Micro-open door on hover
@@ -483,7 +550,7 @@ export function DoorSection({
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (handlePaintedRef.current) handlePaintedRef.current.visible = true
     if (doorPaintedRef.current) doorPaintedRef.current.visible = true
-  }, [isAnimating, play, side])
+  }, [isAnimating, play, roomId, side])
 
   const handlePointerLeave = useCallback(() => {
     if (isOpenRef.current || isAnimating) return
@@ -546,6 +613,7 @@ export function DoorSection({
             roomId={roomId}
             showRoom={showRoom}
             onReady={handleRoomReady}
+            onError={handleRoomError}
             isExiting={isInsideRoom && isAnimating}
           />
         )}

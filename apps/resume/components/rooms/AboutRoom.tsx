@@ -6,6 +6,7 @@ import { Text, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
+import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { PaperAirplane } from './about/PaperAirplane'
 import SkyChunk, { CHUNK_LENGTH, CORRIDOR_CLIP_Z, ROOM_Z } from './about/SkyChunk'
@@ -21,7 +22,6 @@ const AVATAR_HEIGHT = AVATAR_WIDTH / AVATAR_LEGACY_ASPECT
 
 interface AboutRoomProps {
   showRoom: boolean
-  onReady: () => void
   isExiting: boolean
 }
 
@@ -206,19 +206,18 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AboutRoom({ showRoom, onReady, isExiting }: AboutRoomProps) {
+export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { camera }              = useThree()
   const { isTeleporting }       = useScene()
-  const { unlockAchievement, showTutorial }   = useAchievements()
+  const { unlockAchievement }   = useAchievements()
   const router = useWheelRouter()
+  useRoomTutorial('about_scroll')
 
   const scrollPos       = useRef(0)
   const scrollVelocity  = useRef(0)
   const currentBank     = useRef(0)
   const currentPitch    = useRef(0)
   const isFlightActive  = useRef(false)
-  const hasSignaled     = useRef(false)
-  const frameCount      = useRef(0)
 
   // showRoom ref for event handler guards
   const showRoomRef = useRef(showRoom)
@@ -227,8 +226,6 @@ export function AboutRoom({ showRoom, onReady, isExiting }: AboutRoomProps) {
   // Reset on teleport
   useEffect(() => {
     if (isTeleporting) {
-      hasSignaled.current      = false
-      frameCount.current       = 0
       currentBank.current      = 0
       currentPitch.current     = 0
       isFlightActive.current   = false
@@ -243,17 +240,6 @@ export function AboutRoom({ showRoom, onReady, isExiting }: AboutRoomProps) {
   const worldRef = useRef<THREE.Group>(null)
 
   useFrame((_, delta) => {
-    // Ready signal
-    if (!hasSignaled.current) {
-      frameCount.current++
-      if (frameCount.current >= 20) {
-        hasSignaled.current = true
-        onReady()
-        setTimeout(() => showTutorial('about_scroll'), 2000)
-      }
-      return
-    }
-
     if (isExiting || isTeleporting) return
 
     // Momentum scroll

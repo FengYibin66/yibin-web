@@ -15,6 +15,10 @@ const sceneMocks = vi.hoisted(() => ({
   resetRoomLoad: vi.fn(),
 }))
 
+const roomAssetMocks = vi.hoisted(() => ({
+  reloadRoomAssets: vi.fn(),
+}))
+
 vi.mock('@react-three/fiber', () => ({
   Canvas: () => <div data-testid="lab-canvas" />,
 }))
@@ -83,6 +87,10 @@ vi.mock('@/components/ui/NavigationUI', () => ({
 
 vi.mock('@/lib/lab/texturePreload', () => ({
   preloadCorridorTextures: vi.fn(),
+}))
+
+vi.mock('@/lib/lab/roomAssets', () => ({
+  reloadRoomAssets: roomAssetMocks.reloadRoomAssets,
 }))
 
 import { LabScene } from '@/components/lab/LabScene'
@@ -158,6 +166,7 @@ describe('LabScene room loading indicator', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })))
     sceneMocks.retryRoomLoad.mockReset()
     sceneMocks.resetRoomLoad.mockReset()
+    roomAssetMocks.reloadRoomAssets.mockReset()
     sceneMocks.roomLoadState = FAILED_STATE
   })
 
@@ -180,7 +189,24 @@ describe('LabScene room loading indicator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     fireEvent.click(screen.getByRole('button', { name: 'Back to corridor' }))
+    expect(roomAssetMocks.reloadRoomAssets).toHaveBeenCalledWith('publications')
     expect(sceneMocks.retryRoomLoad).toHaveBeenCalledTimes(1)
+    expect(
+      roomAssetMocks.reloadRoomAssets.mock.invocationCallOrder[0],
+    ).toBeLessThan(sceneMocks.retryRoomLoad.mock.invocationCallOrder[0])
     expect(sceneMocks.resetRoomLoad).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not run ordinary-room asset reload for gallery retries', () => {
+    sceneMocks.roomLoadState = {
+      ...FAILED_STATE,
+      roomId: 'gallery',
+    }
+    render(<LabScene />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(roomAssetMocks.reloadRoomAssets).not.toHaveBeenCalled()
+    expect(sceneMocks.retryRoomLoad).toHaveBeenCalledTimes(1)
   })
 })

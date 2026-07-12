@@ -19,6 +19,7 @@ import { RoomLoadingIndicator } from './RoomLoadingIndicator'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
+import { reloadRoomAssets } from '@/lib/lab/roomAssets'
 import { preloadCorridorTextures } from '@/lib/lab/texturePreload'
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
@@ -88,6 +89,14 @@ function LabCanvas() {
     setCameraOverrideRef.current(active)
   }, [])
 
+  const handleRetryRoomLoad = useCallback(() => {
+    const roomId = roomLoadState.roomId
+    if (roomId && roomId !== 'gallery') {
+      reloadRoomAssets(roomId)
+    }
+    retryRoomLoad()
+  }, [retryRoomLoad, roomLoadState.roomId])
+
   useEffect(() => {
     playBgm('corridor_bg')
     return () => stopBgm()
@@ -112,7 +121,7 @@ function LabCanvas() {
 
       <RoomLoadingIndicator
         state={roomLoadState}
-        onRetry={retryRoomLoad}
+        onRetry={handleRetryRoomLoad}
         onBack={resetRoomLoad}
       />
 

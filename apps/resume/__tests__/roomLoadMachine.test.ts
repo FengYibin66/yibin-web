@@ -18,6 +18,59 @@ const PUBLICATIONS_LOADING_STATE: RoomLoadState = {
   error: null,
 }
 
+const ROOM_LOAD_PHASES: RoomLoadPhase[] = [
+  'idle',
+  'aligning',
+  'loading',
+  'ready',
+  'opening',
+  'entered',
+  'failed',
+  'exiting',
+]
+
+const ROOM_LOAD_EVENTS: RoomLoadEvent[] = [
+  { type: 'BEGIN', roomId: 'publications' },
+  { type: 'ALIGNED' },
+  { type: 'READY' },
+  { type: 'OPENING' },
+  { type: 'OPENED' },
+  { type: 'EXIT' },
+  { type: 'RESET' },
+  { type: 'RETRY' },
+  { type: 'TIMEOUT', message: 'timed out' },
+  { type: 'FAIL', message: 'failed' },
+]
+
+const LEGAL_EVENT_TYPES: Record<
+  RoomLoadPhase,
+  readonly RoomLoadEvent['type'][]
+> = {
+  idle: ['BEGIN'],
+  aligning: ['ALIGNED'],
+  loading: ['READY', 'TIMEOUT', 'FAIL'],
+  ready: ['OPENING'],
+  opening: ['OPENED'],
+  entered: ['EXIT'],
+  failed: ['RESET', 'RETRY'],
+  exiting: ['RESET'],
+}
+
+const INVALID_TRANSITIONS = ROOM_LOAD_PHASES.flatMap(phase =>
+  ROOM_LOAD_EVENTS
+    .filter(event => !LEGAL_EVENT_TYPES[phase].includes(event.type))
+    .map(event => [phase, event] as const),
+)
+
+function createStateForPhase(phase: RoomLoadPhase): RoomLoadState {
+  return {
+    phase,
+    roomId: phase === 'idle' ? null : 'publications',
+    attempt: phase === 'idle' ? 0 : 1,
+    error: phase === 'failed' ? 'failed' : null,
+  }
+}
+
 describe('roomLoadReducer', () => {
   it('starts from the exact idle state', () => {
     expect(INITIAL_ROOM_LOAD_STATE).toEqual({
@@ -41,19 +94,44 @@ describe('roomLoadReducer', () => {
     })
 
     const loading = roomLoadReducer(aligning, { type: 'ALIGNED' })
-    expect(loading.phase).toBe('loading')
+    expect(loading).toEqual({
+      phase: 'loading',
+      roomId: 'publications',
+      attempt: 1,
+      error: null,
+    })
 
     const ready = roomLoadReducer(loading, { type: 'READY' })
-    expect(ready.phase).toBe('ready')
+    expect(ready).toEqual({
+      phase: 'ready',
+      roomId: 'publications',
+      attempt: 1,
+      error: null,
+    })
 
     const opening = roomLoadReducer(ready, { type: 'OPENING' })
-    expect(opening.phase).toBe('opening')
+    expect(opening).toEqual({
+      phase: 'opening',
+      roomId: 'publications',
+      attempt: 1,
+      error: null,
+    })
 
     const entered = roomLoadReducer(opening, { type: 'OPENED' })
-    expect(entered.phase).toBe('entered')
+    expect(entered).toEqual({
+      phase: 'entered',
+      roomId: 'publications',
+      attempt: 1,
+      error: null,
+    })
 
     const exiting = roomLoadReducer(entered, { type: 'EXIT' })
-    expect(exiting.phase).toBe('exiting')
+    expect(exiting).toEqual({
+      phase: 'exiting',
+      roomId: 'publications',
+      attempt: 1,
+      error: null,
+    })
 
     expect(roomLoadReducer(exiting, { type: 'RESET' })).toEqual(
       INITIAL_ROOM_LOAD_STATE,
@@ -103,27 +181,14 @@ describe('roomLoadReducer', () => {
     )
   })
 
-  it.each<[RoomLoadPhase, RoomLoadEvent]>([
-    ['idle', { type: 'RESET' }],
-    ['aligning', { type: 'READY' }],
-    ['loading', { type: 'OPENED' }],
-    ['ready', { type: 'RESET' }],
-    ['opening', { type: 'EXIT' }],
-    ['entered', { type: 'BEGIN', roomId: 'gallery' }],
-    ['exiting', { type: 'RETRY' }],
-    ['failed', { type: 'OPENING' }],
-  ])('rejects an invalid transition from %s', (phase, event) => {
-    const state: RoomLoadState = {
-      phase,
-      roomId: phase === 'idle' ? null : 'publications',
-      attempt: phase === 'idle' ? 0 : 1,
-      error: phase === 'failed' ? 'failed' : null,
-    }
-
-    expect(() => roomLoadReducer(state, event)).toThrow(
-      new RegExp(`invalid room load transition.*${phase}.*${event.type}`, 'i'),
-    )
-  })
+  it.each(INVALID_TRANSITIONS)(
+    'rejects every invalid transition from %s',
+    (phase, event) => {
+      expect(() => roomLoadReducer(createStateForPhase(phase), event)).toThrow(
+        new RegExp(`invalid room load transition.*${phase}.*${event.type}`, 'i'),
+      )
+    },
+  )
 })
 
 function SceneWrapper({ children }: { children: ReactNode }) {
@@ -131,6 +196,57 @@ function SceneWrapper({ children }: { children: ReactNode }) {
 }
 
 describe('SceneContext room loading', () => {
+  it.each(['loading', 'opening'] as const)(
+    'blocks teleporting while the room is %s',
+    (blockedPhase) => {
+      const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+      const teleportFromIdle = result.current.teleportTo
+
+      act(() => result.current.beginRoomLoad('publications'))
+      act(() => result.current.markRoomAligned())
+      if (blockedPhase === 'opening') {
+        act(() => result.current.markRoomReady())
+        act(() => result.current.markRoomOpening())
+      }
+
+      act(() => teleportFromIdle('projects'))
+
+      expect(result.current.roomLoadState.phase).toBe(blockedPhase)
+      expect(result.current.currentRoom).toBeNull()
+      expect(result.current.teleportTarget).toBeNull()
+      expect(result.current.isTeleporting).toBe(false)
+      expect(result.current.teleportPhase).toBeNull()
+      expect(result.current.pendingDoorClick).toBeNull()
+      expect(result.current.isFastTeleport).toBe(false)
+    },
+  )
+
+  it.each(['idle', 'entered'] as const)(
+    'allows existing teleport behavior while the room state is %s',
+    (allowedPhase) => {
+      const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+
+      if (allowedPhase === 'entered') {
+        act(() => result.current.beginRoomLoad('publications'))
+        act(() => result.current.markRoomAligned())
+        act(() => result.current.markRoomReady())
+        act(() => result.current.markRoomOpening())
+        act(() => result.current.markRoomEntered())
+        act(() => result.current.enterRoom('publications'))
+      }
+
+      act(() => result.current.teleportTo('projects'))
+
+      expect(result.current.currentRoom).toBe(
+        allowedPhase === 'entered' ? 'publications' : null,
+      )
+      expect(result.current.teleportTarget).toBe('projects')
+      expect(result.current.isTeleporting).toBe(true)
+      expect(result.current.teleportPhase).toBe('closing')
+      expect(result.current.isFastTeleport).toBe(true)
+    },
+  )
+
   it('drives room loading through reducer-backed context actions', () => {
     const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
 

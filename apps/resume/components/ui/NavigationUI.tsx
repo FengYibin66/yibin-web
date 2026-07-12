@@ -18,7 +18,15 @@ const ROOM_LABELS: Record<RoomId, string> = {
 }
 
 export function NavigationUI() {
-  const { hasEntered, isInRoom, currentRoom, requestExit, teleportTo, isTeleporting } = useScene()
+  const {
+    hasEntered,
+    isInRoom,
+    currentRoom,
+    requestExit,
+    teleportTo,
+    isTeleporting,
+    roomLoadState,
+  } = useScene()
   const { isMuted, toggleMute, sfxVolume, setSfxVolume, bgmVolume, setBgmVolume } = useAudio()
   const { showTutorial, unlockAchievement } = useAchievements()
 
@@ -30,6 +38,9 @@ export function NavigationUI() {
 
   const mapPanelRef  = useRef<HTMLDivElement>(null)
   const mapCloseRef  = useRef<HTMLButtonElement>(null)
+  const canTeleport =
+    roomLoadState.phase === 'idle' || roomLoadState.phase === 'entered'
+  const isRoomNavigationDisabled = isTeleporting || !canTeleport
 
   // Show tutorial hints at the right moments
   useEffect(() => {
@@ -103,12 +114,12 @@ export function NavigationUI() {
   }, [])
 
   const handleRoomClick = useCallback((roomId: RoomId) => {
-    if (roomId === currentRoom || isTeleporting) return
+    if (roomId === currentRoom || isRoomNavigationDisabled) return
     setMapOpen(false)
     setAudioOpen(false)
     setAchievementsOpen(false)
     teleportTo(roomId)
-  }, [currentRoom, isTeleporting, teleportTo])
+  }, [currentRoom, isRoomNavigationDisabled, teleportTo])
 
   const handleBackClick = useCallback(() => {
     setIsExiting(true)
@@ -292,7 +303,8 @@ export function NavigationUI() {
               <button
                 key={roomId}
                 onClick={() => handleRoomClick(roomId)}
-                disabled={isTeleporting}
+                disabled={isRoomNavigationDisabled}
+                aria-disabled={isRoomNavigationDisabled}
                 style={{
                   background: currentRoom === roomId ? 'rgba(42,31,14,0.08)' : 'transparent',
                   border: '1px solid rgba(42,31,14,0.12)',
@@ -302,9 +314,9 @@ export function NavigationUI() {
                   fontFamily: "'CabinSketch-Bold', serif",
                   fontSize: 14,
                   color: '#1a1a1a',
-                  cursor: isTeleporting ? 'not-allowed' : 'pointer',
+                  cursor: isRoomNavigationDisabled ? 'not-allowed' : 'pointer',
                   letterSpacing: '0.05em',
-                  opacity: isTeleporting ? 0.5 : 1,
+                  opacity: isRoomNavigationDisabled ? 0.5 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,

@@ -6,6 +6,7 @@ import {
   useContext,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from 'react'
 
@@ -81,6 +82,8 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     roomLoadReducer,
     INITIAL_ROOM_LOAD_STATE,
   )
+  const roomLoadPhaseRef = useRef(roomLoadState.phase)
+  roomLoadPhaseRef.current = roomLoadState.phase
 
   const isRoomLoading =
     roomLoadState.phase === 'aligning' || roomLoadState.phase === 'loading'
@@ -148,6 +151,8 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const teleportTo = useCallback((roomId: RoomId) => {
+    const roomPhase = roomLoadPhaseRef.current
+    if (roomPhase !== 'idle' && roomPhase !== 'entered') return
     if (isTeleporting || roomId === currentRoom) return
 
     setTeleportTarget(roomId)

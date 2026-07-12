@@ -86,3 +86,9 @@ export function preloadRoomAssets(roomId: OrdinaryRoomId): void {
   console.info(`[progress] preloading ${assets.length} ${roomId} room assets`)
   assets.forEach(asset => useTexture.preload(asset))
 }
+
+export function reloadRoomAssets(roomId: OrdinaryRoomId): void {
+  ROOM_ASSETS[roomId].forEach(asset => useTexture.clear(asset))
+  preloadedRooms.delete(roomId)
+  preloadRoomAssets(roomId)
+}

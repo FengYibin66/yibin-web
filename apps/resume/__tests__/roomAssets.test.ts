@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTexture } from '@react-three/drei'
-import { ROOM_ASSETS, preloadRoomAssets } from '@/lib/lab/roomAssets'
+import {
+  ROOM_ASSETS,
+  preloadRoomAssets,
+  reloadRoomAssets,
+} from '@/lib/lab/roomAssets'
 
 vi.mock('@react-three/drei', () => ({
   useTexture: {
+    clear: vi.fn(),
     preload: vi.fn(),
   },
 }))
@@ -39,6 +44,7 @@ describe('ROOM_ASSETS', () => {
 
 describe('preloadRoomAssets', () => {
   beforeEach(() => {
+    vi.mocked(useTexture.clear).mockClear()
     vi.mocked(useTexture.preload).mockClear()
   })
 
@@ -49,6 +55,26 @@ describe('preloadRoomAssets', () => {
     expect(useTexture.preload).toHaveBeenCalledTimes(ROOM_ASSETS.about.length)
     ROOM_ASSETS.about.forEach((asset, index) => {
       expect(useTexture.preload).toHaveBeenNthCalledWith(index + 1, asset)
+    })
+  })
+
+  it('清除每个缓存 URL 后重置幂等状态并重新预载', () => {
+    preloadRoomAssets('projects')
+    vi.mocked(useTexture.preload).mockClear()
+
+    reloadRoomAssets('projects')
+    preloadRoomAssets('projects')
+
+    expect(useTexture.clear).toHaveBeenCalledTimes(ROOM_ASSETS.projects.length)
+    expect(useTexture.preload).toHaveBeenCalledTimes(ROOM_ASSETS.projects.length)
+    ROOM_ASSETS.projects.forEach((asset, index) => {
+      expect(useTexture.clear).toHaveBeenNthCalledWith(index + 1, asset)
+      expect(useTexture.preload).toHaveBeenNthCalledWith(index + 1, asset)
+      expect(
+        vi.mocked(useTexture.clear).mock.invocationCallOrder[index],
+      ).toBeLessThan(
+        vi.mocked(useTexture.preload).mock.invocationCallOrder[index],
+      )
     })
   })
 })

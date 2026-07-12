@@ -112,8 +112,8 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
     if (isOpenRef.current) return
     play('door_hover')
     // Doors crack open slightly
-    gsap.to(leftRef.current!.rotation,  { y: -0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
-    gsap.to(rightRef.current!.rotation, { y:  0.08, duration: 0.3, ease: 'power2.out', overwrite: true })
+    gsap.to(leftRef.current!.rotation,  { y: -0.25, duration: 0.3, ease: 'power2.out', overwrite: true })
+    gsap.to(rightRef.current!.rotation, { y:  0.25, duration: 0.3, ease: 'power2.out', overwrite: true })
     // Handle hint
     if (leftHandleRef.current)  gsap.to(leftHandleRef.current.rotation,  { z:  0.1, duration: 0.2, ease: 'power2.out', overwrite: true })
     if (rightHandleRef.current) gsap.to(rightHandleRef.current.rotation, { z: -0.1, duration: 0.2, ease: 'power2.out', overwrite: true })
@@ -227,10 +227,16 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
         <meshBasicMaterial map={floorTex} color="#e8e4dc" />
       </mesh>
 
-      {/* Brick wall background */}
-      <mesh position={[0, 0.5, 0]}>
-        <planeGeometry args={[28, 16]} />
-        <meshBasicMaterial map={brickTex} />
+      {/* Outer fill — covers any gaps at edges when camera flies to z=10 */}
+      <mesh position={[0, 0.5, -0.1]}>
+        <planeGeometry args={[60, 30]} />
+        <meshBasicMaterial color="#e0ddd4" />
+      </mesh>
+      {/* Brick wall — itomdev proportions [16,8] so UV aligns window hole correctly.
+          transparent+alphaTest exposes the hole at x≈2.5,y≈0 where avatar shows through. */}
+      <mesh position={[0, 2.25, 0.15]}>
+        <planeGeometry args={[16, 8]} />
+        <meshBasicMaterial map={brickTex} transparent alphaTest={0.01} />
       </mesh>
 
       {/* Stone path */}
@@ -253,14 +259,16 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
         </group>
       </group>
 
-      {/* Avatar — hidden outside wall at x=4, slides in on window hover */}
-      <mesh ref={avatarRef} position={[4.0, 0, 0.09]}>
+      {/* Avatar — z=0.04: behind brick wall (z=0.15).
+          Brick texture has transparent hole at window position; avatar visible through it.
+          Initial x=4.0 hides off-screen; hover GSAP slides to x=2.5. */}
+      <mesh ref={avatarRef} position={[4.0, 0, 0.04]}>
         <planeGeometry args={[1.5, 1.5]} />
         <meshBasicMaterial map={avatarTex} transparent alphaTest={0.01} depthWrite={false} />
       </mesh>
 
-      {/* Window — right side */}
-      <mesh position={[2.5, 0, 0.1]} onPointerEnter={handleWinEnter} onPointerLeave={handleWinLeave}>
+      {/* Window frame — z=0.25: in front of brick wall */}
+      <mesh position={[2.5, 0, 0.25]} onPointerEnter={handleWinEnter} onPointerLeave={handleWinLeave}>
         <planeGeometry args={[1.5, 1.5]} />
         <meshBasicMaterial map={winTex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>

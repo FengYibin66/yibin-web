@@ -44,7 +44,7 @@ export function GalleryTrack() {
           },
         },
       })
-    }, 200)
+    }, 500)
 
     return () => {
       clearTimeout(timer)
@@ -107,15 +107,6 @@ export function GalleryTrack() {
               <p className="text-sm italic" style={{ color: '#6b5a3e' }}>
                 End of Collection
               </p>
-              <a
-                href="/"
-                className="inline-block mt-8 text-xs uppercase tracking-[0.3em] transition-colors duration-300"
-                style={{ color: '#8b7355' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#2a1f0e')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#8b7355')}
-              >
-                ← Return to Portfolio
-              </a>
             </div>
           </div>
         </div>

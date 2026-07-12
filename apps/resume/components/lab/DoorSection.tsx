@@ -5,8 +5,10 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { useRouter } from 'next/navigation'
 import { useAudio } from '@/context/AudioContext'
 import { useScene } from '@/context/SceneContext'
+import { useAchievements } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
@@ -59,6 +61,15 @@ export function DoorSection({
   setCameraOverride,
 }: DoorSectionProps) {
   const { play } = useAudio()
+  const { unlockAchievement } = useAchievements()
+  const router = useRouter()
+
+  // Prefetch /gallery as soon as this door mounts (when roomId === 'gallery')
+  useEffect(() => {
+    if (roomId === 'gallery') {
+      router.prefetch('/gallery')
+    }
+  }, [roomId, router])
   const {
     enterRoom,
     exitRoom: contextExitRoom,
@@ -110,6 +121,7 @@ export function DoorSection({
   const doorRevealRef    = useRef<{ uProgress: number } | null>(null)
   const handleRevealRef  = useRef<{ uProgress: number } | null>(null)
   const handlePaintedRef = useRef<THREE.Mesh>(null)
+  const doorPaintedRef   = useRef<THREE.Mesh>(null)
 
   const currentTilt      = useRef(BASE_TILT)
   const isNearRef        = useRef(false)
@@ -177,6 +189,9 @@ export function DoorSection({
   })
 
   // ─── Open door panels ────────────────────────────────────────────────────────
+  // For gallery: navigate as soon as door opens (during fly-in, not after)
+  const navigatingToGalleryRef = useRef(false)
+
   const openDoorPanels = useCallback((fastMode: boolean, onComplete: () => void) => {
     const door = doorRef.current
     if (!door) { onComplete(); return }
@@ -186,7 +201,7 @@ export function DoorSection({
 
     const dur = fastMode ? 0.01 : 0.7
     gsap.to(door.rotation, {
-      y: side === 'left' ? -Math.PI * 0.6 : Math.PI * 0.6,
+      y: side === 'left' ? Math.PI * 0.75 : -Math.PI * 0.75,
       duration: dur,
       ease: fastMode ? 'none' : 'power2.out',
       onComplete,
@@ -216,6 +231,7 @@ export function DoorSection({
     if (hideDelayRef.current) hideDelayRef.current.kill()
     hideDelayRef.current = gsap.delayedCall(0.65, () => {
       if (handlePaintedRef.current) handlePaintedRef.current.visible = false
+      if (doorPaintedRef.current) doorPaintedRef.current.visible = false
     })
   }, [play])
 
@@ -243,12 +259,13 @@ export function DoorSection({
           setIsInsideRoom(true)
           setTimeout(() => {
             enterRoom(roomId)
+            unlockAchievement('corridor_enter')
             if (useFastMode) signalRoomReady()
           }, 250)
         }
       })
     })
-  }, [isFastTeleport, openDoorPanels, camera, enterDistance, enterRoom, roomId, signalRoomReady])
+  }, [isFastTeleport, openDoorPanels, camera, enterDistance, enterRoom, roomId, signalRoomReady, unlockAchievement])
 
   // ─── Main click / teleport handler ──────────────────────────────────────────
   const handleClick = useCallback((opts?: { isTeleport?: boolean }) => {
@@ -311,6 +328,15 @@ export function DoorSection({
           z: camera.position.z, rotY: camera.rotation.y,
         }
 
+        // Gallery: navigate immediately when camera aligns with door.
+        // This way page loading starts early, reducing perceived lag.
+        if (roomId === 'gallery') {
+          setCameraOverride(false)
+          unlockAchievement('corridor_enter')
+          router.push('/gallery?from=lab')
+          return
+        }
+
         // Begin lazy loading room — door opens when onReady fires
         roomReadyRef.current = false
         setShowRoom(true)
@@ -333,6 +359,7 @@ export function DoorSection({
                   setIsInsideRoom(true)
                   setTimeout(() => {
                     enterRoom(roomId)
+                    unlockAchievement('corridor_enter')
                     if (useFastMode) signalRoomReady()
                   }, 250)
                 }
@@ -342,7 +369,7 @@ export function DoorSection({
         }, 8000)
       },
     })
-  }, [isAnimating, setCameraOverride, camera, side, position, isFastTeleport, openDoorPanels, enterDistance, enterRoom, roomId, signalRoomReady])
+  }, [isAnimating, setCameraOverride, camera, side, position, isFastTeleport, openDoorPanels, enterDistance, enterRoom, roomId, signalRoomReady, router, unlockAchievement, setShowRoom])
 
   // ─── Exit room handler ───────────────────────────────────────────────────────
   const exitRoom = useCallback(() => {
@@ -412,9 +439,11 @@ export function DoorSection({
   }, [exitRequested, isInsideRoom, isAnimating, exitRoom])
 
   // ─── pendingDoorClick listener (teleport auto-click) ────────────────────────
+  // Respond to the nearest segment's door so teleport works regardless of scroll depth.
   useEffect(() => {
-    const isSegment0 = segmentIndex === 0
-    if (pendingDoorClick === roomId && isSegment0 && !isOpenRef.current && !isAnimating) {
+    if (pendingDoorClick !== roomId || isOpenRef.current || isAnimating) return
+    const currentSeg = Math.floor((10 - camera.position.z) / 100)
+    if (segmentIndex === currentSeg) {
       handleClick({ isTeleport: true })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,13 +475,14 @@ export function DoorSection({
     play('door_hover')
     // Micro-open door on hover
     if (doorRef.current) {
-      gsap.to(doorRef.current.rotation, { y: side === 'left' ? -0.12 : 0.12, duration: 0.3, ease: 'power2.out', overwrite: true })
+      gsap.to(doorRef.current.rotation, { y: side === 'left' ? 0.25 : -0.25, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
     for (const ref of [doorRevealRef, handleRevealRef]) {
       if (ref.current) gsap.to(ref.current, { uProgress: 1.0, duration: 0.8, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
     if (handlePaintedRef.current) handlePaintedRef.current.visible = true
+    if (doorPaintedRef.current) doorPaintedRef.current.visible = true
   }, [isAnimating, play, side])
 
   const handlePointerLeave = useCallback(() => {
@@ -466,6 +496,7 @@ export function DoorSection({
     }
     hideDelayRef.current = gsap.delayedCall(0.55, () => {
       if (handlePaintedRef.current) handlePaintedRef.current.visible = false
+      if (doorPaintedRef.current) doorPaintedRef.current.visible = false
     })
   }, [isAnimating])
 
@@ -527,8 +558,8 @@ export function DoorSection({
           onPointerLeave={handlePointerLeave}
           onClick={() => handleClick()}
         >
-          {/* painted layer */}
-          <mesh position={[side === 'left' ? DOOR_WIDTH / 2 : -DOOR_WIDTH / 2, 0, -0.001]}>
+          {/* painted layer — hidden by default, shown on hover */}
+          <mesh ref={doorPaintedRef} position={[side === 'left' ? DOOR_WIDTH / 2 : -DOOR_WIDTH / 2, 0, -0.001]} visible={false}>
             <planeGeometry args={[DOOR_WIDTH, DOOR_HEIGHT]} />
             <meshBasicMaterial map={paintedTex} transparent alphaTest={0.3} />
           </mesh>

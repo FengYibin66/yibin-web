@@ -2,40 +2,23 @@
 
 import { useRef, useCallback, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { CorridorGeometry } from './CorridorGeometry'
-import { DoorSection } from './DoorSection'
+
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+gsap.registerPlugin(ScrollTrigger)
+import { InfiniteCorridorManager } from './InfiniteCorridorManager'
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
 import { NavigationUI } from '@/components/ui/NavigationUI'
-import { Avatar } from './Avatar'
-import { Doodles } from './Doodles'
-import { Cat } from './Cat'
-import { CorridorWindow } from './CorridorWindow'
-import { BugEaster } from './BugEaster'
+
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
-import { HeroText } from './HeroText'
-import { CorridorDecorations } from './CorridorDecorations'
-import { SegmentDoor } from './SegmentDoor'
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'
-import { AchievementsProvider } from '@/context/AchievementsContext'
-import type { RoomId } from '@/context/SceneContext'
+import { AchievementsProvider, useAchievements } from '@/context/AchievementsContext'
+import { WheelRouterProvider } from '@/hooks/useWheelRouter'
 
-const DOORS_LOOP1 = [
-  { z:  -8,  side: 'left'  as const, type: 'about',    label: 'About',        room: 'about'        as RoomId, seg: 0 },
-  { z: -20,  side: 'right' as const, type: 'projekty', label: 'Projects',     room: 'projects'     as RoomId, seg: 0 },
-  { z: -32,  side: 'left'  as const, type: 'kontakt',  label: 'Publications', room: 'publications' as RoomId, seg: 0 },
-  { z: -44,  side: 'right' as const, type: 'social',   label: 'Gallery',      room: 'gallery'      as RoomId, seg: 0 },
-  { z: -56,  side: 'left'  as const, type: 'kontakt',  label: 'Contact',      room: 'contact'      as RoomId, seg: 0 },
-]
-
-// Second loop 100 units further — produces the "infinite corridor" feeling
-const DOORS_LOOP2 = DOORS_LOOP1.map(d => ({ ...d, z: d.z - 100, seg: 1 }))
-
-const ALL_DOORS = [...DOORS_LOOP1, ...DOORS_LOOP2]
-
-// Camera controller inside Canvas context — exposes setCameraOverride via ref callback
+// Camera controller lives inside Canvas so it has access to R3F context
 function CameraController({
   onSetOverride,
 }: {
@@ -43,7 +26,6 @@ function CameraController({
 }) {
   const { setCameraOverride } = useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02 })
 
-  // Expose the function to parent once on mount
   useEffect(() => {
     onSetOverride(setCameraOverride)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,13 +34,31 @@ function CameraController({
   return null
 }
 
-// Inner component — can access all Contexts (AudioProvider, SceneProvider, etc.)
 function LabCanvas() {
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
-  const { isInRoom } = useScene()
+  const { isInRoom, markEntered } = useScene()
+  const { unlockAchievement } = useAchievements()
 
-  // setCameraOverride is set by CameraController after mount
+  // Mark as entered immediately — /lab route means the user has entered the corridor
+  useEffect(() => { markEntered() }, [markEntered])
+
+  // Unlock corridor_explore on first scroll
+  const hasScrolledRef = useRef(false)
+  useEffect(() => {
+    const handleFirstScroll = () => {
+      if (hasScrolledRef.current) return
+      hasScrolledRef.current = true
+      unlockAchievement('corridor_explore')
+    }
+    window.addEventListener('wheel', handleFirstScroll, { once: true })
+    window.addEventListener('touchmove', handleFirstScroll, { once: true })
+    return () => {
+      window.removeEventListener('wheel', handleFirstScroll)
+      window.removeEventListener('touchmove', handleFirstScroll)
+    }
+  }, [unlockAchievement])
+
   const setCameraOverrideRef = useRef<(active: boolean) => void>(() => {})
 
   const handleSetOverride = useCallback((fn: (active: boolean) => void) => {
@@ -76,47 +76,21 @@ function LabCanvas() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#f0ece4' }}>
-      {/* 3D Corridor Canvas */}
       <Canvas
-        camera={{ position: [0, 0.2, 10], fov: 60, near: 0.1, far: 200 }}
+        camera={{ position: [0, 0.2, 28], fov: 60, near: 0.1, far: 400 }}
         style={{ position: 'absolute', inset: 0 }}
         gl={{ antialias: settings.antialias }}
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
-          <fog attach="fog" args={['#f0ece4', 40, 180]} />
+          <fog attach="fog" args={['#f0ece4', 15, 60]} />
           <CameraController onSetOverride={handleSetOverride} />
-          <CorridorGeometry />
-          {ALL_DOORS.map((door) => (
-            <DoorSection
-              key={`${door.room}-${door.z}`}
-              position={[door.side === 'left' ? -3.5 : 3.5, 0, door.z]}
-              side={door.side}
-              type={door.type}
-              label={door.label}
-              roomId={door.room}
-              segmentIndex={door.seg}
-              setCameraOverride={setCameraOverride}
-            />
-          ))}
-          <HeroText visible={!isInRoom} position={[0, 0.3, -4]} />
-          <Avatar />
-          <Doodles offsetZ={0} />
-          <Cat position={[-2, -1.75 + 0.6, 2]} />
-          <CorridorWindow />
-          <BugEaster />                              {/* LOOP1: z=-70 (default) */}
-          <BugEaster position={[0, 0, -170]} />   {/* LOOP2 */}
-          <CorridorDecorations setCameraOverride={setCameraOverride} />
-          {/* Alcove return walls removed — causes visual artifacts */}
-          {/* <CorridorAlcoves doorPositions={ALL_DOORS.map(d => ({ z: d.z, side: d.side }))} /> */}
-          {/* Segment transition doors — auto-open on approach, mark loop boundaries */}
-          <SegmentDoor position={[0, 0, -65]} />
-          <SegmentDoor position={[0, 0, -165]} />
+          <InfiniteCorridorManager setCameraOverride={setCameraOverride} />
+
           <TeleportRoom />
         </Suspense>
       </Canvas>
 
-      {/* Scroll hint */}
       {!isInRoom && (
         <div style={{
           position: 'absolute',
@@ -133,7 +107,6 @@ function LabCanvas() {
         </div>
       )}
 
-      {/* Back to entry link */}
       {!isInRoom && (
         <a
           href="/"
@@ -147,11 +120,9 @@ function LabCanvas() {
         </a>
       )}
 
-      {/* Paper transition — reads SceneContext.teleportPhase directly, no props */}
       <PaperTransition />
-
-      {/* Navigation UI — map, back button, audio toggle */}
       <NavigationUI />
+
     </div>
   )
 }
@@ -162,7 +133,9 @@ export function LabScene() {
       <AudioProvider>
         <SceneProvider>
           <AchievementsProvider>
-            <LabCanvas />
+            <WheelRouterProvider>
+              <LabCanvas />
+            </WheelRouterProvider>
           </AchievementsProvider>
         </SceneProvider>
       </AudioProvider>

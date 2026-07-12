@@ -15,6 +15,7 @@ if (typeof window !== 'undefined') preloadCorridorTextures()
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
 import { LabTutorial } from './LabTutorial'
+import { RoomLoadingIndicator } from './RoomLoadingIndicator'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
@@ -44,7 +45,13 @@ function CameraController({
 function LabCanvas() {
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
-  const { isInRoom, markEntered } = useScene()
+  const {
+    isInRoom,
+    markEntered,
+    roomLoadState,
+    retryRoomLoad,
+    resetRoomLoad,
+  } = useScene()
   const { unlockAchievement } = useAchievements()
 
   const [isTouch, setIsTouch] = useState(false)
@@ -102,6 +109,12 @@ function LabCanvas() {
           <TeleportRoom />
         </Suspense>
       </Canvas>
+
+      <RoomLoadingIndicator
+        state={roomLoadState}
+        onRetry={retryRoomLoad}
+        onBack={resetRoomLoad}
+      />
 
       {!isInRoom && (
         <div style={{

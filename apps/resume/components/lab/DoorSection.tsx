@@ -56,6 +56,22 @@ export interface DoorSectionProps {
   setCameraOverride: (active: boolean) => void
 }
 
+interface DoorEscapeState {
+  isInsideRoom: boolean
+  isAnimating: boolean
+  isTeleporting: boolean
+}
+
+export function handleDoorEscape(
+  event: KeyboardEvent,
+  state: DoorEscapeState,
+  requestExit: () => void,
+): void {
+  if (event.key !== 'Escape') return
+  if (!state.isInsideRoom || state.isAnimating || state.isTeleporting) return
+  requestExit()
+}
+
 export function DoorSection({
   position,
   side,
@@ -95,6 +111,7 @@ export function DoorSection({
     timeoutRoomLoad,
     failRoomLoad,
     resetRoomLoad,
+    resetRoomLoadForTeleport,
     requestExit,
   } = useScene()
   const { camera } = useThree()
@@ -476,13 +493,15 @@ export function DoorSection({
   // ─── ESC key listener ────────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isInsideRoom && !isAnimating) {
-        requestExit()
-      }
+      handleDoorEscape(
+        e,
+        { isInsideRoom, isAnimating, isTeleporting },
+        requestExit,
+      )
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isInsideRoom, isAnimating, requestExit])
+  }, [isAnimating, isInsideRoom, isTeleporting, requestExit])
 
   // ─── exitRequested listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -517,8 +536,7 @@ export function DoorSection({
       && isInsideRoom
       && currentRoom === roomId
     ) {
-      requestExit()
-      resetRoomLoad()
+      resetRoomLoadForTeleport()
       contextExitRoom()
       resetDoorVisuals()
       releaseEntryOwnership()
@@ -526,7 +544,7 @@ export function DoorSection({
       setIsAnimating(false)
       setShowRoom(false)
     }
-  }, [contextExitRoom, currentRoom, isInsideRoom, isTeleporting, releaseEntryOwnership, requestExit, resetDoorVisuals, resetRoomLoad, roomId, teleportPhase])
+  }, [contextExitRoom, currentRoom, isInsideRoom, isTeleporting, releaseEntryOwnership, resetDoorVisuals, resetRoomLoadForTeleport, roomId, teleportPhase])
 
   // ─── Hover handlers ──────────────────────────────────────────────────────────
   const handlePointerEnter = useCallback(() => {

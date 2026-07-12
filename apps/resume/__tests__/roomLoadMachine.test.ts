@@ -36,6 +36,7 @@ const ROOM_LOAD_EVENTS: RoomLoadEvent[] = [
   { type: 'OPENING' },
   { type: 'OPENED' },
   { type: 'EXIT' },
+  { type: 'TELEPORT_RESET' },
   { type: 'RESET' },
   { type: 'RETRY' },
   { type: 'TIMEOUT', message: 'timed out' },
@@ -51,7 +52,7 @@ const LEGAL_EVENT_TYPES: Record<
   loading: ['READY', 'TIMEOUT', 'FAIL'],
   ready: ['OPENING'],
   opening: ['OPENED'],
-  entered: ['EXIT'],
+  entered: ['EXIT', 'TELEPORT_RESET'],
   failed: ['RESET', 'RETRY'],
   exiting: ['RESET'],
 }
@@ -246,6 +247,31 @@ describe('SceneContext room loading', () => {
       expect(result.current.isFastTeleport).toBe(true)
     },
   )
+
+  it('blocks a stale exit callback after teleport starts from entered', () => {
+    const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })
+
+    act(() => result.current.beginRoomLoad('publications'))
+    act(() => result.current.markRoomAligned())
+    act(() => result.current.markRoomReady())
+    act(() => result.current.markRoomOpening())
+    act(() => result.current.markRoomEntered())
+    act(() => result.current.enterRoom('publications'))
+    const requestExitBeforeTeleport = result.current.requestExit
+
+    act(() => result.current.teleportTo('projects'))
+    act(() => requestExitBeforeTeleport())
+
+    expect(result.current.isTeleporting).toBe(true)
+    expect(result.current.teleportPhase).toBe('closing')
+    expect(result.current.roomLoadState.phase).toBe('entered')
+    expect(result.current.exitRequested).toBe(false)
+    expect(result.current.currentRoom).toBe('publications')
+
+    act(() => result.current.startTeleportTransition())
+    act(() => result.current.resetRoomLoadForTeleport())
+    expect(result.current.roomLoadState).toEqual(INITIAL_ROOM_LOAD_STATE)
+  })
 
   it('drives room loading through reducer-backed context actions', () => {
     const { result } = renderHook(() => useScene(), { wrapper: SceneWrapper })

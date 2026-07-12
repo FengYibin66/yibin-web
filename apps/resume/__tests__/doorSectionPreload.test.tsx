@@ -1,7 +1,21 @@
 import { fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DoorSection } from '@/components/lab/DoorSection'
+import * as DoorSectionModule from '@/components/lab/DoorSection'
 import { preloadRoomAssets } from '@/lib/lab/roomAssets'
+
+const { DoorSection } = DoorSectionModule
+
+interface DoorEscapeState {
+  isInsideRoom: boolean
+  isAnimating: boolean
+  isTeleporting: boolean
+}
+
+type HandleDoorEscape = (
+  event: KeyboardEvent,
+  state: DoorEscapeState,
+  requestExit: () => void,
+) => void
 
 const testState = vi.hoisted(() => ({
   frameCallbacks: [] as Array<() => void>,
@@ -74,6 +88,7 @@ vi.mock('@/context/SceneContext', () => ({
     timeoutRoomLoad: vi.fn(),
     failRoomLoad: vi.fn(),
     resetRoomLoad: vi.fn(),
+    resetRoomLoadForTeleport: vi.fn(),
     requestExit: vi.fn(),
   }),
 }))
@@ -93,6 +108,41 @@ function prepareThreeGroups(container: HTMLElement): void {
     })
   })
 }
+
+function getHandleDoorEscape(): HandleDoorEscape {
+  const handler: unknown = Reflect.get(DoorSectionModule, 'handleDoorEscape')
+  expect(handler).toBeTypeOf('function')
+  if (typeof handler !== 'function') {
+    throw new Error('DoorSection must export handleDoorEscape')
+  }
+  return handler as HandleDoorEscape
+}
+
+describe('DoorSection Escape exit guard', () => {
+  it('does not request exit while teleporting from inside a room', () => {
+    const requestExit = vi.fn()
+
+    getHandleDoorEscape()(
+      new KeyboardEvent('keydown', { key: 'Escape' }),
+      { isInsideRoom: true, isAnimating: false, isTeleporting: true },
+      requestExit,
+    )
+
+    expect(requestExit).not.toHaveBeenCalled()
+  })
+
+  it('requests exit from Escape when entered and not teleporting', () => {
+    const requestExit = vi.fn()
+
+    getHandleDoorEscape()(
+      new KeyboardEvent('keydown', { key: 'Escape' }),
+      { isInsideRoom: true, isAnimating: false, isTeleporting: false },
+      requestExit,
+    )
+
+    expect(requestExit).toHaveBeenCalledTimes(1)
+  })
+})
 
 describe('DoorSection room asset preload', () => {
   beforeEach(() => {

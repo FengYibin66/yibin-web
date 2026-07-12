@@ -42,6 +42,7 @@ export interface SceneState {
   failRoomLoad: (message: string) => void
   retryRoomLoad: () => void
   resetRoomLoad: () => void
+  resetRoomLoadForTeleport: () => void
 
   enterRoom: (roomId: RoomId) => void
   exitRoom: () => void
@@ -83,7 +84,9 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     INITIAL_ROOM_LOAD_STATE,
   )
   const roomLoadPhaseRef = useRef(roomLoadState.phase)
+  const isTeleportingRef = useRef(isTeleporting)
   roomLoadPhaseRef.current = roomLoadState.phase
+  isTeleportingRef.current = isTeleporting
 
   const isRoomLoading =
     roomLoadState.phase === 'aligning' || roomLoadState.phase === 'loading'
@@ -124,9 +127,15 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     dispatchRoomLoad({ type: 'RESET' })
   }, [])
 
+  const resetRoomLoadForTeleport = useCallback(() => {
+    if (roomLoadPhaseRef.current !== 'entered' || !isTeleportingRef.current) return
+    dispatchRoomLoad({ type: 'TELEPORT_RESET' })
+  }, [])
+
   const enterRoom = useCallback((roomId: RoomId) => {
     setCurrentRoom(roomId)
     setExitRequested(false)
+    isTeleportingRef.current = false
     setIsTeleporting(false)
     setPendingDoorClick(null)
   }, [])
@@ -137,10 +146,10 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const requestExit = useCallback(() => {
-    if (roomLoadState.phase !== 'entered') return
+    if (roomLoadPhaseRef.current !== 'entered' || isTeleportingRef.current) return
     dispatchRoomLoad({ type: 'EXIT' })
     setExitRequested(true)
-  }, [roomLoadState.phase])
+  }, [])
 
   const clearExitRequest = useCallback(() => {
     setExitRequested(false)
@@ -155,6 +164,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     if (roomPhase !== 'idle' && roomPhase !== 'entered') return
     if (isTeleporting || roomId === currentRoom) return
 
+    isTeleportingRef.current = true
     setTeleportTarget(roomId)
     setIsTeleporting(true)
     setIsFastTeleport(true)
@@ -187,6 +197,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
 
   const cancelTeleport = useCallback(() => {
     setTeleportTarget(null)
+    isTeleportingRef.current = false
     setIsTeleporting(false)
     setTeleportPhase(null)
     setPendingDoorClick(null)
@@ -214,6 +225,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     failRoomLoad,
     retryRoomLoad,
     resetRoomLoad,
+    resetRoomLoadForTeleport,
     enterRoom,
     exitRoom,
     requestExit,
@@ -246,6 +258,7 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     failRoomLoad,
     retryRoomLoad,
     resetRoomLoad,
+    resetRoomLoadForTeleport,
     enterRoom,
     exitRoom,
     requestExit,

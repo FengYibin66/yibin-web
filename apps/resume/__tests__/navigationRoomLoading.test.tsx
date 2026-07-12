@@ -11,6 +11,8 @@ const sceneMocks = vi.hoisted(() => ({
     attempt: 0,
     error: null,
   } as RoomLoadState,
+  isTeleporting: false,
+  requestExit: vi.fn(),
   teleportTo: vi.fn(),
 }))
 
@@ -19,9 +21,9 @@ vi.mock('@/context/SceneContext', () => ({
     hasEntered: true,
     isInRoom: sceneMocks.currentRoom !== null,
     currentRoom: sceneMocks.currentRoom,
-    requestExit: vi.fn(),
+    requestExit: sceneMocks.requestExit,
     teleportTo: sceneMocks.teleportTo,
-    isTeleporting: false,
+    isTeleporting: sceneMocks.isTeleporting,
     roomLoadState: sceneMocks.roomLoadState,
   }),
 }))
@@ -75,6 +77,8 @@ function setRoomLoadPhase(phase: RoomLoadPhase): void {
 
 describe('NavigationUI room loading guard', () => {
   beforeEach(() => {
+    sceneMocks.isTeleporting = false
+    sceneMocks.requestExit.mockReset()
     sceneMocks.teleportTo.mockReset()
   })
 
@@ -104,4 +108,26 @@ describe('NavigationUI room loading guard', () => {
       expect(screen.getByRole('button', { name: 'Projects' })).toBeEnabled()
     },
   )
+
+  it('disables Back accessibly while teleporting from an entered room', () => {
+    setRoomLoadPhase('entered')
+    sceneMocks.isTeleporting = true
+    render(<NavigationUI />)
+
+    const backButton = screen.getByRole('button', { name: 'Back to corridor' })
+    expect(backButton).toBeDisabled()
+    expect(backButton).toHaveAttribute('aria-disabled', 'true')
+
+    fireEvent.click(backButton)
+    expect(sceneMocks.requestExit).not.toHaveBeenCalled()
+  })
+
+  it('requests exit from Back while entered and not teleporting', () => {
+    setRoomLoadPhase('entered')
+    render(<NavigationUI />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to corridor' }))
+
+    expect(sceneMocks.requestExit).toHaveBeenCalledTimes(1)
+  })
 })

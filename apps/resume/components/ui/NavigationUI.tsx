@@ -122,9 +122,10 @@ export function NavigationUI() {
   }, [currentRoom, isRoomNavigationDisabled, teleportTo])
 
   const handleBackClick = useCallback(() => {
+    if (isTeleporting) return
     setIsExiting(true)
     requestExit()
-  }, [requestExit])
+  }, [isTeleporting, requestExit])
 
   const closeAll = useCallback(() => {
     setMapOpen(false)
@@ -143,6 +144,8 @@ export function NavigationUI() {
       {isInRoom && (
         <button
           onClick={handleBackClick}
+          disabled={isTeleporting}
+          aria-disabled={isTeleporting}
           style={{
             position: 'absolute',
             top: 20, left: 20,
@@ -154,12 +157,12 @@ export function NavigationUI() {
             fontFamily: "'CabinSketch-Bold', serif",
             fontSize: 13,
             color: '#2a1f0e',
-            cursor: 'pointer',
+            cursor: isTeleporting ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
             letterSpacing: '0.05em',
-            opacity: isExiting ? 0 : 1,
+            opacity: isExiting || isTeleporting ? 0.5 : 1,
             transition: 'opacity 0.3s ease',
           }}
           aria-label="Back to corridor"

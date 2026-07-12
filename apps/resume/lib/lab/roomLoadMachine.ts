@@ -24,6 +24,7 @@ export type RoomLoadEvent =
   | { type: 'OPENING' }
   | { type: 'OPENED' }
   | { type: 'EXIT' }
+  | { type: 'TELEPORT_RESET' }
   | { type: 'RESET' }
   | { type: 'RETRY' }
   | { type: 'TIMEOUT'; message: string }
@@ -62,6 +63,9 @@ export function roomLoadReducer(
   }
   if (state.phase === 'entered' && event.type === 'EXIT') {
     return { ...state, phase: 'exiting' }
+  }
+  if (state.phase === 'entered' && event.type === 'TELEPORT_RESET') {
+    return INITIAL_ROOM_LOAD_STATE
   }
   if (
     (state.phase === 'exiting' || state.phase === 'failed') &&

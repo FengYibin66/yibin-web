@@ -87,6 +87,7 @@ function renderCard(overrides: Partial<typeof BASE_PROPS> = {}) {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks()
   testState.material.bend = 0
   testState.material.windStrength = 0
   testState.material.uProgress = 0
@@ -94,6 +95,7 @@ beforeEach(() => {
   testState.motion.close.mockClear()
   testState.motion.cancel.mockClear()
   BASE_PROPS.onSelect.mockReset()
+  document.body.style.cursor = 'auto'
   vi.spyOn(window, 'open').mockImplementation(() => null)
 })
 
@@ -181,11 +183,65 @@ describe('PublicationCard interaction', () => {
     testState.material.uProgress = 0.65
     const { container } = renderCard(state)
     const card = container.querySelector('group')
+    document.body.style.cursor = 'pointer'
 
     fireEvent.pointerOver(card!, { pointerType: 'mouse' })
     fireEvent.pointerOut(card!, { pointerType: 'mouse' })
 
     expect(testState.material.uProgress).toBe(0.65)
+    expect(document.body.style.cursor).toBe('auto')
+  })
+
+  it('clears stale hover progress after leaving during a locked transition', () => {
+    const { container, rerender } = renderCard()
+    const card = container.querySelector('group')
+    fireEvent.pointerOver(card!, { pointerType: 'mouse' })
+    expect(testState.material.uProgress).toBe(1)
+
+    rerender(
+      <PublicationCard
+        {...BASE_PROPS}
+        isSelected
+        isLocked
+      />,
+    )
+    expect(document.body.style.cursor).toBe('auto')
+    fireEvent.pointerOut(card!, { pointerType: 'mouse' })
+    expect(testState.material.uProgress).toBe(1)
+
+    rerender(<PublicationCard {...BASE_PROPS} />)
+
+    expect(testState.material.uProgress).toBe(0)
+  })
+
+  it('restores hover reveal after unlocking while still hovered', () => {
+    const { container, rerender } = renderCard()
+    const card = container.querySelector('group')
+    fireEvent.pointerOver(card!, { pointerType: 'mouse' })
+
+    rerender(
+      <PublicationCard
+        {...BASE_PROPS}
+        isSelected
+        isLocked
+      />,
+    )
+    testState.material.uProgress = 0.4
+    rerender(<PublicationCard {...BASE_PROPS} />)
+
+    expect(testState.material.uProgress).toBe(1)
+    expect(document.body.style.cursor).toBe('pointer')
+  })
+
+  it('clears the cursor when unmounted while hovered', () => {
+    const { container, unmount } = renderCard()
+    fireEvent.pointerOver(container.querySelector('group')!, {
+      pointerType: 'mouse',
+    })
+
+    unmount()
+
+    expect(document.body.style.cursor).toBe('auto')
   })
 
   it.each([
@@ -226,5 +282,19 @@ describe('PublicationCard interaction', () => {
     expect(stopPropagation).toHaveBeenCalledOnce()
     expect(window.open).toHaveBeenCalledOnce()
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('disables the paper button while the selected card is locked', () => {
+    const { container } = renderCard({
+      isSelected: true,
+      isLocked: true,
+    })
+    const paperButtonHitArea = container.querySelector(
+      '[name="publication-paper-hit-area"]',
+    )
+
+    fireEvent.click(paperButtonHitArea!)
+
+    expect(window.open).not.toHaveBeenCalled()
   })
 })

@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
 } from 'react'
@@ -140,6 +141,7 @@ export const PublicationCard = forwardRef<
   const paperBackTexture = useTexture(PAPER_BACK_TEXTURE_PATH)
   const frontRef = useRef<THREE.Group>(null)
   const backRef = useRef<THREE.Group>(null)
+  const hoveredRef = useRef(false)
   const motion = usePublicationCardMotion()
 
   useImperativeHandle(ref, () => ({
@@ -147,6 +149,22 @@ export const PublicationCard = forwardRef<
     close: motion.close,
     cancel: motion.cancel,
   }), [motion.cancel, motion.close, motion.open])
+
+  useEffect(() => {
+    document.body.style.cursor = 'auto'
+    if (!isSelected && !isLocked) {
+      const shouldReveal = canHover && hoveredRef.current
+      if (motion.materialRef.current) {
+        motion.materialRef.current.uProgress = shouldReveal ? 1 : 0
+      }
+      if (shouldReveal) {
+        document.body.style.cursor = 'pointer'
+      }
+    }
+    return () => {
+      document.body.style.cursor = 'auto'
+    }
+  }, [canHover, isLocked, isSelected, motion.materialRef])
 
   useFrame(state => {
     const material = motion.materialRef.current
@@ -182,7 +200,11 @@ export const PublicationCard = forwardRef<
     event: ThreeEvent<PointerEvent>,
   ): void => {
     event.stopPropagation()
-    if (!canHover || isSelected || isLocked || isTouchPointer(event)) {
+    if (isTouchPointer(event)) {
+      return
+    }
+    hoveredRef.current = true
+    if (!canHover || isSelected || isLocked) {
       return
     }
     if (motion.materialRef.current) {
@@ -194,14 +216,15 @@ export const PublicationCard = forwardRef<
   const handlePointerOut = useCallback((
     event: ThreeEvent<PointerEvent>,
   ): void => {
-    if (!canHover || isSelected || isLocked || isTouchPointer(event)) {
+    hoveredRef.current = false
+    document.body.style.cursor = 'auto'
+    if (isTouchPointer(event) || isSelected || isLocked) {
       return
     }
     if (motion.materialRef.current) {
       motion.materialRef.current.uProgress = 0
     }
-    document.body.style.cursor = 'auto'
-  }, [canHover, isLocked, isSelected, motion.materialRef])
+  }, [isLocked, isSelected, motion.materialRef])
 
   return (
     <group
@@ -242,7 +265,7 @@ export const PublicationCard = forwardRef<
           <PublicationCardBack
             publication={publication}
             opacity={1}
-            isOpen={isSelected}
+            isOpen={isSelected && !isLocked}
           />
         </group>
       </group>

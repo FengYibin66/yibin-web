@@ -8,8 +8,17 @@ import {
   usePerformance,
   type PerformanceTier,
 } from '@/context/PerformanceContext'
-import { PUBLICATION_AUDIO_ASSETS } from '@/lib/lab/roomAssets'
 import { GalleryClouds } from '../gallery/GalleryClouds'
+import {
+  advancePublicationBird,
+  usePublicationCityAmbience,
+  type PublicationBirdState,
+} from './publicationSceneryRuntime'
+
+export {
+  advancePublicationBird,
+  type PublicationBirdState,
+} from './publicationSceneryRuntime'
 
 const FLOOR_TEXTURE_PATH = '/textures/gallery/floor.webp'
 const RAILING_TEXTURE_PATH = '/textures/gallery/railing.webp'
@@ -17,14 +26,12 @@ const THRESHOLD_TEXTURE_PATH = '/textures/corridor/texturadoprogow.webp'
 const HOUSES_TEXTURE_PATH = '/textures/gallery/domki.webp'
 const CITY_TEXTURE_PATH = '/textures/gallery/miastotlo.webp'
 const BIRD_TEXTURE_PATH = '/textures/gallery/bird_gray.webp'
-const CITY_AMBIENCE_PATH = PUBLICATION_AUDIO_ASSETS[1]
 const RIGHT_HOUSE_CROP = 0.2
 const HOUSES_WIDTH = 15
 const HOUSES_HEIGHT = HOUSES_WIDTH / 2.357
 const CITY_WIDTH = 30
 const CITY_HEIGHT = CITY_WIDTH / 2.357
 const RAILING_HEIGHT = 1.25
-const SAFE_FRAME_DELTA = 0.05
 
 export const PUBLICATION_ROPE_POINTS = [
   new THREE.Vector3(-16, 3.5, -6),
@@ -34,19 +41,15 @@ export const PUBLICATION_ROPE_POINTS = [
   new THREE.Vector3(16, 3.5, -6),
 ] as const
 
-export interface PublicationBirdState {
-  x: number
-  y: number
-  velocityY: number
-  jumpTimer: number
-  rotationZ: number
+export interface PublicationsPaintApi {
+  opacity: number
+  onBeforeCompile?: THREE.Material['onBeforeCompile']
 }
 
 export interface PublicationsSceneryProps {
+  paint?: PublicationsPaintApi
   ambienceEnabled?: boolean
   children?: ReactNode
-  materialOpacity?: number
-  onBeforeCompile?: THREE.Material['onBeforeCompile']
 }
 
 export function getPublicationCloudCount(tier: PerformanceTier): number {
@@ -64,47 +67,30 @@ export function getRightHouseCrop(baseWidth: number, cropAmount: number) {
   }
 }
 
-export function advancePublicationBird(
-  bird: PublicationBirdState,
-  delta: number,
-  random: () => number = Math.random,
-): PublicationBirdState {
-  const safeDelta = Math.min(Math.max(delta, 0), SAFE_FRAME_DELTA)
-  const x = bird.x + 2.5 * safeDelta
-  if (x > 25) {
-    return { x: -25, y: 4.5, velocityY: 0, jumpTimer: 0, rotationZ: 0 }
-  }
-
-  let velocityY = bird.velocityY - 12 * safeDelta
-  let y = bird.y + velocityY * safeDelta
-  let jumpTimer = bird.jumpTimer - safeDelta
-  if (jumpTimer <= 0 || y < 3.2) {
-    velocityY = 5.5
-    jumpTimer = 0.9 + random() * 0.3
-  }
-  if (y < 3) {
-    y = 3
-    velocityY = 5.5
-  } else if (y > 6.5) {
-    y = 6.5
-    velocityY = 0
-  }
-  const targetRotation = THREE.MathUtils.clamp(
-    velocityY * 0.05,
-    -Math.PI / 6,
-    Math.PI / 8,
-  )
+export function getPublicationsMaterialProps(paint?: PublicationsPaintApi) {
+  const opacity = paint?.opacity ?? 1
   return {
-    x,
-    y,
-    velocityY,
-    jumpTimer,
-    rotationZ: THREE.MathUtils.lerp(
-      bird.rotationZ,
-      targetRotation,
-      safeDelta * 8,
-    ),
+    color: '#e0e0e0',
+    transparent: opacity < 1,
+    opacity,
+    onBeforeCompile: paint?.onBeforeCompile,
   }
+}
+
+export function createPublicationsFloorMaterial(
+  texture: THREE.Texture,
+  paint?: PublicationsPaintApi,
+): THREE.MeshBasicMaterial {
+  const props = getPublicationsMaterialProps(paint)
+  const material = new THREE.MeshBasicMaterial({
+    color: props.color,
+    map: texture,
+    opacity: props.opacity,
+    side: THREE.DoubleSide,
+    transparent: props.transparent,
+  })
+  if (props.onBeforeCompile) material.onBeforeCompile = props.onBeforeCompile
+  return material
 }
 
 function FlyingBird({ texture, opacity }: {
@@ -136,29 +122,10 @@ function FlyingBird({ texture, opacity }: {
   )
 }
 
-function useCityAmbience(enabled: boolean): void {
-  useEffect(() => {
-    if (!enabled) return
-    const audio = new Audio(CITY_AMBIENCE_PATH)
-    audio.loop = true
-    audio.volume = 0.6
-    try {
-      void audio.play().catch(() => undefined)
-    } catch {
-      // Audio is decorative and must never participate in room readiness.
-    }
-    return () => {
-      audio.pause()
-      audio.currentTime = 0
-    }
-  }, [enabled])
-}
-
 export function PublicationsScenery({
+  paint,
   ambienceEnabled = true,
   children,
-  materialOpacity = 1,
-  onBeforeCompile,
 }: PublicationsSceneryProps) {
   const { tier } = usePerformance()
   const floorTexture = useTexture(FLOOR_TEXTURE_PATH)
@@ -167,7 +134,8 @@ export function PublicationsScenery({
   const housesTexture = useTexture(HOUSES_TEXTURE_PATH)
   const cityTexture = useTexture(CITY_TEXTURE_PATH)
   const birdTexture = useTexture(BIRD_TEXTURE_PATH)
-  useCityAmbience(ambienceEnabled)
+  usePublicationCityAmbience(ambienceEnabled)
+  const materialProps = getPublicationsMaterialProps(paint)
 
   useEffect(() => {
     floorTexture.wrapS = floorTexture.wrapT = THREE.MirroredRepeatWrapping
@@ -176,6 +144,7 @@ export function PublicationsScenery({
     railingTexture.repeat.set(7, 1)
     thresholdTexture.wrapS = thresholdTexture.wrapT = THREE.RepeatWrapping
     thresholdTexture.repeat.set(15 / 2.524, 1)
+    thresholdTexture.colorSpace = THREE.SRGBColorSpace
     floorTexture.needsUpdate = true
     railingTexture.needsUpdate = true
     thresholdTexture.needsUpdate = true
@@ -190,6 +159,11 @@ export function PublicationsScenery({
     shape.closePath()
     return shape
   }, [])
+  const floorMaterial = useMemo(
+    () => createPublicationsFloorMaterial(floorTexture, paint),
+    [floorTexture, paint?.opacity, paint?.onBeforeCompile],
+  )
+  useEffect(() => () => floorMaterial.dispose(), [floorMaterial])
   const ropeGeometry = useMemo(() => new THREE.TubeGeometry(
     new THREE.CatmullRomCurve3([...PUBLICATION_ROPE_POINTS]),
     64,
@@ -200,10 +174,12 @@ export function PublicationsScenery({
   const floorOutline = useMemo(() => {
     const material = new THREE.LineBasicMaterial({
       color: '#999999',
-      opacity: materialOpacity,
+      opacity: materialProps.opacity,
       transparent: true,
     })
-    if (onBeforeCompile) material.onBeforeCompile = onBeforeCompile
+    if (materialProps.onBeforeCompile) {
+      material.onBeforeCompile = materialProps.onBeforeCompile
+    }
     return new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(7.5, 4, 0),
@@ -211,11 +187,12 @@ export function PublicationsScenery({
       ]),
       material,
     )
-  }, [materialOpacity, onBeforeCompile])
+  }, [materialProps.opacity, materialProps.onBeforeCompile])
   useEffect(() => () => {
     floorOutline.geometry.dispose()
     floorOutline.material.dispose()
   }, [floorOutline])
+  useEffect(() => () => ropeGeometry.dispose(), [ropeGeometry])
   const rightCrop = getRightHouseCrop(HOUSES_WIDTH, RIGHT_HOUSE_CROP)
   const rightHousesTexture = useMemo(() => {
     const texture = housesTexture.clone()
@@ -226,19 +203,11 @@ export function PublicationsScenery({
   }, [housesTexture, rightCrop.offsetX, rightCrop.repeatX])
   useEffect(() => () => rightHousesTexture.dispose(), [rightHousesTexture])
 
-  const materialProps = {
-    color: '#e0e0e0',
-    transparent: materialOpacity < 1,
-    opacity: materialOpacity,
-    onBeforeCompile,
-  }
-
   return (
     <group name="publications-scenery" position={[0, -0.7, -2]}>
       <mesh name="publication-floor" rotation={[-Math.PI / 2, 0, 0]}>
         <shapeGeometry args={[floorShape]} />
-        <meshBasicMaterial {...materialProps} map={floorTexture}
-          side={THREE.DoubleSide} />
+        <primitive object={floorMaterial} />
       </mesh>
       <group name="publication-floor-outline" rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.01, 0]}>
@@ -286,12 +255,13 @@ export function PublicationsScenery({
             alphaTest={0.1} side={THREE.DoubleSide} />
         </mesh>
       ))}
-      <FlyingBird texture={birdTexture} opacity={materialOpacity} />
+      <FlyingBird texture={birdTexture} opacity={materialProps.opacity} />
       <GalleryClouds count={getPublicationCloudCount(tier)} seed={123} />
       <mesh name="publication-sky" position={[0, 5, -20]}>
         <sphereGeometry args={[40, 32, 32]} />
         <meshBasicMaterial color="#f0f0f0" side={THREE.BackSide} transparent
-          opacity={0.5 * materialOpacity} onBeforeCompile={onBeforeCompile} />
+          opacity={0.5 * materialProps.opacity}
+          onBeforeCompile={materialProps.onBeforeCompile} />
       </mesh>
     </group>
   )

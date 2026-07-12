@@ -1,19 +1,28 @@
 import { render, waitFor } from '@testing-library/react'
 import * as THREE from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
+import * as sceneryModule from '@/components/rooms/publications/PublicationsScenery'
+
+const {
   advancePublicationBird,
+  createPublicationsFloorMaterial,
   getPublicationCloudCount,
+  getPublicationsMaterialProps,
   getRightHouseCrop,
   PUBLICATION_ROPE_POINTS,
   PublicationsScenery,
-} from '@/components/rooms/publications/PublicationsScenery'
+} = sceneryModule
 
 const mocks = vi.hoisted(() => ({
   frameCallback: undefined as
     | ((state: unknown, delta: number) => void)
     | undefined,
   tier: 'HIGH' as 'HIGH' | 'MEDIUM' | 'LOW',
+  textures: [] as THREE.Texture[],
+  audio: {
+    isMuted: false,
+    bgmVolume: 0.3,
+  },
 }))
 
 vi.mock('@react-three/fiber', () => ({
@@ -23,7 +32,11 @@ vi.mock('@react-three/fiber', () => ({
 }))
 
 vi.mock('@react-three/drei', () => ({
-  useTexture: () => new THREE.Texture(),
+  useTexture: () => {
+    const texture = new THREE.Texture()
+    mocks.textures.push(texture)
+    return texture
+  },
 }))
 
 vi.mock('@/context/PerformanceContext', () => ({
@@ -40,10 +53,29 @@ vi.mock('@/components/rooms/gallery/GalleryClouds', () => ({
   ),
 }))
 
+vi.mock('@/context/AudioContext', () => ({
+  useAudio: () => ({
+    ...mocks.audio,
+    sfxVolume: 0.8,
+    audioEnabled: true,
+    toggleMute: vi.fn(),
+    setSfxVolume: vi.fn(),
+    setBgmVolume: vi.fn(),
+    enableAudio: vi.fn(),
+    play: vi.fn(),
+    playBgm: vi.fn(),
+    stopBgm: vi.fn(),
+  }),
+}))
+
 beforeEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   mocks.frameCallback = undefined
   mocks.tier = 'HIGH'
+  mocks.textures.length = 0
+  mocks.audio.isMuted = false
+  mocks.audio.bgmVolume = 0.3
 })
 
 describe('PublicationsScenery geometry', () => {
@@ -94,6 +126,45 @@ describe('PublicationsScenery geometry', () => {
     )
   })
 
+  it('maps the unified paint API to critical material props', () => {
+    const onBeforeCompile = vi.fn()
+    expect(getPublicationsMaterialProps({
+      opacity: 0.35,
+      onBeforeCompile,
+    })).toMatchObject({
+      opacity: 0.35,
+      onBeforeCompile,
+    })
+
+    const material = createPublicationsFloorMaterial(
+      new THREE.Texture(),
+      { opacity: 0.35, onBeforeCompile },
+    )
+    expect(material.opacity).toBe(0.35)
+    expect(material.onBeforeCompile).toBe(onBeforeCompile)
+    material.dispose()
+  })
+
+  it('sets the threshold texture to sRGB color space', () => {
+    render(<PublicationsScenery ambienceEnabled={false} />)
+
+    expect(mocks.textures[2].colorSpace).toBe(THREE.SRGBColorSpace)
+  })
+
+  it('disposes memoized geometry and cloned textures on unmount', () => {
+    const geometryDispose = vi.spyOn(
+      THREE.BufferGeometry.prototype,
+      'dispose',
+    )
+    const textureDispose = vi.spyOn(THREE.Texture.prototype, 'dispose')
+    const { unmount } = render(<PublicationsScenery ambienceEnabled={false} />)
+
+    unmount()
+
+    expect(geometryDispose.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(textureDispose).toHaveBeenCalled()
+  })
+
   it('keeps scenery mounted when city ambience playback fails', async () => {
     const play = vi.fn().mockRejectedValue(new Error('autoplay blocked'))
     const pause = vi.fn()
@@ -113,6 +184,50 @@ describe('PublicationsScenery geometry', () => {
     unmount()
     expect(pause).toHaveBeenCalledOnce()
   })
+
+  it('syncs city ambience to bgm mute and volume settings', async () => {
+    mocks.audio.isMuted = true
+    mocks.audio.bgmVolume = 0.2
+    const audio = {
+      currentTime: 0,
+      loop: false,
+      muted: false,
+      volume: 1,
+      pause: vi.fn(),
+      play: vi.fn().mockResolvedValue(undefined),
+    }
+    vi.stubGlobal('Audio', vi.fn(function Audio() {
+      return audio
+    }))
+
+    render(<PublicationsScenery />)
+
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+    expect(audio.muted).toBe(true)
+    expect(audio.volume).toBe(0.2)
+  })
+
+  it('stops city ambience when disabled', async () => {
+    const pause = vi.fn()
+    const audio = {
+      currentTime: 0,
+      loop: false,
+      muted: false,
+      volume: 1,
+      pause,
+      play: vi.fn().mockResolvedValue(undefined),
+    }
+    vi.stubGlobal('Audio', vi.fn(function Audio() {
+      return audio
+    }))
+    const { rerender } = render(<PublicationsScenery />)
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+
+    rerender(<PublicationsScenery ambienceEnabled={false} />)
+
+    expect(pause).toHaveBeenCalledOnce()
+    expect(audio.currentTime).toBe(0)
+  })
 })
 
 describe('publication bird physics', () => {
@@ -131,7 +246,7 @@ describe('publication bird physics', () => {
     expect(next.jumpTimer).toBeCloseTo(0.95)
   })
 
-  it('resets safely after crossing the flight boundary', () => {
+  it('continues physics after resetting at the flight boundary', () => {
     const next = advancePublicationBird({
       x: 25,
       y: 6,
@@ -142,10 +257,10 @@ describe('publication bird physics', () => {
 
     expect(next).toMatchObject({
       x: -25,
-      y: 4.5,
-      velocityY: 0,
-      jumpTimer: 0,
-      rotationZ: 0,
+      y: 4.47,
+      velocityY: 5.5,
+      jumpTimer: 0.9,
     })
+    expect(next.rotationZ).toBeGreaterThan(0)
   })
 })

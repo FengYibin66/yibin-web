@@ -131,6 +131,7 @@ export function DoorSection({
   const hideDelayRef     = useRef<gsap.core.Tween | null>(null)
   const loadTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roomReadyRef     = useRef(false)
+  const hasPreloadedNearbyRef = useRef(false)
 
   // Camera state saved before entering (for exit reverse animation)
   const savedCameraState   = useRef({ x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0 })
@@ -150,7 +151,8 @@ export function DoorSection({
     if (!inner) return
 
     const dist = Math.abs(camera.position.z - position[2])
-    if (roomId !== 'gallery' && dist < TILT_START) {
+    if (roomId !== 'gallery' && !hasPreloadedNearbyRef.current && dist < TILT_START) {
+      hasPreloadedNearbyRef.current = true
       preloadRoomAssets(roomId)
     }
 

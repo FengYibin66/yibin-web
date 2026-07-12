@@ -22,9 +22,6 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/about/uowyspa.webp',
     '/textures/about/freelancewyspa.webp',
     ...CLOUD_TEXTURES,
-    '/fonts/RubikScribble-Regular.ttf',
-    '/fonts/CabinSketch-Regular.ttf',
-    '/fonts/CabinSketch-Bold.ttf',
   ],
   projects: [
     '/textures/studio/monitor_front.webp',
@@ -55,8 +52,6 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/studio/phone_back_painted.webp',
     '/textures/studio/phone_side.webp',
     '/textures/studio/phone_side_painted.webp',
-    '/fonts/CabinSketch-Bold.ttf',
-    '/fonts/CabinSketch-Regular.ttf',
   ],
   publications: [
     '/textures/gallery/floor.webp',
@@ -68,8 +63,6 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/gallery/tylkartki.webp',
     '/textures/gallery/przyciskdotylukartki.webp',
     ...CLOUD_TEXTURES,
-    '/fonts/CabinSketch-Bold.ttf',
-    '/fonts/CabinSketch-Regular.ttf',
   ],
   contact: [
     '/textures/contact/faletopdown.webp',
@@ -80,8 +73,6 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/contact/beczka_painted.webp',
     '/textures/contact/paper_form.webp',
     '/textures/contact/send_button.webp',
-    '/fonts/CabinSketch-Bold.ttf',
-    '/fonts/CabinSketch-Regular.ttf',
   ],
 }
 

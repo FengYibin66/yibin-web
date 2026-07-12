@@ -16,17 +16,24 @@ describe('ROOM_ASSETS', () => {
     expect(ROOM_ASSETS).not.toHaveProperty('gallery')
   })
 
-  it.each(ROOM_IDS)('%s 有非空且无重复的静态资源清单', (roomId) => {
+  it.each(ROOM_IDS)('%s 有非空且房间内无重复的纹理清单', (roomId) => {
     const assets = ROOM_ASSETS[roomId]
 
     expect(assets.length).toBeGreaterThan(0)
     expect(new Set(assets).size).toBe(assets.length)
   })
 
-  it.each(ROOM_IDS)('%s 仅收录纹理或字体 URL', (roomId) => {
+  it.each(ROOM_IDS)('%s 仅收录供 useTexture 预载的纹理 URL', (roomId) => {
     for (const asset of ROOM_ASSETS[roomId]) {
-      expect(asset).toMatch(/^\/(?:textures|fonts)\//)
+      expect(asset).toMatch(/^\/textures\//)
     }
+  })
+
+  it('允许独立房间共享实际依赖的纹理', () => {
+    const aboutAssets = new Set(ROOM_ASSETS.about)
+    const sharedAssets = ROOM_ASSETS.publications.filter(asset => aboutAssets.has(asset))
+
+    expect(sharedAssets.length).toBeGreaterThan(0)
   })
 })
 

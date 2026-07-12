@@ -110,7 +110,9 @@ describe('DoorSection room asset preload', () => {
 
     testState.camera.position.z = -5.1
     frame()
+    frame()
     expect(preloadRoomAssets).toHaveBeenCalledWith('about')
+    expect(preloadRoomAssets).toHaveBeenCalledTimes(1)
   })
 
   it('指针进入普通房门时再次请求预载', () => {

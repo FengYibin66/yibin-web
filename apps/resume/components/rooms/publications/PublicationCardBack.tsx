@@ -3,15 +3,17 @@
 import { Text } from '@react-three/drei'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { Mesh } from 'three'
+import { useLocale } from '@/hooks/useLocale'
 import {
   createPublicationCardBackViewModel,
   createPublicationCardFrontViewModel,
   openPublicationPaper,
 } from './publicationCardViewModel'
+import {
+  getPublicationFonts,
+} from './publicationFonts'
 import type { PublicationCardFaceProps } from './publicationTypes'
 
-const FONT_BOLD = '/fonts/CabinSketch-Bold.ttf'
-const FONT_REGULAR = '/fonts/CabinSketch-Regular.ttf'
 const CTA_WIDTH = 1.05
 const CTA_HEIGHT = 0.28
 const disableRaycast: Mesh['raycast'] = () => undefined
@@ -31,6 +33,8 @@ export function PublicationCardBack({
   depthTest = true,
   renderOrder = 0,
 }: PublicationCardBackProps) {
+  const { locale } = useLocale()
+  const fonts = getPublicationFonts(locale)
   const viewModel = createPublicationCardBackViewModel(publication)
   const front = createPublicationCardFrontViewModel(publication)
   const paperAction = viewModel.paperAction
@@ -48,10 +52,10 @@ export function PublicationCardBack({
         depthTest={depthTest}
         renderOrder={renderOrder}
         position={[0, 0.82, 0.02]}
-        fontSize={0.075}
+        fontSize={locale === 'zh' ? 0.07 : 0.075}
         color="#1c1c1c"
         fillOpacity={opacity}
-        font={FONT_BOLD}
+        font={fonts.bold}
         anchorX="center"
         anchorY="top"
         maxWidth={1.28}
@@ -68,7 +72,7 @@ export function PublicationCardBack({
         fontSize={0.058}
         color="#6a5a40"
         fillOpacity={opacity}
-        font={FONT_BOLD}
+        font={fonts.latinBold}
         anchorX="center"
         anchorY="middle"
         maxWidth={1.28}
@@ -96,10 +100,10 @@ export function PublicationCardBack({
         depthTest={depthTest}
         renderOrder={renderOrder}
         position={[0, 0.2, 0.02]}
-        fontSize={0.052}
+        fontSize={locale === 'zh' ? 0.048 : 0.052}
         color="#333333"
         fillOpacity={opacity}
-        font={FONT_REGULAR}
+        font={fonts.regular}
         anchorX="center"
         anchorY="top"
         maxWidth={1.28}
@@ -116,7 +120,7 @@ export function PublicationCardBack({
         fontSize={0.042}
         color="#8a7355"
         fillOpacity={opacity}
-        font={FONT_REGULAR}
+        font={fonts.regular}
         anchorX="center"
         anchorY="top"
         maxWidth={1.28}
@@ -138,7 +142,6 @@ export function PublicationCardBack({
               depthWrite={false}
             />
           </mesh>
-          {/* simple border */}
           <mesh
             position={[0, 0, -0.001]}
             raycast={disableRaycast}
@@ -160,7 +163,7 @@ export function PublicationCardBack({
             fontSize={0.09}
             color="#1c1c1c"
             fillOpacity={opacity}
-            font={FONT_BOLD}
+            font={fonts.latinBold}
             anchorX="center"
             anchorY="middle"
             raycast={disableRaycast}

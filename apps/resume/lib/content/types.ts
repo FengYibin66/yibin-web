@@ -23,16 +23,31 @@ export interface EducationEntry {
   period: string
   note?: string
   logo?: string
+  /** e.g. "QS #8" — shown as a prominent badge */
+  qsRank?: string
+  /** e.g. "Global Rank" / "全球排名" */
+  qsLabel?: string
+  location?: string
   keyModules?: string[]
+}
+
+export interface AboutHighlight {
+  title: string
+  description: string
 }
 
 export interface AboutContent {
   title: string
   bio: string[]
-  stats: { value: string; label: string }[]
-  education: EducationEntry[]
+  highlights: AboutHighlight[]
+}
+
+export interface EducationContent {
+  title: string
+  subtitle?: string
   keyModulesLabel: string
   viewEducationLabel: string
+  items: EducationEntry[]
 }
 
 export interface SkillGroup {
@@ -76,6 +91,13 @@ export interface ExperienceItem {
   period: string
   location: string
   bullets: string[]
+  /** Hero/cover image shown on the timeline card */
+  coverImage?: string
+  coverAlt?: string
+  /** Optional org logo (e.g. lab brand mark) */
+  logo?: string
+  /** Official site */
+  companyUrl?: string
   images?: string[]
   detail?: ExperienceDetail
 }
@@ -104,16 +126,41 @@ export interface ProjectCategory {
   groups?: ProjectGroup[]
 }
 
+export interface PublicationLink {
+  label: string
+  url: string
+}
+
 export interface PublicationItem {
+  id: string
   title: string
   venue: string
   year: number
   authors: string
+  /** ACM / DOI landing page when available */
   doi?: string
   keywords: string[]
   abstract?: string
+  /** One-line takeaway on Classic L1 cards */
+  takeaway?: string
+  /** Bullet highlights for Classic detail (L2) */
+  highlights?: string[]
+  citations?: number
+  role?: 'first' | 'coauthor'
   featured?: boolean
   image?: string
+  links?: PublicationLink[]
+}
+
+export interface PublicationsContent {
+  title: string
+  scholarUrl: string
+  scholarLabel: string
+  readHighlightsLabel: string
+  citationsLabel: string
+  firstAuthorLabel: string
+  stats?: { citations: number; hIndex: number; i10: number }
+  items: PublicationItem[]
 }
 
 export interface CredentialItem {
@@ -165,10 +212,11 @@ export interface SiteContent {
   nav: NavContent
   hero: HeroContent
   about: AboutContent
+  education: EducationContent
   skills: { title: string; groups: SkillGroup[] }
   experience: { title: string; learnMoreLabel: string; items: ExperienceItem[] }
   projects: { title: string; categories: ProjectCategory[] }
-  publications: { title: string; items: PublicationItem[] }
+  publications: PublicationsContent
   credentials: CredentialsContent
   contact: ContactContent
   footer: FooterContent

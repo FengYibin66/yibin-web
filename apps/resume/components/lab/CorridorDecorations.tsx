@@ -6,6 +6,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import '@/components/lab/shaders/RevealMaterial'
+import { getCorridorMurals, fitMuralSize } from '@/lib/lab/corridorMurals'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -216,12 +217,12 @@ function InspectableFrame({ frame, frameTexture, framePaintedTexture, setCameraO
         />
       )}
 
-      {/* Signature text (for empty frames) */}
-      {frame.signature && (
+      {/* Signature — empty frames always; photo murals only while inspected */}
+      {frame.signature && (!frame.image || isInspected) ? (
         <Text
           position={[
             frame.signatureX ?? 0,
-            frame.signatureY ?? 0,
+            frame.image && isInspected ? 0 : (frame.signatureY ?? 0),
             0.02,
           ]}
           fontSize={frame.signatureSize ?? 0.12}
@@ -234,7 +235,7 @@ function InspectableFrame({ frame, frameTexture, framePaintedTexture, setCameraO
         >
           {frame.signature}
         </Text>
-      )}
+      ) : null}
     </group>
   )
 }
@@ -329,6 +330,11 @@ function Cabinet({ z }: { z: number }) {
   const frontTex = useTexture('/textures/corridor/szafkaprzod.webp')
   const restTex  = useTexture('/textures/corridor/szafkaprzodgora.webp')
   const frameTex = useTexture('/textures/corridor/ramkanazdjeciemala.webp')
+  const photoTex = useTexture('/gallery/life/beloved.jpg')
+
+  useEffect(() => {
+    photoTex.colorSpace = THREE.SRGBColorSpace
+  }, [photoTex])
 
   return (
     <group>
@@ -342,14 +348,17 @@ function Cabinet({ z }: { z: number }) {
         <meshBasicMaterial attach="material-4" map={restTex}  color="#e0e0e0" />
         <meshBasicMaterial attach="material-5" map={restTex}  color="#e0e0e0" />
       </mesh>
-      {/* Standing photo frame on top */}
-      <mesh
-        position={[WALL_X - 0.26, FLOOR_Y + 1.0 + 0.2, z]}
-        rotation={[0, -Math.PI / 2 + 0.2, 0]}
-      >
-        <planeGeometry args={[0.3, 0.3 / 0.777]} />
-        <meshBasicMaterial map={frameTex} transparent alphaTest={0.1} color="#e0e0e0" side={THREE.DoubleSide} />
-      </mesh>
+      {/* Standing photo frame on top — small personal photo */}
+      <group position={[WALL_X - 0.26, FLOOR_Y + 1.0 + 0.22, z]} rotation={[0, -Math.PI / 2 + 0.2, 0]}>
+        <mesh position={[0, 0, -0.002]}>
+          <planeGeometry args={[0.32, 0.32 / 0.777]} />
+          <meshBasicMaterial map={frameTex} transparent alphaTest={0.1} color="#e0e0e0" side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, 0.01, 0.005]}>
+          <planeGeometry args={[0.2, 0.26]} />
+          <meshBasicMaterial map={photoTex} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
     </group>
   )
 }
@@ -381,18 +390,191 @@ function PottedTree({ z }: { z: number }) {
   )
 }
 
+// ── Adaptive museum mural (fixed preferred width, height follows aspect) ──────
+
+interface AdaptiveMuralFrameProps {
+  mural: {
+    id: string
+    side: 'left' | 'right'
+    z: number
+    y: number
+    preferredWidth: number
+    offsetFromWall: number
+    image: string
+    aspect: number
+    signature: string
+  }
+  setCameraOverride?: (active: boolean) => void
+}
+
+/**
+ * Museum-style frame: photo is full-bleed inside a slim matte.
+ * Width prefers `preferredWidth`; height = width / aspect (clamped to corridor).
+ * No letterboxed empty area inside the picture.
+ */
+function AdaptiveMuralFrame({ mural, setCameraOverride }: AdaptiveMuralFrameProps) {
+  const { camera, viewport } = useThree()
+  const groupRef = useRef<THREE.Group>(null)
+  const tex = useTexture(mural.image)
+
+  const [isHovered, setIsHovered] = useState(false)
+  const [isInspected, setIsInspected] = useState(false)
+
+  useEffect(() => {
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.anisotropy = 4
+    tex.needsUpdate = true
+  }, [tex])
+
+  const liveAspect = useMemo(() => {
+    const iw = tex.image?.width
+    const ih = tex.image?.height
+    if (typeof iw === 'number' && typeof ih === 'number' && iw > 0 && ih > 0) {
+      return iw / ih
+    }
+    return mural.aspect
+  }, [tex.image, mural.aspect])
+
+  const { width, height } = useMemo(
+    () => fitMuralSize(liveAspect, mural.preferredWidth),
+    [liveAspect, mural.preferredWidth],
+  )
+
+  // Slim matte around the photo (~4.5%)
+  const matte = Math.min(width, height) * 0.045
+  const outerW = width + matte * 2
+  const outerH = height + matte * 2
+
+  const offsetX = mural.offsetFromWall
+  const originX = mural.side === 'left' ? -WALL_X + offsetX : WALL_X - offsetX
+  const originPos = useMemo(
+    () => new THREE.Vector3(originX, mural.y, mural.z),
+    [originX, mural.y, mural.z],
+  )
+  const originRot = useMemo(
+    () => new THREE.Euler(0, mural.side === 'left' ? Math.PI / 2 : -Math.PI / 2, 0),
+    [mural.side],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (isInspected && setCameraOverride) setCameraOverride(false)
+    }
+  }, [isInspected, setCameraOverride])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+    if (isInspected) {
+      camera.getWorldDirection(_dir)
+      const aspectOffset = Math.max(0, 1.8 - viewport.aspect) * 1.5
+      const dist = Math.min(2.8, Math.max(1.5, 1.3 + aspectOffset))
+      _pos.copy(camera.position).add(_dir.multiplyScalar(dist))
+      _rot.copy(camera.quaternion)
+      _euler.set(-state.pointer.y * 0.25, state.pointer.x * 0.25, 0)
+      _quat.setFromEuler(_euler)
+      _rot.multiply(_quat)
+      _scale.set(1.15, 1.15, 1.15)
+    } else {
+      _pos.copy(originPos)
+      _rot.setFromEuler(originRot)
+      _scale.set(1, 1, 1)
+    }
+    const f = delta * 6
+    groupRef.current.position.lerp(_pos, f)
+    groupRef.current.quaternion.slerp(_rot, f)
+    groupRef.current.scale.lerp(_scale, f)
+  })
+
+  const handleClick = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation()
+    setIsInspected(prev => {
+      const next = !prev
+      if (setCameraOverride) setCameraOverride(next)
+      return next
+    })
+    setIsHovered(false)
+  }, [setCameraOverride])
+
+  const rimBoost = isHovered || isInspected ? 1.08 : 1
+
+  return (
+    <group ref={groupRef} position={originPos} rotation={originRot}>
+      {/* Hitbox */}
+      <mesh
+        position={[0, 0, 0.06]}
+        onClick={handleClick}
+        onPointerEnter={(e) => { e.stopPropagation(); if (!isInspected) setIsHovered(true) }}
+        onPointerLeave={(e) => { e.stopPropagation(); setIsHovered(false) }}
+      >
+        <planeGeometry args={[outerW, outerH]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      {/* Soft shadow plate */}
+      <mesh position={[0.02, -0.03, -0.02]}>
+        <planeGeometry args={[outerW * 1.02, outerH * 1.02]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />
+      </mesh>
+
+      {/* Outer wood rim */}
+      <mesh position={[0, 0, -0.005]}>
+        <planeGeometry args={[outerW * rimBoost, outerH * rimBoost]} />
+        <meshBasicMaterial color={isHovered || isInspected ? '#5c4030' : '#3d2b1f'} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Cream matte */}
+      <mesh position={[0, 0, 0]}>
+        <planeGeometry args={[outerW - 0.04, outerH - 0.04]} />
+        <meshBasicMaterial color="#f3eee6" side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Full-bleed photo — no empty letterbox */}
+      <mesh position={[0, 0, 0.012]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial map={tex} toneMapped={false} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Hover accent line */}
+      {(isHovered || isInspected) && (
+        <mesh position={[0, -outerH / 2 - 0.04, 0.02]}>
+          <planeGeometry args={[Math.min(outerW * 0.45, 0.9), 0.012]} />
+          <meshBasicMaterial color="#00d4ff" toneMapped={false} />
+        </mesh>
+      )}
+
+      {isInspected ? (
+        <Text
+          position={[0, -outerH / 2 - 0.18, 0.03]}
+          fontSize={0.09}
+          font={CABIN_SKETCH}
+          color="#2a2a2a"
+          anchorX="center"
+          anchorY="top"
+          maxWidth={outerW * 1.1}
+          textAlign="center"
+        >
+          {mural.signature}
+        </Text>
+      ) : null}
+    </group>
+  )
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 interface CorridorDecorationsProps {
   /** Z coordinate of segment start (camera-facing end) */
   zOffset: number
+  /** Used to rotate Gallery mural heroes across infinite segments */
+  segmentIndex?: number
   setCameraOverride?: (active: boolean) => void
 }
 
-export function CorridorDecorations({ zOffset, setCameraOverride }: CorridorDecorationsProps) {
-  const frameTexture        = useTexture('/textures/corridor/ramkanazdjecieduza.webp')
-  const framePaintedTexture = useTexture('/textures/corridor/ramkanazdjecieduza_painted.webp')
-
+export function CorridorDecorations({
+  zOffset,
+  segmentIndex = 0,
+  setCameraOverride,
+}: CorridorDecorationsProps) {
   // Lamp positions: every 15 units from zOffset-5
   const lampZs = useMemo(() => {
     const zs: number[] = []
@@ -400,68 +582,37 @@ export function CorridorDecorations({ zOffset, setCameraOverride }: CorridorDeco
     return zs
   }, [zOffset])
 
-  // Frame definitions — matching itomdev layout
-  const frames = useMemo<FrameDef[]>(() => [
-    {
-      id: 'f1', side: 'right', z: zOffset - 10, y: 0.3,
-      width: 2.5, height: 2.5 / 1.785,
-      image: '/textures/corridor/rysuneknaobraz1.webp',
-      imageWidth: 1.1, imageHeight: 1.1,
-      offsetFromWall: 0.1,
-    },
-    {
-      id: 'f2', side: 'left', z: zOffset - 25, y: 0.2,
-      width: 2.5, height: 2.5 / 1.785,
-      image: '/textures/corridor/rysuneknaobrazek3.webp',
-      imageWidth: 1.7, imageHeight: 1.0,
-      offsetFromWall: 0.1,
-    },
-    {
-      id: 'f3', side: 'right', z: zOffset - 40, y: 0.25,
-      width: 2.5, height: 2.5 / 1.785,
-      signature: 'Empty canvas!\nWant your art here?\nContact me!',
-      signatureX: 0, signatureY: 0, signatureSize: 0.12, signatureColor: '#333333',
-    },
-    {
-      id: 'f4', side: 'left', z: zOffset - 55, y: 0.35,
-      width: 2.5, height: 2.5 / 1.785,
-      signature: 'Empty canvas!\nWant your art here?\nContact me!',
-      signatureX: 0, signatureY: 0, signatureSize: 0.12, signatureColor: '#333333',
-    },
-  ], [zOffset])
+  const murals = useMemo(
+    () =>
+      getCorridorMurals(segmentIndex).map(m => ({
+        ...m,
+        z: zOffset + m.relativeZ,
+      })),
+    [zOffset, segmentIndex],
+  )
 
   return (
     <group>
-      {/* Ceiling lamps */}
       {lampZs.map(z => <CeilingLamp key={z} z={z} />)}
 
-      {/* Picture frames */}
-      {frames.map(frame => (
-        <InspectableFrame
-          key={frame.id}
-          frame={frame}
-          frameTexture={frameTexture}
-          framePaintedTexture={framePaintedTexture}
+      {murals.map(mural => (
+        <AdaptiveMuralFrame
+          key={`${mural.id}-${segmentIndex}`}
+          mural={mural}
           setCameraOverride={setCameraOverride}
         />
       ))}
 
-      {/* Ventilation grates — opposite wall from each frame */}
-      {frames.map(frame => (
+      {murals.map(mural => (
         <VentGrate
-          key={`grate-${frame.id}`}
-          side={frame.side === 'left' ? 'right' : 'left'}
-          z={frame.z}
+          key={`grate-${mural.id}-${segmentIndex}`}
+          side={mural.side === 'left' ? 'right' : 'left'}
+          z={mural.z}
         />
       ))}
 
-      {/* Desk + flower: left wall, between door relZ=-20 and relZ=-32 */}
       <Desk z={zOffset - 27} />
-
-      {/* Cabinet + frame: right wall, between door relZ=-44 and relZ=-56 */}
       <Cabinet z={zOffset - 49} />
-
-      {/* Potted tree: left wall, after last door relZ=-56 */}
       <PottedTree z={zOffset - 63} />
     </group>
   )

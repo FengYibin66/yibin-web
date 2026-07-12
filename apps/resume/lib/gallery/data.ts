@@ -3,6 +3,8 @@ export interface GalleryImage {
   caption: string
   year: string
   location: string
+  /** width / height — drives corridor adaptive frames */
+  aspect?: number
 }
 
 export interface GalleryRoom {
@@ -58,12 +60,97 @@ export const galleryRooms: GalleryRoom[] = [
       { src: '/gallery/imperial/Royal_Albert_Hall.jpg', caption: 'Royal Albert Hall', year: '2022', location: 'South Kensington, London' },
       { src: '/gallery/imperial/SouthKingsinton.jpg', caption: 'South Kensington', year: '2021', location: 'London, UK' },
       { src: '/gallery/imperial/Natural_history_museum.jpg', caption: 'Natural History Museum', year: '2022', location: 'London, UK' },
+      { src: '/gallery/imperial/graduation-ceremony-new.jpg', caption: 'Graduation Ceremony', year: '2022', location: 'Imperial College London', aspect: 4 / 3 },
       { src: '/gallery/imperial/graduate.jpg', caption: 'Graduation Day', year: '2022', location: 'Imperial College London' },
       { src: '/gallery/imperial/graduate2.jpg', caption: 'With Classmates', year: '2022', location: 'Imperial College London' },
       { src: '/gallery/imperial/graduate3.jpg', caption: 'Ceremony', year: '2022', location: 'Royal Albert Hall' },
       { src: '/gallery/imperial/graduate4.jpg', caption: 'Class of 2022', year: '2022', location: 'Imperial College London' },
       { src: '/gallery/imperial/group photo.jpg', caption: 'Research Group', year: '2022', location: 'London, UK' },
       { src: '/gallery/imperial/friends.jpg', caption: 'Friends', year: '2022', location: 'London, UK' },
+    ],
+  },
+  {
+    id: 'ai4sg',
+    title: 'AI4SG Lab',
+    subtitle: 'Research Student — NUS · AI for Social Good',
+    year: '2023–2025',
+    images: [
+      {
+        src: '/gallery/ai4sg/cscw-group.jpg',
+        caption: 'CSCW with AI4SG',
+        year: '2025',
+        location: 'CSCW · Bergen, Norway',
+        aspect: 4 / 3,
+      },
+    ],
+  },
+  {
+    id: 'mcallister',
+    title: 'McAllister',
+    subtitle: 'Graduate Engineer — London team life',
+    year: '2022–2023',
+    images: [
+      {
+        src: '/gallery/mcallister/life/colleagues-new.jpg',
+        caption: 'Team Dinner',
+        year: '2023',
+        location: 'London, UK',
+        aspect: 4 / 3,
+      },
+      {
+        src: '/gallery/mcallister/life/bros.jpg',
+        caption: 'McAllister Bros',
+        year: '2023',
+        location: 'London, UK',
+        aspect: 1,
+      },
+      {
+        src: '/gallery/mcallister/life/colleagues.jpg',
+        caption: 'With Colleagues',
+        year: '2023',
+        location: 'London, UK',
+      },
+      {
+        src: '/gallery/mcallister/life/team.jpg',
+        caption: 'Team Photo',
+        year: '2023',
+        location: 'London, UK',
+      },
+      {
+        src: '/gallery/mcallister/life/afternoon-tea.jpg',
+        caption: 'Afternoon Tea',
+        year: '2023',
+        location: 'London, UK',
+      },
+    ],
+  },
+  {
+    id: 'life',
+    title: 'Life',
+    subtitle: 'People & moments along the way',
+    year: '2022–2025',
+    images: [
+      {
+        src: '/gallery/life/union.jpg',
+        caption: 'The Union',
+        year: '2023',
+        location: 'London, UK',
+        aspect: 3 / 4,
+      },
+      {
+        src: '/gallery/life/beloved.jpg',
+        caption: 'Beloved',
+        year: '2024',
+        location: '—',
+        aspect: 1202 / 1600,
+      },
+      {
+        src: '/gallery/life/family.jpg',
+        caption: 'New Family',
+        year: '2025',
+        location: '—',
+        aspect: 3 / 4,
+      },
     ],
   },
   {

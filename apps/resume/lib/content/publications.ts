@@ -1,114 +1,95 @@
 import type { PublicationRoomItem } from '@/components/rooms/publications/publicationTypes'
 import { content, type Locale } from '@/lib/content'
 import type { PublicationItem } from '@/lib/content/types'
-
-const PUBLICATION_IDS = ['cscw25', 'acm23', 'chi25'] as const
-type PublicationId = (typeof PUBLICATION_IDS)[number]
-
-const PUBLICATION_ID_BY_DOI: Readonly<Partial<Record<string, PublicationId>>> = {
-  'https://doi.org/10.1145/3715070.3749246': 'cscw25',
-  'https://doi.org/10.1145/3757633': 'acm23',
-  'https://doi.org/10.1145/3706599.3719973': 'chi25',
-}
+import { PUBLICATION_ORDER } from '@/lib/content/publicationItems'
 
 const ABSTRACT_FALLBACKS: Record<Locale, string> = {
   en: 'Abstract unavailable. Please view the publication for details.',
   zh: '暂无摘要，请查看论文原文了解详情。',
 }
 
-function normalizeDoiUrl(locale: Locale, doi?: string): string {
-  if (!doi) {
-    throw new Error(
-      `Publication mapping failed for locale "${locale}": DOI missing`,
-    )
-  }
-
-  let url: URL
-  try {
-    url = new URL(doi)
-  } catch {
-    throw new Error(
-      `Publication mapping failed for locale "${locale}": invalid DOI "${doi}"`,
-    )
-  }
-
-  if (url.protocol !== 'https:') {
-    throw new Error(
-      `Publication mapping failed for locale "${locale}": DOI must use HTTPS "${doi}"`,
-    )
-  }
-
-  const doiMatch = decodeURIComponent(url.pathname).match(
-    /\/(10\.\d{4,9}\/.+)$/i,
-  )
-  if (!doiMatch) {
-    throw new Error(
-      `Publication mapping failed for locale "${locale}": invalid DOI "${doi}"`,
-    )
-  }
-
-  return `https://doi.org/${doiMatch[1].replace(/\/$/, '').toLowerCase()}`
+function resolvePaperUrl(item: PublicationItem): string | undefined {
+  if (item.doi) return item.doi
+  const first = item.links?.[0]?.url
+  return first
 }
 
 function mapPublicationRoomItem(
   locale: Locale,
   item: PublicationItem,
-  seenDois: Set<string>,
+  seenIds: Set<string>,
 ): PublicationRoomItem {
-  const normalizedDoi = normalizeDoiUrl(locale, item.doi)
-  if (seenDois.has(normalizedDoi)) {
+  if (seenIds.has(item.id)) {
     throw new Error(
-      `Publication mapping failed for locale "${locale}": duplicate DOI "${normalizedDoi}"`,
+      `Publication mapping failed for locale "${locale}": duplicate id "${item.id}"`,
     )
   }
-  seenDois.add(normalizedDoi)
+  seenIds.add(item.id)
 
-  const id = PUBLICATION_ID_BY_DOI[normalizedDoi]
-  if (!id) {
+  const paperUrl = resolvePaperUrl(item)
+  if (!paperUrl) {
     throw new Error(
-      `Publication mapping failed for locale "${locale}": unknown DOI "${normalizedDoi}"`,
+      `Publication mapping failed for locale "${locale}": "${item.id}" has no DOI or link`,
     )
   }
 
   return {
-    id,
+    id: item.id,
     title: item.title,
     venue: item.venue,
     year: item.year,
     authors: item.authors,
     abstract: item.abstract ?? ABSTRACT_FALLBACKS[locale],
-    doi: normalizedDoi,
+    // Keep doi for ACM papers; non-DOI papers still expose a clickable URL via paperUrl.
+    doi: item.doi,
+    paperUrl,
     keywords: [...item.keywords],
-    featured: id === 'cscw25',
-    // Temporary: reuse CSCW poster until each paper has its own cover art.
-    image: item.image ?? '/publications-cscw-cover.png',
+    featured: item.featured === true,
+    image: item.image ?? '/publications/03-social-norms.png',
   }
 }
 
-function assertCompleteDoiMapping(
-  locale: Locale,
-  roomItems: readonly PublicationRoomItem[],
-  seenDois: ReadonlySet<string>,
-): void {
-  const mappedIds = new Set(roomItems.map(item => item.id))
-  const missingIds = PUBLICATION_IDS.filter(id => !mappedIds.has(id))
-  if (missingIds.length > 0) {
-    throw new Error(
-      `Publication mapping failed for locale "${locale}": DOI mapping incomplete; missing IDs: ${missingIds.join(', ')}; DOIs: ${[...seenDois].join(', ')}`,
-    )
-  }
-}
-
+/**
+ * Adapt Classic publication list → 3D clothesline items.
+ * Syncs all Classic papers (ACM DOI + OpenReview/arXiv).
+ */
 export function adaptPublicationRoomItems(
   locale: Locale,
   items: readonly PublicationItem[],
 ): readonly PublicationRoomItem[] {
-  const seenDois = new Set<string>()
-  const roomItems = items.map(item =>
-    mapPublicationRoomItem(locale, item, seenDois),
-  )
-  assertCompleteDoiMapping(locale, roomItems, seenDois)
-  return roomItems
+  const idCounts = new Map<string, number>()
+  for (const item of items) {
+    idCounts.set(item.id, (idCounts.get(item.id) ?? 0) + 1)
+  }
+  for (const [id, count] of idCounts) {
+    if (count > 1) {
+      throw new Error(
+        `Publication mapping failed for locale "${locale}": duplicate id "${id}"`,
+      )
+    }
+  }
+
+  const byId = new Map(items.map(item => [item.id, item]))
+  const seenIds = new Set<string>()
+
+  const ordered = PUBLICATION_ORDER.map(id => {
+    const item = byId.get(id)
+    if (!item) {
+      throw new Error(
+        `Publication mapping failed for locale "${locale}": missing Classic id "${id}"`,
+      )
+    }
+    return mapPublicationRoomItem(locale, item, seenIds)
+  })
+
+  // Any extra Classic items beyond the ordered set (forward-compatible)
+  for (const item of items) {
+    if (!seenIds.has(item.id)) {
+      ordered.push(mapPublicationRoomItem(locale, item, seenIds))
+    }
+  }
+
+  return ordered
 }
 
 export function getPublicationRoomItems(

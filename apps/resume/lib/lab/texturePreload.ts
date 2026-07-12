@@ -1,6 +1,7 @@
 'use client'
 
 import { useTexture } from '@react-three/drei'
+import { getCorridorMuralTexturePaths } from '@/lib/lab/corridorMurals'
 
 /**
  * Texture preload lists.
@@ -64,6 +65,9 @@ export const CORRIDOR_TEXTURES: string[] = [
   '/textures/corridor/cat_body.webp',
   '/textures/corridor/bug_sketch.webp',
   '/textures/corridor/ink_splash.webp',
+
+  // Gallery photos used as corridor murals (first 3 segments)
+  ...getCorridorMuralTexturePaths(3),
 ]
 
 export const ENTRANCE_TEXTURES: string[] = [

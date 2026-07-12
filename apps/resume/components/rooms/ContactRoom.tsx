@@ -6,6 +6,8 @@ import { useTexture, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
+import { useLocale } from '@/hooks/useLocale'
+import { getContactRoomLinks } from '@/lib/content/labAdapters'
 import { SocialBarrel } from './contact/SocialBarrel'
 import { MessagePaper } from './contact/MessagePaper'
 
@@ -29,6 +31,8 @@ const STATEK_SETTINGS = {
 
 export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   const { unlockAchievement } = useAchievements()
+  const { locale } = useLocale()
+  const links = getContactRoomLinks(locale)
   useRoomTutorial('contact_found')
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
@@ -128,21 +132,21 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
         rotation={[0, 0.2, 0]}
         texturePath="/textures/contact/beczka.webp"
         label="LINKEDIN"
-        onClick={() => { window.open('https://linkedin.com/in/yibinfeng-imperial', '_blank'); unlockAchievement('contact_found') }}
+        onClick={() => { window.open(links.linkedin, '_blank'); unlockAchievement('contact_found') }}
       />
       <SocialBarrel
         position={isMobile ? [-1.5, -0.3, -7] : [-5, -0.3, -8]}
         rotation={[0, 0.3, 0]}
         texturePath="/textures/contact/beczka.webp"
         label="GITHUB"
-        onClick={() => { window.open('https://github.com/FengYibin66', '_blank'); unlockAchievement('contact_found') }}
+        onClick={() => { window.open(links.github, '_blank'); unlockAchievement('contact_found') }}
       />
       <SocialBarrel
         position={isMobile ? [1.2, 0.5, -10] : [3, 0.5, -10]}
         rotation={[0, -0.2, 0]}
         texturePath="/textures/contact/beczka.webp"
         label="EMAIL"
-        onClick={() => { window.open('mailto:fengyibinapply@163.com', '_blank'); unlockAchievement('contact_found') }}
+        onClick={() => { window.open(links.emailMailto, '_blank'); unlockAchievement('contact_found') }}
       />
       <SocialBarrel
         position={isMobile ? [1.5, -0.3, -7] : [5, -0.3, -8]}

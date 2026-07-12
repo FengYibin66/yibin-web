@@ -86,7 +86,11 @@ function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegme
       ))}
 
       {/* ── Wall decorations (paintings, plants, lamps) ── */}
-      <CorridorDecorations zOffset={zStart} setCameraOverride={setCameraOverride} />
+      <CorridorDecorations
+        zOffset={zStart}
+        segmentIndex={segmentIndex}
+        setCameraOverride={setCameraOverride}
+      />
 
       {/* ── Bug easter egg ── */}
       <BugEaster position={[0, 0, zStart + BUG_RELATIVE_Z]} />

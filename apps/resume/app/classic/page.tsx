@@ -8,6 +8,7 @@ import { Navbar, Footer } from '@/components/layout'
 import {
   HeroSection,
   AboutSection,
+  EducationSection,
   SkillsSection,
   ExperienceSection,
   ProjectsSection,
@@ -56,6 +57,7 @@ export default function ClassicPage() {
       <main>
         <HeroSection />
         <AboutSection />
+        <EducationSection />
         <SkillsSection />
         <ExperienceSection />
         <ProjectsSection />

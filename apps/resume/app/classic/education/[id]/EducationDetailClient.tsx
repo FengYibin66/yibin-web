@@ -6,7 +6,7 @@ import { EducationDetailView } from '@/components/classic/EducationDetailView'
 
 export function EducationDetailClient({ id }: { id: string }) {
   const { locale } = useLocale()
-  const edu = content[locale].about.education.find((e) => e.id === id)
+  const edu = content[locale].education.items.find((e) => e.id === id)
 
   if (!edu) {
     return (

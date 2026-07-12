@@ -14,23 +14,16 @@ function animateIn(
   })
 }
 
-function animateBlur(selector: string, trigger: string, start = 'top 82%'): void {
-  gsap.from(selector, {
-    filter: 'blur(12px)',
-    opacity: 0,
-    y: 16,
-    duration: 0.9,
-    stagger: 0.08,
-    ease: 'power2.out',
-    immediateRender: false,
-    scrollTrigger: { trigger, start, once: true },
-  })
-}
-
 export function registerScrollAnimations(): void {
-  // Blur reveal — scoped to each section's title
-  ;['#about', '#skills', '#experience', '#projects', '#publications', '#contact'].forEach(id => {
-    animateBlur(`${id} .section-title-text`, id, 'top 88%')
+  // Section titles — fade/slide only (no filter blur; blur can leave titles soft/fuzzy)
+  ;['#about', '#skills', '#experience', '#projects', '#publications', '#contact', '#education', '#credentials'].forEach(id => {
+    animateIn(`${id} .section-title-text`, id, {
+      opacity: 0,
+      y: 16,
+      duration: 0.7,
+      ease: 'power2.out',
+      clearProps: 'opacity,transform',
+    }, 'top 88%')
   })
 
   // About section — bio + stats fade in from below

@@ -1,12 +1,14 @@
 import type { SiteContent } from './types'
 import { credentialsEn } from './credentials'
 import { mcallisterDetailEn } from './mcallisterDetail'
+import { mergePublication } from './publicationItems'
 
 export const en: SiteContent = {
   nav: {
     brand: 'Yibin Feng',
     links: [
       { label: 'About', href: '/classic/#about' },
+      { label: 'Education', href: '/classic/#education' },
       { label: 'Skills', href: '/classic/#skills' },
       { label: 'Experience', href: '/classic/#experience' },
       { label: 'Projects', href: '/classic/#projects' },
@@ -35,24 +37,43 @@ export const en: SiteContent = {
   about: {
     title: 'About Me',
     bio: [
-      'I am an AI Research Engineer on Epic! (kids reading, overseas) at TAL Education, working across Beijing and Silicon Valley. I build full-stack product features, AI agent workflows and harnesses, and search/recommendation pipelines for the US and global markets. Previously I was a Front-end Engineer at Xueersi Online School, shipping private-domain growth, public-domain content, and in-app ops platforms.',
-      'Before pivoting to AI, I earned an MSc in Computer Science from the National University of Singapore (GPA 4.46/5.0) and an MSc in General Structural Engineering from Imperial College London. My academic research led to a first-author paper at CSCW 2025 on how multi-agent systems leverage social identity to drive prosocial behavior change — a finding that continues to inform how I design human-AI interactions.',
+      'I currently work at **TAL Education** on **Epic!** (kids reading, overseas) as an **AI Research Engineer**, based across Beijing and Silicon Valley. I own full-stack R&D for US and global products — **AI Agent** workflows, **Harness** engineering, and search/recommendation pipelines. Earlier within the same TAL family, I was a **Front-end Engineer** at **Xueersi Online School**, shipping private-domain growth, public-domain content, and in-app ops platforms.',
+      'During my MSc at the **National University of Singapore**, I was a **Research Student** at **AI4SG Lab** (AI for Social Good), supervised by **Prof. Yi-Chieh (EJ) Lee** and **Dr. Tianqi Song**, working on HCI, social computing, and multi-agent systems — work that led directly to my later **CSCW first-author** research.',
+      'Before that, I worked in London at **McAllister Group** as a structural engineer on **HS2** — Europe\'s largest active infrastructure programme and a flagship underground high-speed rail project — delivering lining design, temporary works, and on-site packages.',
+      'Academically, I earned an MSc in Computer Science from NUS (GPA **4.46/5.0**) and an MSc in General Structural Engineering from **Imperial College London**.',
     ],
-    stats: [
-      { value: '4.46 / 5.0', label: 'NUS GPA' },
-      { value: 'CSCW 2025', label: 'First Author' },
-      { value: '3 Cities', label: 'London · Beijing · SV' },
+    highlights: [
+      {
+        title: 'Multi-national',
+        description: 'Studied in 4 countries · Worked in 3 (China / UK / US)',
+      },
+      {
+        title: 'Communication',
+        description: 'Cross-cultural collaboration, research storytelling & engineering alignment',
+      },
+      {
+        title: 'AI Depth',
+        description: 'From multi-agent research to production agents and full-stack delivery',
+      },
     ],
+  },
+
+  education: {
+    title: 'Education',
+    subtitle: 'A path across Asia and Europe — QS-leading universities with a strong engineering foundation.',
     keyModulesLabel: 'Key Modules',
     viewEducationLabel: 'View modules',
-    education: [
+    items: [
       {
         id: 'nus',
-        school: 'National University of Singapore (NUS) · Global Rank #8',
+        school: 'National University of Singapore (NUS)',
         degree: 'MSc',
         field: 'Computer Science',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
+        qsRank: '#8',
+        qsLabel: 'QS World Rank',
+        location: 'Singapore',
         logo: '/education/NUS SOC.png',
         keyModules: [
           'Software Development Fundamentals',
@@ -70,11 +91,14 @@ export const en: SiteContent = {
       },
       {
         id: 'imperial',
-        school: 'Imperial College London · Global Rank #2',
+        school: 'Imperial College London',
         degree: 'MSc',
         field: 'General Structural Engineering',
         period: '2021 – 2022',
         note: 'Merit; Distinction in Final Design & Research Project',
+        qsRank: '#2',
+        qsLabel: 'QS World Rank',
+        location: 'London, UK',
         logo: '/education/imperial horizontal.png',
         keyModules: [
           'Structural Analysis',
@@ -98,6 +122,7 @@ export const en: SiteContent = {
         field: 'Civil Engineering',
         period: '2017 – 2021',
         note: 'Rank 1 / 148',
+        location: 'Sichuan, China',
         logo: '/education/SCUJJU.jpg',
         keyModules: [
           'Building Materials',
@@ -113,11 +138,14 @@ export const en: SiteContent = {
       },
       {
         id: 'um',
-        school: 'University of Malaya (UM) · QS Rank #59',
+        school: 'University of Malaya (UM)',
         degree: 'Exchange Program',
         field: 'Civil Engineering',
         period: '2019 – 2020',
-        note: 'Kuala Lumpur, Malaysia',
+        note: 'Exchange semester',
+        qsRank: '#56',
+        qsLabel: 'QS World Rank',
+        location: 'Kuala Lumpur, Malaysia',
         logo: '/education/UM.png',
         keyModules: [
           'Design of Steel Buildings',
@@ -178,6 +206,8 @@ export const en: SiteContent = {
         role: 'AI Research Engineer',
         period: 'Apr 2026 – Present',
         location: 'Beijing (China) · Silicon Valley (US)',
+        coverImage: '/experience/01-epic.png',
+        coverAlt: 'Epic! kids reading platform',
         bullets: [
           'R&D for Epic US and global products spanning web clients and backend services',
           'Full-stack delivery, AI agent workflows, and harness engineering',
@@ -191,6 +221,8 @@ export const en: SiteContent = {
         role: 'Front-end Engineer',
         period: 'Jul 2025 – Apr 2026',
         location: 'Beijing, China',
+        coverImage: '/experience/02-xueersi.png',
+        coverAlt: 'Xueersi Online School / learning device',
         bullets: [
           'Private-domain growth stack: WeCom outreach, referral campaigns, ops config, lead-course conversion',
           'Shipped public-domain short-video/content growth and in-app ops resource platforms',
@@ -209,6 +241,22 @@ export const en: SiteContent = {
         ],
       },
       {
+        id: 'ai4sg',
+        company: 'NUS · AI4SG Lab',
+        role: 'Research Student',
+        period: '2023 – 2025',
+        location: 'Singapore',
+        coverImage: '/experience/03-ai4sg.jpg',
+        coverAlt: 'AI4SG Lab at CSCW',
+        logo: '/brands/ai4sg-logo.png',
+        companyUrl: 'https://www.ai4sg.org/',
+        bullets: [
+          'Research student at NUS AI4SG Lab (AI for Social Good) focusing on HCI, social computing, and multi-agent systems',
+          'Supervised by Prof. Yi-Chieh (EJ) Lee and Dr. Tianqi Song; contributed to CSCW / CHI research and publications',
+          'Worked on conversational AI, prosocial behavior change, and human–AI collaboration system design',
+        ],
+      },
+      {
         id: 'mcallister',
         company: 'McAllister Group',
         role: 'Graduate Engineer (Structural)',
@@ -223,6 +271,8 @@ export const en: SiteContent = {
           '/gallery/hs2/under Euston Station.jpg',
           '/gallery/hs2/lining work as Oldfield Lane.jpg',
           '/gallery/hs2/geospatial data collection.jpg',
+          '/gallery/mcallister/life/colleagues-new.jpg',
+          '/gallery/mcallister/life/bros.jpg',
         ],
         detail: mcallisterDetailEn,
       },
@@ -403,37 +453,98 @@ export const en: SiteContent = {
 
   publications: {
     title: 'Publications',
+    scholarUrl: 'https://scholar.google.com/citations?user=3-nYIGQAAAAJ&hl=en',
+    scholarLabel: 'Google Scholar',
+    readHighlightsLabel: 'Read highlights',
+    citationsLabel: 'Citations',
+    firstAuthorLabel: 'First author',
+    stats: { citations: 54, hIndex: 3, i10: 2 },
     items: [
-      {
+      mergePublication('03-social-norms', {
         title: 'Multi-Agent Systems Shape Social Norms for Prosocial Behavior Change',
-        venue: 'CSCW Companion \'25',
-        year: 2025,
+        venue: "CSCW Companion '25",
         authors: 'Yibin Feng, Tianqi Song, Yugin Tan, Zicheng Zhu, Yi-Chieh Lee',
-        doi: 'https://doi.org/10.1145/3715070.3749246',
-        keywords: ['Multi-Agent Systems', 'Social Norm', 'Social Identity', 'Behavior Change', 'LLM Agent'],
+        keywords: ['Multi-Agent Systems', 'Social Norm', 'Social Identity', 'Donation', 'LLM Agent'],
+        takeaway:
+          'Multi-agent groups can establish virtual social norms; in-group agents boost donations more than out-group agents.',
         abstract:
-          'Multi-agent systems can establish virtual social norms to encourage prosocial behavior. In-group agents led to 62% donation increase vs 25% for out-group (χ²=3.95, p<0.05), demonstrating that AI groups can effectively influence human behavior through social identity dynamics.',
-        featured: true,
-        image: '/publications-cscw-cover.png',
-      },
-      {
-        title: 'Multi-Agents as Social Groups: Investigating Social Influence of Multiple Agents in Human-Agent Interactions',
-        venue: 'ACM',
-        year: 2023,
+          'Multi-agent systems can establish virtual social norms to encourage prosocial behavior. In-group agents produced stronger gains in donation willingness and amounts than out-group agents, showing that social-identity dynamics can shape human behavior.',
+        highlights: [
+          'Use multi-agent group chat to instantiate “virtual social norms” for donation interventions',
+          'In-group agents (similar backgrounds) raise perceived norms, conformity, and peer pressure more than out-group agents',
+          'In-group condition: donation amounts rose significantly after the interaction',
+          'Reported contrast: ~62% donation increase (in-group) vs ~25% (out-group); χ²=3.95, p<0.05',
+          'Implication: design social identity into multi-agent interventions to promote prosocial behavior',
+        ],
+      }),
+      mergePublication('01-social-groups', {
+        title:
+          'Multi-Agents are Social Groups: Investigating Social Influence of Multiple Agents in Human-Agent Interactions',
+        venue: 'PACM HCI · CSCW 2025',
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
-        doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
-        keywords: ['Multi-Agent', 'Social Influence', 'Human-AI Interaction'],
-        image: '/publications-cscw-cover.png',
-      },
-      {
+        keywords: ['Multi-Agent', 'Social Influence', 'Opinion Change', 'Social Pressure', 'LLM Agent'],
+        takeaway:
+          'Unified multi-agent stances are perceived as a social group and shift opinions and pressure more than a single agent.',
+        abstract:
+          'Inspired by human group social influence, we study whether a group of AI agents can pressure users to agree. Conversing with multiple agents increased felt social pressure and shifted opinions further toward the agents’ stances.',
+        highlights: [
+          'Frame multi-agents as a social group sharing one stance, then measure social influence on users',
+          'Vs single agent: larger opinion shifts and stronger perceived social pressure',
+          'Both agreement and disagreement from agents are amplified in the multi-agent setting',
+          'Dual use: potential for social good and for malicious opinion manipulation',
+          'Bridges social influence theory with LLM agents / CASA research',
+        ],
+      }),
+      mergePublication('02-greater-sum', {
         title: 'Greater than the Sum of its Parts: Exploring Social Influence of Multi-Agents',
         venue: 'CHI Extended Abstracts 2025',
-        year: 2025,
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
-        doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
-        keywords: ['Multi-Agent', 'Social Influence', 'CHI'],
-        image: '/publications-cscw-cover.png',
-      },
+        keywords: ['Multi-Agent', 'Social Influence', 'CHI', 'Opinion Change'],
+        takeaway:
+          'In painting discussions, the same arguments distributed across multi-agents shift attitudes more than one agent.',
+        abstract:
+          'Participants discussed two paintings with either one or multiple agents that liked or disliked each painting. Multi-agent conversations caused greater opinion shifts toward the agents’ stances.',
+        highlights: [
+          'Painting-preference task; keep argument content fixed, vary 1 vs many speakers',
+          'Multi-agent condition produces larger attitude movement toward agent stances',
+          'Supports “greater than the sum of its parts”: group presentation amplifies influence',
+          'Early evidence informing fuller studies and ethics discussions',
+        ],
+      }),
+      mergePublication('04-more-stronger', {
+        title: 'The More, The Stronger? Investigating How Multi-Agent AI Shapes Human Opinions',
+        venue: 'ICLR 2025 Workshop · Human-AI Coevolution',
+        authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Maojia Song, Yibin Feng, Yi-Chieh Lee',
+        keywords: ['Multi-Agent', 'Opinion Shaping', '1 vs 5 Agents', 'Ethical AI'],
+        takeaway:
+          '1 vs 5 agents: multi-agent AI amplifies opinion shaping—balance influence with user autonomy.',
+        abstract:
+          'Drawing on social influence theory, we compare one vs five AI agents discussing paintings. Multi-agent interaction yielded stronger opinion shifts; we also discuss moderators such as prior beliefs and perceived inauthenticity of AI comments.',
+        highlights: [
+          'Core question: do multi-agent systems shape opinions more than a single agent (like human groups)?',
+          'Experiment: 1-agent vs 5-agents with the same argument set on two paintings',
+          'Finding: multi-agent condition produces significantly stronger opinion shifts',
+          'Moderators: prior beliefs, perceived AI inauthenticity, human–AI preference alignment',
+          'Design implication: balance persuasive power with autonomy and trust',
+        ],
+      }),
+      mergePublication('05-opinionated-bots', {
+        title: 'Understanding and Supporting Online Discussion with Opinionated Chatbots',
+        venue: 'arXiv 2606.11693 · 2026',
+        authors: 'Tianqi Song, Chi-Lan Yang, Zihan Liu, Zhengtao Xu, Yibin Feng, Yi-Chieh Lee',
+        keywords: ['Opinionated Chatbots', 'Online Discussion', 'Opinion Shift', 'Communication Style'],
+        takeaway:
+          'Opposing / reinforcing / balanced chatbots change later openness and interpersonal communication style.',
+        abstract:
+          'We study how preparatory chats with opinionated bots affect later online discussions. Opposing bots increase openness to revising stances; reinforcing bots make subsequent human–human talk more agreeable. Bot type also shifts trust and perceptions of bots vs humans.',
+        highlights: [
+          'Pipeline: opinionated chatbot first, then human–human online discussion',
+          'Opposing bots: greater later opinion revision / openness',
+          'Reinforcing bots: more agreeable expressions with human interlocutors afterward',
+          'Trust and perceptions of bots vs humans vary by chatbot type',
+          'Design trade-off: cognitive flexibility vs positive UX and trust',
+        ],
+      }),
     ],
   },
 

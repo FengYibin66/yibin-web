@@ -1,4 +1,25 @@
+'use client'
+
+import { useLocale } from '@/hooks/useLocale'
+import { content } from '@/lib/content'
+
 export function ClassicPanel() {
+  const { locale } = useLocale()
+  const hero = content[locale].hero
+
+  const tags =
+    locale === 'zh'
+      ? [
+          { icon: '◈', label: 'AI 研究' },
+          { icon: '◉', label: '前端工程' },
+          { icon: '◎', label: '结构工程' },
+        ]
+      : [
+          { icon: '◈', label: 'AI Research' },
+          { icon: '◉', label: 'Frontend' },
+          { icon: '◎', label: 'Structural' },
+        ]
+
   return (
     <div style={{
       width: '100%',
@@ -32,7 +53,7 @@ export function ClassicPanel() {
         lineHeight: 1.1,
         textAlign: 'center',
       }}>
-        Yibin Feng
+        {hero.name}
       </h1>
 
       <div style={{
@@ -44,22 +65,20 @@ export function ClassicPanel() {
 
       <p style={{
         fontFamily: 'var(--font-gallery, "Cormorant Garamond", serif)',
-        fontSize: 'clamp(0.9rem, 1.4vw, 1.15rem)',
+        fontSize: 'clamp(0.75rem, 1.2vw, 1rem)',
         color: '#6b5744',
-        letterSpacing: '0.12em',
+        letterSpacing: '0.08em',
         textAlign: 'center',
         margin: '0 0 32px',
         fontStyle: 'italic',
+        maxWidth: '420px',
+        lineHeight: 1.6,
       }}>
-        AI Engineer · Researcher · Builder
+        {hero.roles.join(' · ')}
       </p>
 
       <div style={{ display: 'flex', gap: '28px', marginBottom: '40px' }}>
-        {[
-          { icon: '◈', label: 'AI / ML' },
-          { icon: '◉', label: 'Research' },
-          { icon: '◎', label: 'Systems' },
-        ].map(({ icon, label }) => (
+        {tags.map(({ icon, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '18px', color: '#c8a96e', marginBottom: '4px' }}>{icon}</div>
             <div style={{

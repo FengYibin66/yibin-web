@@ -45,18 +45,19 @@ export function createPublicationCardBackViewModel(
     abstractHeading: ABSTRACT_HEADING,
     abstract: publication.abstract,
     keywords: publication.keywords.join(CONTENT_SEPARATOR),
-    paperAction: publication.doi
-      ? { label: VIEW_PAPER_LABEL, href: publication.doi }
-      : null,
+    paperAction: (() => {
+      const href = publication.doi ?? publication.paperUrl
+      return href ? { label: VIEW_PAPER_LABEL, href } : null
+    })(),
   }
 }
 
 export function openPublicationPaper(
-  doi: string,
+  url: string,
   openWindow: OpenWindow = window.open.bind(window),
 ): void {
-  const opened = openWindow(doi, '_blank', 'noopener,noreferrer')
+  const opened = openWindow(url, '_blank', 'noopener,noreferrer')
   if (opened == null) {
-    console.warn('[pub] window.open blocked for', doi)
+    console.warn('[pub] window.open blocked for', url)
   }
 }

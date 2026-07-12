@@ -1,21 +1,23 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
-import { SectionTitle } from '@/components/ui'
+import { SectionTitle, ImagePreview } from '@/components/ui'
 import type { CredentialItem } from '@/lib/content/types'
 
-function CredentialCard({ item, onOpen }: { item: CredentialItem; onOpen: () => void }) {
+function CredentialCard({ item }: { item: CredentialItem }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="glass-card rounded-xl overflow-hidden text-left w-full cursor-pointer"
-    >
+    <div className="glass-card rounded-xl overflow-hidden text-left w-full">
       {item.image ? (
-        <img src={item.image} alt={item.title} className="w-full h-40 object-cover" loading="lazy" />
+        <ImagePreview
+          src={item.image}
+          alt={item.title}
+          caption={item.title}
+          className="aspect-[4/3] w-full"
+          imgClassName="object-cover"
+          rounded="rounded-none"
+        />
       ) : null}
       <div className="p-4">
         <h3 className="font-display font-semibold text-sm leading-snug" style={{ color: 'var(--text-primary)' }}>
@@ -31,52 +33,6 @@ function CredentialCard({ item, onOpen }: { item: CredentialItem; onOpen: () => 
             {item.note}
           </p>
         ) : null}
-      </div>
-    </button>
-  )
-}
-
-function Lightbox({ item, onClose }: { item: CredentialItem; onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
-      onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="max-w-3xl w-full rounded-xl overflow-hidden"
-        style={{ background: 'var(--bg-base)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {item.image ? (
-          <img src={item.image} alt={item.title} className="w-full max-h-[70vh] object-contain bg-black" />
-        ) : null}
-        <div className="p-5">
-          <h3 className="font-display font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {item.title}
-          </h3>
-          {item.level ? (
-            <p className="text-sm mt-1" style={{ color: 'var(--accent-primary)' }}>
-              {item.level}
-            </p>
-          ) : null}
-          {item.note ? (
-            <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-              {item.note}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-4 text-sm underline"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -94,15 +50,18 @@ export function CredentialsSection() {
         <SectionTitle title={c.title} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           {featured.map((item) => (
-            <Link
-              key={item.id}
-              href="/classic/credentials/"
-              className="glass-card rounded-xl overflow-hidden no-underline block"
-            >
+            <div key={item.id} className="glass-card rounded-xl overflow-hidden">
               {item.image ? (
-                <img src={item.image} alt={item.title} className="w-full h-36 object-cover" loading="lazy" />
+                <ImagePreview
+                  src={item.image}
+                  alt={item.title}
+                  caption={item.title}
+                  className="aspect-[4/3] w-full"
+                  imgClassName="object-cover"
+                  rounded="rounded-none"
+                />
               ) : null}
-              <div className="p-4">
+              <Link href="/classic/credentials/" className="block p-4 no-underline">
                 <h3 className="font-display font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                   {item.title}
                 </h3>
@@ -111,8 +70,8 @@ export function CredentialsSection() {
                     {item.level}
                   </p>
                 ) : null}
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
         <div className="text-center">
@@ -133,7 +92,6 @@ export function CredentialsSection() {
 export function CredentialsPageView() {
   const { locale } = useLocale()
   const c = content[locale].credentials
-  const [active, setActive] = useState<CredentialItem | null>(null)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-16">
@@ -154,7 +112,7 @@ export function CredentialsPageView() {
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
         {c.awards.map((item) => (
-          <CredentialCard key={item.id} item={item} onOpen={() => setActive(item)} />
+          <CredentialCard key={item.id} item={item} />
         ))}
       </div>
 
@@ -163,11 +121,9 @@ export function CredentialsPageView() {
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {c.certificates.map((item) => (
-          <CredentialCard key={item.id} item={item} onOpen={() => setActive(item)} />
+          <CredentialCard key={item.id} item={item} />
         ))}
       </div>
-
-      {active ? <Lightbox item={active} onClose={() => setActive(null)} /> : null}
     </div>
   )
 }

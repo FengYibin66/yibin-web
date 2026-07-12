@@ -1,6 +1,7 @@
 'use client'
 
 import type { ExperienceItem } from '@/lib/content/types'
+import { ImagePreview } from '@/components/ui'
 import { ClassicBackLink } from './ClassicBackLink'
 
 function ImageGrid({
@@ -12,7 +13,14 @@ function ImageGrid({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {images.map((img) => (
         <figure key={img.src} className="glass-card rounded-xl overflow-hidden">
-          <img src={img.src} alt={img.caption} className="w-full h-44 object-cover" loading="lazy" />
+          <ImagePreview
+            src={img.src}
+            alt={img.caption}
+            caption={img.caption}
+            className="aspect-[4/3] w-full"
+            imgClassName="object-cover"
+            rounded="rounded-none"
+          />
           <figcaption className="p-3">
             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
               {img.caption}
@@ -73,11 +81,13 @@ export function ExperienceDetailView({ item }: { item: ExperienceItem }) {
           </p>
         ) : null}
         {detail.heroImage ? (
-          <img
+          <ImagePreview
             src={detail.heroImage}
             alt={item.company}
-            className="mt-6 w-full max-h-72 object-cover rounded-xl"
-            loading="lazy"
+            caption={item.company}
+            className="mt-6 w-full max-h-72"
+            imgClassName="object-cover max-h-72"
+            rounded="rounded-xl"
           />
         ) : null}
       </header>

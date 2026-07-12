@@ -44,13 +44,27 @@ describe('publication card content', () => {
     })
   })
 
-  it('hides the paper action when the publication has no DOI', () => {
+  it('hides the paper action when the publication has no DOI or paperUrl', () => {
     const viewModel = createPublicationCardBackViewModel({
       ...PUBLICATION,
       doi: undefined,
+      paperUrl: undefined,
     })
 
     expect(viewModel.paperAction).toBeNull()
+  })
+
+  it('uses paperUrl when DOI is absent (OpenReview / arXiv)', () => {
+    const viewModel = createPublicationCardBackViewModel({
+      ...PUBLICATION,
+      doi: undefined,
+      paperUrl: 'https://openreview.net/forum?id=example',
+    })
+
+    expect(viewModel.paperAction).toEqual({
+      label: 'VIEW PAPER',
+      href: 'https://openreview.net/forum?id=example',
+    })
   })
 
   it('opens the DOI in a protected new tab', () => {

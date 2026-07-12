@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import { Text, PositionalAudio } from '@react-three/drei'
 import * as THREE from 'three'
@@ -8,6 +8,8 @@ import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
+import { useLocale } from '@/hooks/useLocale'
+import { getAboutRoomCopy } from '@/lib/content/labAdapters'
 import { PaperAirplane } from './about/PaperAirplane'
 import SkyChunk, { CHUNK_LENGTH, CORRIDOR_CLIP_Z, ROOM_Z } from './about/SkyChunk'
 
@@ -33,6 +35,8 @@ interface MilestoneProps {
 }
 
 function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
+  const { locale } = useLocale()
+  const copy = useMemo(() => getAboutRoomCopy(locale), [locale])
   const avatarTexture = useLoader(THREE.TextureLoader, '/textures/about/awatarnachmurce.webp')
   const groupRef  = useRef<THREE.Group>(null)
   const titleRef  = useRef<{ position: THREE.Vector3 }>(null)
@@ -74,27 +78,30 @@ function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
       <Text ref={titleRef as never} position={[0, 5, 0.1]} fontSize={0.8}
         color="#1a1a1a" anchorX="center" anchorY="middle"
         font="/fonts/RubikScribble-Regular.ttf">
-        YIBIN FENG
+        {copy.name}
       </Text>
-      <Text ref={brandRef as never} position={[0, 4.3, 0.1]} fontSize={0.45}
+      <Text ref={brandRef as never} position={[0, 4.3, 0.1]} fontSize={0.4}
         color="#4a4a4a" anchorX="center" anchorY="middle"
-        font="/fonts/CabinSketch-Regular.ttf">
-        AI Engineer · Builder
+        font="/fonts/CabinSketch-Regular.ttf" maxWidth={10} textAlign="center">
+        {copy.rolesLine}
       </Text>
       <mesh ref={avatarRef} position={[0, 2, 0]}>
         <planeGeometry args={[AVATAR_WIDTH, AVATAR_HEIGHT]} />
         <meshBasicMaterial color="#e0e0e0" map={avatarTexture} transparent
           side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      <Text position={[0, 0, 0.1]} fontSize={0.3} color="#555555"
-        anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Regular.ttf">
-        Building intelligent systems that shape human behavior
+      <Text position={[0, 0, 0.1]} fontSize={0.28} color="#555555"
+        anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Regular.ttf"
+        maxWidth={11} textAlign="center">
+        {copy.tagline}
       </Text>
     </group>
   )
 }
 
 function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
+  const { locale } = useLocale()
+  const copy = useMemo(() => getAboutRoomCopy(locale), [locale])
   const uoTexture  = useLoader(THREE.TextureLoader, '/textures/about/uowyspa.webp')
   const frTexture  = useLoader(THREE.TextureLoader, '/textures/about/freelancewyspa.webp')
   const groupRef   = useRef<THREE.Group>(null)
@@ -138,32 +145,32 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
     <group ref={groupRef} position={[0, 0, z]}>
       <Text position={[0, 5, 0.3]} fontSize={1.2} color="#1a1a1a"
         anchorX="center" anchorY="middle" font="/fonts/RubikScribble-Regular.ttf">
-        JOURNEY
+        {copy.journeyTitle}
       </Text>
       <Text position={[0, 4.2, 0.3]} fontSize={0.35} color="#555555"
         anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Regular.ttf">
-        Education & Experience
+        {copy.journeySubtitle}
       </Text>
-      {/* NUS island (left) */}
       <group ref={uoRef} position={[-3.5, -2, 0]}>
         <mesh>
           <planeGeometry args={[ISLAND_HEIGHT * ISLAND_ASPECT, ISLAND_HEIGHT]} />
           <meshBasicMaterial color="#e0e0e0" map={uoTexture} transparent side={THREE.DoubleSide} />
         </mesh>
-        <Text position={[0, -0.85, 0.1]} fontSize={0.4} color="#1a1a1a"
-          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf">
-          NUS 2023-2025
+        <Text position={[0, -0.85, 0.1]} fontSize={0.35} color="#1a1a1a"
+          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf"
+          maxWidth={5} textAlign="center">
+          {copy.leftIslandLabel}
         </Text>
       </group>
-      {/* TAL island (right) */}
       <group ref={frRef} position={[3.5, -1, 0.5]}>
         <mesh>
           <planeGeometry args={[ISLAND_HEIGHT * ISLAND_ASPECT, ISLAND_HEIGHT]} />
           <meshBasicMaterial color="#e0e0e0" map={frTexture} transparent side={THREE.DoubleSide} />
         </mesh>
-        <Text position={[0, -0.65, 0.1]} fontSize={0.4} color="#1a1a1a"
-          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf">
-          TAL 2025-NOW
+        <Text position={[0, -0.65, 0.1]} fontSize={0.35} color="#1a1a1a"
+          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf"
+          maxWidth={5} textAlign="center">
+          {copy.rightIslandLabel}
         </Text>
       </group>
     </group>
@@ -172,8 +179,9 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
 
 // Simplified skills milestone — Text only (gas balloons are a separate complex subsystem)
 function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
+  const { locale } = useLocale()
+  const copy = useMemo(() => getAboutRoomCopy(locale), [locale])
   const groupRef = useRef<THREE.Group>(null)
-  const SKILLS = ['React', 'Three.js', 'GSAP', 'Next.js', 'Go', 'Python', 'Docker', 'FastAPI']
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -185,17 +193,18 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
     <group ref={groupRef} position={[0, 0, z]}>
       <Text position={[0, 6, 0.5]} fontSize={1.2} color="#1a1a1a"
         anchorX="center" anchorY="middle" font="/fonts/RubikScribble-Regular.ttf">
-        SKILLS
+        {copy.skillsTitle}
       </Text>
-      {SKILLS.map((skill, i) => {
+      {copy.skills.map((skill, i) => {
         const col = i % 4
         const row = Math.floor(i / 4)
         return (
           <Text key={skill}
             position={[(col - 1.5) * 2.5, 4.5 - row * 1.2, 0.3]}
-            fontSize={0.4} color="#2a1f0e"
+            fontSize={0.35} color="#2a1f0e"
             anchorX="center" anchorY="middle"
-            font="/fonts/CabinSketch-Bold.ttf">
+            font="/fonts/CabinSketch-Bold.ttf"
+            maxWidth={2.3} textAlign="center">
             {skill}
           </Text>
         )

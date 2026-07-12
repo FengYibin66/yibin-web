@@ -3,7 +3,7 @@ import { en } from '@/lib/content/en'
 import { EducationDetailClient } from './EducationDetailClient'
 
 export function generateStaticParams() {
-  return en.about.education.map((edu) => ({ id: edu.id }))
+  return en.education.items.map((edu) => ({ id: edu.id }))
 }
 
 export default async function EducationDetailPage({

@@ -1,12 +1,14 @@
 import type { SiteContent } from './types'
 import { credentialsZh } from './credentials'
 import { mcallisterDetailZh } from './mcallisterDetail'
+import { mergePublication } from './publicationItems'
 
 export const zh: SiteContent = {
   nav: {
     brand: 'Yibin Feng',
     links: [
       { label: '关于我', href: '/classic/#about' },
+      { label: '教育经历', href: '/classic/#education' },
       { label: '技能', href: '/classic/#skills' },
       { label: '工作经历', href: '/classic/#experience' },
       { label: '项目', href: '/classic/#projects' },
@@ -34,24 +36,43 @@ export const zh: SiteContent = {
   about: {
     title: '关于我',
     bio: [
-      '我目前在好未来 Epic!（海外儿童阅读）担任 AI Research Engineer，办公地覆盖北京与硅谷，负责美国及全球相关产品的全栈研发、AI Agent 工作流、Harness 工程，以及搜索推荐算法与 pipeline。此前在学而思网校担任前端开发工程师，交付私域增长、公域内容与端内运营等多条产品线。',
-      '在转型 AI 之前，我在新加坡国立大学取得计算机科学硕士学位（GPA 4.46/5.0），并在伦敦帝国理工学院取得结构工程硕士学位。学术研究促成 CSCW 2025 第一作者论文，探究多智能体系统如何利用社会认同推动亲社会行为改变——这一发现持续影响着我对人机交互的设计理念。',
+      '我目前在**好未来**旗下 **Epic!**（海外儿童阅读）担任 **AI Research Engineer**，办公地覆盖北京与硅谷，负责美国及全球相关产品的全栈研发、**AI Agent** 工作流、**Harness** 工程，以及搜索推荐算法与 pipeline。此前同样在好未来体系内的 **学而思网校** 担任 **前端开发工程师**，交付私域增长、公域内容与端内运营等多条产品线。',
+      '在**新加坡国立大学**就读期间，我于 **AI4SG Lab**（AI for Social Good）担任 **Research Student**，由 **Prof. Yi-Chieh (EJ) Lee** 与 **Dr. Tianqi Song** 指导，围绕人机交互、社会计算与多智能体系统开展研究——这也直接促成了后续的 **CSCW 第一作者**工作。',
+      '更早之前，我在伦敦 **McAllister Group** 担任结构工程师，参与欧洲现行最大的基建项目、地下高铁 **HS2** 的衬砌设计、临时工程与现场交付——这段欧洲旗舰工程经历，塑造了我对复杂系统落地与跨方协作的理解。',
+      '学术路径上，我在新加坡国立大学取得计算机科学硕士学位（GPA **4.46/5.0**），并在**帝国理工大学**取得结构工程硕士学位。',
     ],
-    stats: [
-      { value: '4.46 / 5.0', label: 'NUS 绩点' },
-      { value: 'CSCW 2025', label: '第一作者论文' },
-      { value: '3 城', label: 'London · Beijing · SV' },
+    highlights: [
+      {
+        title: '多国经历',
+        description: '4 个国家求学 · 3 个国家工作（中 / 英 / 美）',
+      },
+      {
+        title: '善于沟通',
+        description: '跨文化协作、研究表达与工程对齐',
+      },
+      {
+        title: '深耕 AI',
+        description: '从多智能体研究到生产级 Agent 与全栈落地',
+      },
     ],
+  },
+
+  education: {
+    title: '教育经历',
+    subtitle: '跨越亚洲与欧洲的求学路径，QS 顶尖院校与扎实工程基础并重。',
     keyModulesLabel: '核心课程',
     viewEducationLabel: '查看课程详情',
-    education: [
+    items: [
       {
         id: 'nus',
-        school: '新加坡国立大学（NUS）· 全球排名第 8',
+        school: '新加坡国立大学（NUS）',
         degree: '理学硕士',
         field: '计算机科学',
         period: '2023 – 2025',
         note: 'GPA 4.46 / 5.0',
+        qsRank: '#8',
+        qsLabel: 'QS 全球排名',
+        location: '新加坡',
         logo: '/education/NUS SOC.png',
         keyModules: [
           'Software Development Fundamentals',
@@ -69,11 +90,14 @@ export const zh: SiteContent = {
       },
       {
         id: 'imperial',
-        school: '伦敦帝国理工学院 · 全球排名第 2',
+        school: '帝国理工大学',
         degree: '理学硕士',
         field: '普通结构工程',
         period: '2021 – 2022',
         note: 'Merit（优良）；毕业设计 Distinction',
+        qsRank: '#2',
+        qsLabel: 'QS 全球排名',
+        location: '英国·伦敦',
         logo: '/education/imperial horizontal.png',
         keyModules: [
           'Structural Analysis',
@@ -97,6 +121,7 @@ export const zh: SiteContent = {
         field: '土木工程',
         period: '2017 – 2021',
         note: '专业排名第 1 / 148',
+        location: '中国·四川',
         logo: '/education/SCUJJU.jpg',
         keyModules: [
           '建筑材料',
@@ -112,11 +137,14 @@ export const zh: SiteContent = {
       },
       {
         id: 'um',
-        school: '马来亚大学（UM）· QS 排名第 59',
+        school: '马来亚大学（UM）',
         degree: '交换生项目',
         field: '土木工程',
         period: '2019 – 2020',
-        note: '马来西亚·吉隆坡',
+        note: '交换学期',
+        qsRank: '#56',
+        qsLabel: 'QS 全球排名',
+        location: '马来西亚·吉隆坡',
         logo: '/education/UM.png',
         keyModules: [
           'Design of Steel Buildings',
@@ -177,6 +205,8 @@ export const zh: SiteContent = {
         role: 'AI Research Engineer',
         period: '2026 年 4 月 – 至今',
         location: 'Beijing (China) · Silicon Valley (US)',
+        coverImage: '/experience/01-epic.png',
+        coverAlt: 'Epic! kids reading platform',
         bullets: [
           '负责 Epic 美国及全球相关产品与业务研发，覆盖 Web 端与后端服务',
           '推进全栈业务开发、AI Agent 工作流实现与 Harness 工程',
@@ -190,6 +220,8 @@ export const zh: SiteContent = {
         role: '前端开发工程师',
         period: '2025 年 7 月 – 2026 年 4 月',
         location: 'Beijing, China',
+        coverImage: '/experience/02-xueersi.png',
+        coverAlt: '学而思网校 / 学习机产品',
         bullets: [
           '参与学而思网校私域获客与运营体系：企微触达、裂变转介绍、增长配置、导流课成交闭环',
           '交付公域短视频/内容增长平台与端内运营资源位等前端产品',
@@ -208,6 +240,22 @@ export const zh: SiteContent = {
         ],
       },
       {
+        id: 'ai4sg',
+        company: 'NUS · AI4SG Lab',
+        role: 'Research Student',
+        period: '2023 – 2025',
+        location: 'Singapore',
+        coverImage: '/experience/03-ai4sg.jpg',
+        coverAlt: 'AI4SG Lab at CSCW',
+        logo: '/brands/ai4sg-logo.png',
+        companyUrl: 'https://www.ai4sg.org/',
+        bullets: [
+          '在新加坡国立大学 AI4SG Lab（AI for Social Good）从事人机交互 / 社会计算 / 多智能体研究',
+          '由 Prof. Yi-Chieh (EJ) Lee 与 Dr. Tianqi Song 指导，参与 CSCW / CHI 等顶会相关研究与发表',
+          '研究方向涵盖 conversational AI、亲社会行为改变与人机协作系统设计',
+        ],
+      },
+      {
         id: 'mcallister',
         company: 'McAllister Group',
         role: 'Graduate Engineer（结构）',
@@ -222,6 +270,8 @@ export const zh: SiteContent = {
           '/gallery/hs2/under Euston Station.jpg',
           '/gallery/hs2/lining work as Oldfield Lane.jpg',
           '/gallery/hs2/geospatial data collection.jpg',
+          '/gallery/mcallister/life/colleagues-new.jpg',
+          '/gallery/mcallister/life/bros.jpg',
         ],
         detail: mcallisterDetailZh,
       },
@@ -393,37 +443,92 @@ export const zh: SiteContent = {
 
   publications: {
     title: '论文发表',
+    scholarUrl: 'https://scholar.google.com/citations?user=3-nYIGQAAAAJ&hl=zh-CN',
+    scholarLabel: 'Google Scholar',
+    readHighlightsLabel: '阅读要点',
+    citationsLabel: '引用',
+    firstAuthorLabel: '第一作者',
+    stats: { citations: 54, hIndex: 3, i10: 2 },
     items: [
-      {
+      mergePublication('03-social-norms', {
         title: '多智能体系统通过塑造社会规范推动亲社会行为改变',
-        venue: 'CSCW Companion \'25',
-        year: 2025,
+        venue: "CSCW Companion '25",
         authors: 'Yibin Feng, Tianqi Song, Yugin Tan, Zicheng Zhu, Yi-Chieh Lee',
-        doi: 'https://doi.org/10.1145/3715070.3749246',
-        keywords: ['多智能体系统', '社会规范', '社会认同', '行为改变', 'LLM 智能体'],
+        keywords: ['多智能体系统', '社会规范', '社会认同', '捐款行为', 'LLM 智能体'],
+        takeaway: '多智能体可建立虚拟社会规范；内群体智能体对捐款的推动显著强于外群体。',
         abstract:
-          '多智能体系统可通过建立虚拟社会规范来鼓励亲社会行为。内群体智能体使捐款率提升 62%，而外群体仅为 25%（χ²=3.95，p<0.05），表明 AI 群体可通过社会认同动态有效影响人类行为。',
-        featured: true,
-        image: '/publications-cscw-cover.png',
-      },
-      {
+          '多智能体系统可通过建立虚拟社会规范来鼓励亲社会行为。内群体智能体使捐款意愿与金额提升更显著，外群体效应较弱，表明社会认同动态可有效影响人类行为。',
+        highlights: [
+          '用多智能体群聊建立「虚拟社会规范」，干预亲社会捐款行为',
+          '内群体 agent（与用户背景相似）比外群体更能提升规范感知、从众与同伴压力',
+          '内群体条件下捐款金额显著上升；外群体效应较弱',
+          '关键结果：内群体捐款增幅约 62%，外群体约 25%（χ²=3.95，p<0.05）',
+          '启示：可把社会认同设计进多智能体干预，以促进亲社会行为',
+        ],
+      }),
+      mergePublication('01-social-groups', {
         title: '多智能体作为社会群体：探究多智能体在人机交互中的社会影响力',
-        venue: 'ACM',
-        year: 2023,
+        venue: 'PACM HCI · CSCW 2025',
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
-        doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
-        keywords: ['多智能体', '社会影响', '人机交互'],
-        image: '/publications-cscw-cover.png',
-      },
-      {
+        keywords: ['多智能体', '社会影响', '意见改变', '社会压力', 'LLM Agent'],
+        takeaway: '多智能体统一立场可被感知为社会群体，比单智能体更能改变意见并制造社会压力。',
+        abstract:
+          '受人类群体社会影响启发，研究多智能体是否会给用户带来社会压力并改变立场。发现与多智能体对话会提高社会压力感，并使意见更向智能体立场偏移。',
+        highlights: [
+          '把多智能体设计为「持有一致立场的社会群体」，检验对用户的社会影响',
+          '相对单智能体：意见改变更大，感知到的社会压力更强',
+          '当智能体同意/反对用户时，多智能体都会放大相应方向的立场偏移',
+          '双刃剑：既可用于促进社会善，也可能被滥用于舆论操纵',
+          '连接社会影响理论与 LLM Agent / CASA 研究线',
+        ],
+      }),
+      mergePublication('02-greater-sum', {
         title: '整体大于部分之和：探索多智能体的社会影响力',
         venue: 'CHI Extended Abstracts 2025',
-        year: 2025,
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
-        doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
-        keywords: ['多智能体', '社会影响', 'CHI'],
-        image: '/publications-cscw-cover.png',
-      },
+        keywords: ['多智能体', '社会影响', 'CHI', '意见改变'],
+        takeaway: '绘画态度讨论中，相同论点由多智能体分摊表达，比单智能体更能推动态度偏移。',
+        abstract:
+          '在绘画喜好讨论中对比单智能体与多智能体：智能体表达喜欢或不喜欢时，多智能体条件带来更大的意见改变。',
+        highlights: [
+          '以绘画评价为任务，控制论点内容一致，只改变「1 vs 多」表达者数量',
+          '多智能体条件下，用户态度更显著地向智能体立场移动',
+          '支持「整体大于部分之和」：群体化呈现放大影响力',
+          '为后续完整研究与伦理风险讨论奠定早期证据',
+        ],
+      }),
+      mergePublication('04-more-stronger', {
+        title: '越多越强？探究多智能体 AI 如何塑造人类观点',
+        venue: 'ICLR 2025 Workshop · Human-AI Coevolution',
+        authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Maojia Song, Yibin Feng, Yi-Chieh Lee',
+        keywords: ['多智能体', '意见塑造', '1 vs 5 Agents', '伦理 AI'],
+        takeaway: '1 vs 5 agents：多智能体显著放大意见塑造，并需权衡影响力与用户自主权。',
+        abstract:
+          '基于社会影响理论，比较单智能体与五智能体对绘画意见的影响。多智能体互动导致更强意见偏移；并讨论先验信念、AI 评论真实感等人机对齐因素的调节作用。',
+        highlights: [
+          '核心问题：多智能体是否比单智能体更能塑造人类意见（类似人类群体效应）',
+          '实验：1-agent vs 5-agents，相同论点集合，讨论两幅画的艺术评价',
+          '结果：多智能体条件意见偏移显著更强（「越多越强」）',
+          '调节因素：用户先验、AI 评论「不真实感」、人机偏好是否对齐',
+          '设计启示：在说服效力与用户自主、信任之间做平衡',
+        ],
+      }),
+      mergePublication('05-opinionated-bots', {
+        title: '用有立场的聊天机器人理解并支持在线讨论',
+        venue: 'arXiv 2606.11693 · 2026',
+        authors: 'Tianqi Song, Chi-Lan Yang, Zihan Liu, Zhengtao Xu, Yibin Feng, Yi-Chieh Lee',
+        keywords: ['Opinionated Chatbots', '在线讨论', '意见改变', '沟通风格'],
+        takeaway: '对立/强化/平衡三类立场型 chatbot，会改变后续人际讨论的开放度与表达风格。',
+        abstract:
+          '研究与有立场 chatbot 预互动如何影响后续在线讨论。对立型更容易促使立场修正；强化型则让用户在后续人际对话中更「agreeable」。不同类型也会影响信任与对 bot/人的感知。',
+        highlights: [
+          '流程：先与 opinionated chatbot 互动，再进入人与人在线讨论',
+          '对立型：更易在后续讨论中修正初始立场，提升开放性',
+          '强化型：后续对人沟通时更倾向和气、认同式表达',
+          '不同类型 chatbot 带来不同的信任与对 bot / 人际对象的感知',
+          '设计权衡：促进认知灵活 vs 保持积极体验与信任',
+        ],
+      }),
     ],
   },
 

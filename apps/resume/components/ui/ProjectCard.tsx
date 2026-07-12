@@ -106,7 +106,7 @@ export function ProjectCard({ item }: ProjectCardProps) {
             style={{
               color: 'var(--text-secondary)',
               borderColor: 'var(--bg-border)',
-              background: 'var(--bg-base, #08101e)',
+              background: 'var(--bg-elevated)',
             }}
           >
             {t}

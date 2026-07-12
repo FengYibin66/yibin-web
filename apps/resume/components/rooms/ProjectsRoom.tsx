@@ -9,6 +9,8 @@ import { useAchievements } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
+import { useLocale } from '@/hooks/useLocale'
+import { getProjectRoomItems } from '@/lib/content/projectsRoom'
 import '@/components/lab/shaders/RevealMaterial'
 
 // ─── Tower constants (itomdev values) ────────────────────────────────────────
@@ -27,18 +29,9 @@ const DRAG_SENSITIVITY   = 0.008
 const FRICTION           = 0.98
 const CAMERA_Y_OFFSET    = -3   // camera height when viewing tower
 
-// ─── Content data (4 projects, mixed platforms) ───────────────────────────────
+// ─── Content data ─────────────────────────────────────────────────────────────
 
 type Platform = 'blog' | 'youtube' | 'tiktok'
-
-const YIBIN_PROJECTS: Array<{
-  id: string; title: string; sub: string; url?: string; platform: Platform
-}> = [
-  { id: 'resume', title: 'Resume Site',        sub: 'Three.js · GSAP · Next.js', url: 'https://resume.yibinfeng.com', platform: 'blog'    },
-  { id: 'wechat', title: 'WeChat AI Platform',  sub: 'Go · Vue 3 · Python',       url: 'https://mpauto.yibinfeng.com', platform: 'youtube' },
-  { id: 'video',  title: 'AI Video Generator',  sub: 'React · LLM · FastAPI',     url: undefined,                      platform: 'tiktok'  },
-  { id: 'cli',    title: 'One-CLI',             sub: 'Go · Docker · React',       url: undefined,                      platform: 'blog'    },
-]
 
 // Platform physical dimensions (itomdev values)
 const PLATFORM_DIM: Record<Platform, [number, number, number]> = {
@@ -68,6 +61,8 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const { unlockAchievement } = useAchievements()
   const { camera } = useThree()
   const router = useWheelRouter()
+  const { locale } = useLocale()
+  const projects = useMemo(() => [...getProjectRoomItems(locale, 4)], [locale])
   useRoomTutorial('projects_inspect')
 
   const towerRef        = useRef<THREE.Group>(null)
@@ -79,17 +74,17 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const rotVelocity     = useRef(0)
   const autoRotSpeed    = useRef(0.12)
   const fallSpeed       = useRef(BASE_FALL_SPEED)
-  const monitorOffsets  = useRef(YIBIN_PROJECTS.map(() => 0))
+  const monitorOffsets  = useRef(projects.map(() => 0))
   const monitorRefs     = useRef<(THREE.Group | null)[]>([])
 
   // Refs for FloatingCodeParticles parallax
   const particleTowerRotation = useRef(0)
   const particleFallOffset    = useRef(0)
 
-  const TOTAL_HEIGHT = YIBIN_PROJECTS.length * VERTICAL_SPACING
+  const TOTAL_HEIGHT = projects.length * VERTICAL_SPACING
 
   const monitors = useMemo<MonitorItem[]>(() =>
-    YIBIN_PROJECTS.map((p, i) => {
+    projects.map((p, i) => {
       const angle = (i / MONITORS_PER_RING) * Math.PI * 2
       const [w, h, d] = PLATFORM_DIM[p.platform]
       return {
@@ -101,7 +96,7 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
         width: w, height: h, depth: d,
       }
     })
-  , [])
+  , [projects])
 
   useEffect(() => { showRoomRef.current = showRoom }, [showRoom])
 

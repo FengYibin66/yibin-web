@@ -303,8 +303,12 @@ docker compose -f docker-compose.prod.yml restart
 # Stop everything
 docker compose -f docker-compose.prod.yml down
 
-# Update code & redeploy
-git pull && docker compose -f docker-compose.prod.yml up -d --build
+# Update code & redeploy (normative — remounts nginx after static build)
+git pull && ./scripts/deploy-prod.sh
+
+# If resume/portal/wechat return 403/404 after a rebuild but files exist on disk:
+# see docs/deployment/TROUBLESHOOT.md § "stale bind mount"
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx
 ```
 
 ---

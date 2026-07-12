@@ -22,7 +22,7 @@ export function PublicationCardFront({
   renderOrder = 0,
 }: PublicationCardFaceProps) {
   const viewModel = createPublicationCardFrontViewModel(publication)
-  const cover = useTexture(publication.image ?? '/cscw-poster.png')
+  const cover = useTexture(publication.image ?? '/publications-cscw-cover.png')
   cover.colorSpace = THREE.SRGBColorSpace
 
   return (
@@ -56,7 +56,7 @@ export function PublicationCardFront({
           transparent
           opacity={opacity}
           depthTest={depthTest}
-          depthWrite={false}
+          depthWrite
         />
       </mesh>
 

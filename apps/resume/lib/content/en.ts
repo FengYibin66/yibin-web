@@ -200,7 +200,7 @@ export const en: SiteContent = {
         abstract:
           'Multi-agent systems can establish virtual social norms to encourage prosocial behavior. In-group agents led to 62% donation increase vs 25% for out-group (χ²=3.95, p<0.05), demonstrating that AI groups can effectively influence human behavior through social identity dynamics.',
         featured: true,
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
       {
         title: 'Multi-Agents as Social Groups: Investigating Social Influence of Multiple Agents in Human-Agent Interactions',
@@ -209,7 +209,7 @@ export const en: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/abs/10.1145/3757633',
         keywords: ['Multi-Agent', 'Social Influence', 'Human-AI Interaction'],
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
       {
         title: 'Greater than the Sum of its Parts: Exploring Social Influence of Multi-Agents',
@@ -218,7 +218,7 @@ export const en: SiteContent = {
         authors: 'Tianqi Song, Yugin Tan, Zicheng Zhu, Yibin Feng, Yi-Chieh Lee',
         doi: 'https://dl.acm.org/doi/full/10.1145/3706599.3719973',
         keywords: ['Multi-Agent', 'Social Influence', 'CHI'],
-        image: '/cscw-poster.png',
+        image: '/publications-cscw-cover.png',
       },
     ],
   },

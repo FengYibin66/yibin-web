@@ -35,7 +35,7 @@ yibin-web/
 **Services:**
 - `portal-client` — React Vite app (frontend)
 - `portal-server` — Hono Node.js backend (3001)
-- Database: MySQL (shared)
+- Database: **libSQL (SQLite-compatible) single file** via `@libsql/client` + Drizzle ORM — **not MySQL, and not shared with auto-wechat**. See ADR 20260822120802.
 
 **Key Features:**
 - Responsive personal website
@@ -82,12 +82,16 @@ yibin-web/
 ```
 yibin-net (Docker network)
 ├── MySQL 8.4 (3306)
-│   └── wechat_ai database (portal + auto-wechat)
+│   └── wechat_ai database — auto-wechat ONLY (portal does not use MySQL)
 ├── Redis 7 (6379)
-│   └── Session cache + task queue
+│   └── Session cache + task queue — auto-wechat only
 └── Nginx (80/443)
     └── HTTPS reverse proxy for three domains
 ```
+
+**Portal 的持久层不在上面这张图里**——它是一个 libSQL 单文件库，不占 Docker 网络里的任何服务（ADR 20260822120802）。
+
+> 这一节曾经写作「wechat_ai database (portal + auto-wechat)」，与实现从不相符。该错误的代价不是文档不整洁，而是它让读者（包括 AI）以为可以跨 portal 与 auto-wechat 做 join、共用连接池、共用迁移工具——这些一项都不成立。**portal 与 auto-wechat 之间没有共享持久层，跨两者的数据需求必须走接口。**
 
 ### Environment & Configuration
 
@@ -172,12 +176,30 @@ CVM (Beijing · 49.233.142.172)
 
 ## Key Design Decisions
 
-1. **Monorepo:** Single repo for coordinated development & deployment
-2. **Unified Docker Compose:** All services orchestrated together in production
-3. **Shared Database:** Portal & Auto-Wechat share MySQL (different schemas)
-4. **Frontend Build-Time Secrets:** Environment variables baked into frontend bundles at build time
-5. **Static Resume:** Next.js SSG for best performance (no runtime backend)
-6. **Nginx Reverse Proxy:** Single entry point for HTTPS, routing, & caching
+**决策理由不在本文件，在 [`docs/adr/`](./adr/AGENTS.md)。**
+
+本节曾是一段六条的 bullet 列表，只说"选了什么"，不说为什么不选别的、代价是什么。它的第 3 条（"Portal & Auto-Wechat share MySQL"）与实现从不相符且长期无人察觉——因为它没有日期、没有状态、没有对应实现的锚点。这正是引入 ADR 制度的直接动因（ADR 20260822120805）。
+
+现在的决策记录：
+
+| ADR | 结论 |
+|-----|------|
+| 20260822120801 | Monorepo 承载三站：部署耦合决定仓库边界 |
+| 20260822120802 | Portal 用 libSQL 单文件库，**不**复用 auto-wechat 的 MySQL |
+| 20260822120803 | Resume 用 Next.js SSG，不保留运行时后端 |
+| 20260822120804 | 单台 CVM + Docker Compose，不上 K8s |
+| 20260822120805 | 引入 ADR 制度：不可变 + 前向指针 + 生成式索引 |
+| 20260822120806 | AGENTS.md 分层上下文 |
+| 20260822120807 | CI 质量门禁前置，生产发布改人工 promote |
+| 20260822120808 | Portal 接口类型从 Drizzle schema 派生 |
+| 20260822120809 | PreToolUse hooks 做机制门禁，fail-closed |
+
+完整索引（含状态与前向指针）见 [`docs/adr/AGENTS.md`](./adr/AGENTS.md)，由脚本生成。
+
+**尚未落 ADR 的既有做法**（发现时补，不要当成已批准的设计）：
+
+- 前端构建期注入环境变量（secret 被打进 bundle）——这是**已知风险**，前端 bundle 里的任何值都等于公开，不要往里放真凭据
+- Nginx 单入口反代承载 HTTPS、路由与缓存
 
 ---
 

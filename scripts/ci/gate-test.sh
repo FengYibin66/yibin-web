@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# evaluate-gate.sh 的回归测试。可在 macOS 自带 bash 3.2 上运行。
+#
+# 用法：bash scripts/ci/gate-test.sh
+set -uo pipefail
+
+GATE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/evaluate-gate.sh"
+pass=0
+fail=0
+
+# expect <期望码> <用例名> <参数...>
+expect() {
+  want="$1"; name="$2"; shift 2
+  bash "$GATE" "$@" >/dev/null 2>&1
+  got=$?
+  if [ "$got" = "$want" ]; then
+    printf '  ✅ %s\n' "$name"; pass=$((pass + 1))
+  else
+    printf '  ❌ %s — 期望 exit %s，实际 %s\n' "$name" "$want" "$got"; fail=$((fail + 1))
+  fi
+}
+
+echo "evaluate-gate.sh"
+
+# 只改了 README：全部 path-filter 跳过，应通过
+expect 0 "全跳过（只改文档）通过" \
+  changes:success docs-index:skipped hooks-test:skipped resume:skipped \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+# 全部跑且全过
+expect 0 "全成功通过" \
+  changes:success docs-index:success hooks-test:success resume:success \
+  portal:success wechat-frontend:success wechat-backend:success
+
+# 单个 job 失败必须拦
+expect 1 "resume 失败被拦" \
+  changes:success docs-index:skipped hooks-test:skipped resume:failure \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+expect 1 "go test 失败被拦" \
+  changes:success docs-index:skipped hooks-test:skipped resume:skipped \
+  portal:skipped wechat-frontend:skipped wechat-backend:failure
+
+# cancelled 不等于通过
+expect 1 "cancelled 被拦" \
+  changes:success docs-index:skipped hooks-test:skipped resume:cancelled \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+# changes 自身跳过/失败：无法判定范围，必须拦（否则一堆 skipped 会伪装成通过）
+expect 1 "changes 跳过被拦" \
+  changes:skipped docs-index:skipped hooks-test:skipped resume:skipped \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+expect 1 "changes 失败被拦" \
+  changes:failure docs-index:skipped hooks-test:skipped resume:skipped \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+# 结果为空串（表达式未求值）不能当通过
+expect 1 "空结果被拦" \
+  changes:success docs-index:skipped hooks-test:skipped resume: \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
+
+# changes 缺失（参数没传）必须拦
+expect 1 "changes 缺失被拦" \
+  docs-index:skipped resume:success
+
+# 无参数是调用错误，非门禁结论
+expect 2 "无参数报用法错误"
+
+echo
+echo "通过 $pass / 失败 $fail"
+[ "$fail" -eq 0 ]

@@ -1,0 +1,180 @@
+# 质量门禁（ADR 20260822120807）。
+#
+# 改造前本仓库唯一的 workflow 是 deploy.yml，它 push main 即自动上生产，
+# 且全文一次 test / lint 都没跑——而仓库里有 50+ 个测试从未在 CI 执行过。
+#
+# 本 workflow 只回答「能不能上」。「要不要上」由人在 deploy.yml 手动触发时回答。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main # main 的门禁在 PR 阶段已跑过，避免重复计费
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # path-based 过滤：偿还 ADR 20260822120801 的全量构建代价，
+  # 改一行简历文案不该重建 portal 和 auto-wechat。
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      portal: ${{ steps.filter.outputs.portal }}
+      resume: ${{ steps.filter.outputs.resume }}
+      wechat: ${{ steps.filter.outputs.wechat }}
+      wechat_go: ${{ steps.filter.outputs.wechat_go }}
+      docs: ${{ steps.filter.outputs.docs }}
+      hooks: ${{ steps.filter.outputs.hooks }}
+      ci_scripts: ${{ steps.filter.outputs.ci_scripts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            portal:
+              - 'apps/portal/**'
+              - 'pnpm-lock.yaml'
+            resume:
+              - 'apps/resume/**'
+              - 'pnpm-lock.yaml'
+            wechat:
+              - 'apps/auto-wechat/frontend/**'
+              - 'pnpm-lock.yaml'
+            wechat_go:
+              - 'apps/auto-wechat/backend/**'
+            docs:
+              - 'docs/adr/**'
+              - 'scripts/docs/**'
+            hooks:
+              - '.claude/hooks/**'
+            ci_scripts:
+              - 'scripts/ci/**'
+
+  # ADR 索引表是生成物，校验它与实际 ADR 同步（见 scripts/AGENTS.md「生成物纪律」）
+  docs-index:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/docs/gen_docs_index.py --check
+
+  # 门禁脚本是生产代码：静默失效时没有症状，只有下一次事故。
+  # 改 hooks 或改门禁汇总逻辑都要跑对应回归测试。
+  hooks-test:
+    needs: changes
+    if: needs.changes.outputs.hooks == 'true' || needs.changes.outputs.ci_scripts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: hooks 回归测试
+        if: needs.changes.outputs.hooks == 'true'
+        run: bash .claude/hooks/tests/test-hooks.sh
+      - name: 门禁汇总逻辑回归测试
+        if: needs.changes.outputs.ci_scripts == 'true'
+        run: bash scripts/ci/gate-test.sh
+
+  resume:
+    needs: changes
+    if: needs.changes.outputs.resume == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @yibin/resume type-check
+      - run: pnpm --filter @yibin/resume test
+      # 刻意不跑 `pnpm --filter @yibin/resume lint`：eslint.config.mjs 按 flat config 写，
+      # 但装的 eslint-config-next@15.5.20 导出的是旧版 eslintrc 对象 → `nextVitals is not iterable`。
+      # 这是依赖版本不匹配，修它是一次独立的升级决策（见根 CLAUDE.md「已知负债」），
+      # 不是本门禁该顺手带的。跑一个已知必然失败的步骤只会训练人忽略红灯。
+
+  portal:
+    needs: changes
+    if: needs.changes.outputs.portal == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # portal 的真实可用检查只有构建（client 是 `tsc -b && vite build`，含类型检查）。
+      #
+      # 刻意不跑 `pnpm --filter @yibin/portal-client lint`：那个 script 声明了 `eslint src`，
+      # 但 portal 既没有 eslint 依赖也没有 eslint 配置文件——执行必然 command not found。
+      # 跑一个已知必然失败的步骤会让每个 portal PR 都红，等于让人习惯忽略红灯。
+      # 这条已登记为负债（见根 CLAUDE.md「已知负债」与 apps/portal/AGENTS.md）；
+      # 要补 lint 就先补依赖与配置，然后把这一步加回来。
+      #
+      # 同理不设覆盖率闸门（portal 现在 0 测试）：
+      # 设一个当前必然失败的闸门等于没有闸门（ADR 20260822120807）。
+      - run: pnpm --filter @yibin/portal build
+
+  wechat-frontend:
+    needs: changes
+    if: needs.changes.outputs.wechat == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter wechat-ai-frontend typecheck
+
+  wechat-backend:
+    needs: changes
+    if: needs.changes.outputs.wechat_go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: apps/auto-wechat/backend/go.sum
+      - name: go vet
+        working-directory: apps/auto-wechat/backend
+        run: go vet ./...
+      - name: go test
+        working-directory: apps/auto-wechat/backend
+        run: go test ./...
+
+  # 汇总门：required check 指向这一个 job，各语言 job 按 path 跳过时也能通过。
+  # skipped 与 success 都算过，failure / cancelled 不算。
+  gate:
+    needs: [changes, docs-index, hooks-test, resume, portal, wechat-frontend, wechat-backend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate
+        # 逻辑抽到脚本里，本地可测（scripts/ci/gate-test.sh）。
+        # 刻意不用关联数组：macOS 自带 bash 3.2 不支持，本地就无法验证门禁逻辑，
+        # 而无法本地验证的门禁在静默失效时没有症状。
+        run: |
+          bash scripts/ci/evaluate-gate.sh \
+            "changes:${{ needs.changes.result }}" \
+            "docs-index:${{ needs.docs-index.result }}" \
+            "hooks-test:${{ needs.hooks-test.result }}" \
+            "resume:${{ needs.resume.result }}" \
+            "portal:${{ needs.portal.result }}" \
+            "wechat-frontend:${{ needs.wechat-frontend.result }}" \
+            "wechat-backend:${{ needs.wechat-backend.result }}"

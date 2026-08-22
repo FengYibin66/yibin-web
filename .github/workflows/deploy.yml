@@ -1,9 +1,16 @@
 name: Deploy to Production
 
+# 生产发布是人工动作，不随合入 main 自动触发（ADR 20260822120807）。
+#
+# 理由：本仓库主要代码产出者是 AI，其典型失败不是「写出跑不过测试的代码」（CI 能拦），
+# 而是「写出跑得过测试但方向错了的代码」。对这类失败唯一有效的检查点是人看一眼，
+# 而「合入即上线」恰好取消了这个检查点存在的时间窗。
+#
+# 上线：Actions → Deploy to Production → Run workflow（选 main）
+# 回滚：同一入口重新跑上一个已知良好的 commit
+#
+# 若觉得这一步麻烦，正确的解法是补足自动化验收（E2E），不是恢复 push 触发。
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:

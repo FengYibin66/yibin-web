@@ -22,7 +22,9 @@ export const project = sqliteTable('project', {
   techTags: text('tech_tags').notNull().default('[]'), // JSON array string
   screenshotPath: text('screenshot_path'),
   url: text('url').notNull(),
-  status: text('status').notNull().default('live'), // "live" | "dev"
+  // enum 约束落在 schema 侧而非只在客户端声明（ADR 20260822120808）：
+  // 只在消费端存在的约束等于不存在——任何直接写库的路径都能绕过它。
+  status: text('status', { enum: ['live', 'dev'] }).notNull().default('live'),
   order: integer('order').notNull().default(0),
   visible: integer('visible').notNull().default(1), // 0 | 1
 })

@@ -3,26 +3,12 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api', withCredentials: true })
 
-export interface Profile {
-  id: number
-  nameEn: string; nameZh: string
-  bioEn: string; bioZh: string
-  avatarPath: string
-  github: string; linkedin: string; email: string
-  updatedAt: number
-}
+// 接口类型从服务端 Drizzle schema 派生，不在此手写（ADR 20260822120808）。
+// `import type` 在编译期擦除，不引入运行时依赖。
+// 改字段请改 apps/portal/server/src/db/schema.ts，这里会自动跟随并在不匹配处报错。
+export type { Profile, Project, ProjectStatus } from '@portal-server/db/types'
 
-export interface Project {
-  id: number
-  nameEn: string; nameZh: string
-  descEn: string; descZh: string
-  techTags: string        // JSON string
-  screenshotPath: string | null
-  url: string
-  status: 'live' | 'dev'
-  order: number
-  visible: number
-}
+import type { Profile, Project } from '@portal-server/db/types'
 
 // --- Public ---
 export function useProfile() {

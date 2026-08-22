@@ -47,6 +47,46 @@ expect 0 pre-push-main.sh "$(bash_in 'git log --oneline maintenance')"         "
 expect 0 pre-push-main.sh "$(bash_in 'git push origin HEAD:feat/x')"          "放行 refspec 指向 feature"
 expect 0 pre-push-main.sh "$(bash_in 'git push -u origin worktree-x')"        "放行带 -u 的 feature 分支"
 
+# 绕过回归：以下四种都是普通、非混淆的写法，早期版本（三条独立 grep）全部放行。
+# 守卫自己的测试当时恰好只覆盖 `origin main` / `HEAD:main`，绕开了它们——
+# 所以这几条是「测试绿≠守卫有效」的直接教训，不许删。
+expect 2 pre-push-main.sh "$(bash_in 'git push origin refs/heads/main')" \
+  "拦截全路径 refs/heads/main（无冒号）"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin refs/heads/master')" \
+  "拦截全路径 refs/heads/master"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin +main')" \
+  "拦截强推前缀 +main"
+expect 2 pre-push-main.sh "$(bash_in 'git push --force-with-lease origin main')" \
+  "拦截 --force-with-lease origin main"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin "main"')" \
+  "拦截带引号的 \"main\""
+expect 2 pre-push-main.sh "$(bash_in 'bash -c "git push origin main"')" \
+  "拦截嵌套 bash -c 里的 push main"
+expect 2 pre-push-main.sh "$(bash_in 'git push . HEAD:main')" \
+  "拦截 remote 为 . 的 HEAD:main"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin :main')" \
+  "拦截删除 main 分支（空源 refspec）"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin --delete main')" \
+  "拦截 --delete main"
+expect 2 pre-push-main.sh "$(bash_in 'git push --all origin')" \
+  "拦截 --all（推送全部分支含 main）"
+expect 2 pre-push-main.sh "$(bash_in 'git push --mirror origin')" \
+  "拦截 --mirror"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin feat/x main')" \
+  "拦截多 refspec 中夹带 main"
+
+# 规范化不该误伤这些合法目标
+expect 0 pre-push-main.sh "$(bash_in 'git push origin refs/heads/feat/x')" \
+  "放行全路径的 feature 分支"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin +feat/x')" \
+  "放行强推 feature 分支"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin main:feat/x')" \
+  "放行把 main 内容推到 feature（目标端不是 main）"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin mainline')" \
+  "放行 mainline（不是 main）"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin master-notes')" \
+  "放行 master-notes（不是 master）"
+
 # 误报回归：早期版本扫整条命令串，导致 commit message 里出现 "main" 就被拦。
 # 误报会训练人绕过守卫，比漏报更伤——所以只检查 git push 那一段。
 expect 0 pre-push-main.sh "$(bash_in "$(printf 'git commit -m "fix: 在 main 尚未 fetch 时探测"\ngit push origin feat/x')")" \
@@ -114,6 +154,21 @@ expect 2 pre-no-verify.sh "$(bash_in 'git commit --no-verify -m x')"           "
 expect 2 pre-no-verify.sh "$(bash_in 'FOO=1 git push --no-verify')"            "拦截环境变量前缀形态"
 expect 0 pre-no-verify.sh "$(bash_in 'git commit -m x')"                       "放行正常 commit"
 expect 0 pre-no-verify.sh "$(bash_in 'npm test --no-verify')"                   "放行非 git 命令的同名 flag"
+
+# -n 的语义按子命令区分：只有 commit 的 -n 才是 --no-verify。
+# 早期版本注释声称覆盖 -n 但代码没实现，最常见的绕法反而放行。
+expect 2 pre-no-verify.sh "$(bash_in 'git commit -n -m x')"                    "拦截 commit -n"
+expect 2 pre-no-verify.sh "$(bash_in 'git commit -nm wip')"                    "拦截聚合短选项 -nm"
+expect 2 pre-no-verify.sh "$(bash_in 'git commit -m x -n')"                    "拦截 -n 在末尾"
+expect 2 pre-no-verify.sh "$(bash_in 'git -c user.name=x commit -n -m y')"     "拦截 git 级选项后的 commit -n"
+expect 2 pre-no-verify.sh "$(bash_in 'git -C /tmp/repo commit -n -m y')"       "拦截 -C dir 后的 commit -n"
+# 这些 -n 不是 --no-verify，拦了就是误报
+expect 0 pre-no-verify.sh "$(bash_in 'git push -n')"                           "放行 push -n（是 --dry-run）"
+expect 0 pre-no-verify.sh "$(bash_in 'git push -n origin feat/x')"             "放行 push --dry-run 带参"
+expect 0 pre-no-verify.sh "$(bash_in 'git add -n .')"                          "放行 add -n（是 --dry-run）"
+expect 0 pre-no-verify.sh "$(bash_in 'git log -n 5')"                          "放行 log -n（是条数）"
+expect 0 pre-no-verify.sh "$(bash_in 'git commit -am wip')"                    "放行 -am（不含 n）"
+expect 0 pre-no-verify.sh "$(bash_in 'git status -n')"                         "放行其他子命令的 -n"
 
 echo "H3 pre-secret-scan.sh"
 expect 2 pre-secret-scan.sh "$(write_in 'a.ts' 'const k = "sk-abcdefghijklmnopqrstuvwxyz123"')" "拦截 sk- 形态"

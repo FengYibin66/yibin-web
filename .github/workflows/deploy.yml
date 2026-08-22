@@ -37,7 +37,9 @@ jobs:
       # 3. Setup pnpm
       # ──────────────────────────────────────────────────────────────
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        # 必须与 ci.yml 一致（v4）。版本漂移意味着「CI 验过的构建」
+        # 与「生产实际执行的构建」用的不是同一个包管理器。
+        uses: pnpm/action-setup@v4
         with:
           version: 10.22.0
 
@@ -91,7 +93,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          dockerfile: docker/Dockerfile.portal-server
+          file: docker/Dockerfile.portal-server
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/yibin-portal-server:latest
@@ -103,7 +105,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          dockerfile: docker/Dockerfile.resume
+          file: docker/Dockerfile.resume
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/yibin-resume:latest
@@ -160,27 +162,43 @@ jobs:
         env:
           CVM_IP: ${{ secrets.CVM_IP }}
         run: |
-          sleep 10  # Wait for containers to start
+          set -euo pipefail
 
-          # Check Portal health
-          curl -f http://$CVM_IP/health || true
+          # 每个检查都必须真的成立。原实现每条 curl 都跟着 `|| true`，
+          # 于是服务起不来时这一步照样打印「✅ Health checks completed」并成功——
+          # 部署验证等于没有。健康检查失败必须让整个 deploy 失败。
+          check() {
+            local name="$1" url="$2"
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS --max-time 10 "$url" >/dev/null; then
+                echo "✅ $name 健康"
+                return 0
+              fi
+              echo "   $name 未就绪（第 $attempt 次），5s 后重试：$url"
+              sleep 5
+            done
+            echo "❌ $name 健康检查失败：$url" >&2
+            return 1
+          }
 
-          # Check Auto-Wechat health
-          curl -f http://$CVM_IP/api/v1/health || true
+          # 容器启动有冷启动时间，靠上面的重试而非固定 sleep 吸收
+          check "Portal" "http://$CVM_IP/health"
+          check "Auto-Wechat" "http://$CVM_IP/api/v1/health"
 
-          echo "✅ Health checks completed"
+          echo "✅ 全部健康检查通过"
 
       # ──────────────────────────────────────────────────────────────
       # 13. Notify on success/failure (optional)
       # ──────────────────────────────────────────────────────────────
       - name: Notify deployment status
         if: always()
+        # 用 steps 级的 job.status 判断是错的：在步骤运行的那一刻 job 尚未结束，
+        # `job.status` 恒为 'success'，于是这一步永远打印「成功」，
+        # 连部署失败都会报成功。改用 GitHub 提供的 needs/step 级条件表达式。
         run: |
-          if [ ${{ job.status }} = 'success' ]; then
-            echo "✅ Deployment to production successful!"
-            # Optional: Send Slack/Feishu notification
-            # curl -X POST ${{ secrets.SLACK_WEBHOOK }} ...
-          else
-            echo "❌ Deployment failed!"
-            # Optional: Send alert
+          if [ "${{ contains(join(steps.*.outcome, ','), 'failure') }}" = "true" ]; then
+            echo "❌ 部署失败——有步骤未通过"
+            # 可选：发 Slack / 飞书告警
+            exit 1
           fi
+          echo "✅ 生产部署成功"

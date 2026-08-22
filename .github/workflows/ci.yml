@@ -36,17 +36,30 @@ jobs:
         id: filter
         with:
           filters: |
+            # 影响全部应用构建的共享配置。任一改动都要重跑所有 app——
+            # 否则「改坏 Dockerfile / 根 workspace 配置」会让全部 job 跳过、
+            # gate 判「全 skipped = 通过」而绿灯，构建产物从没被验证过。
+            shared: &shared
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'tsconfig.base.json'
+              - 'docker/**'
+              - 'docker-compose*.yml'
+              - 'config/**'
+              - '.nvmrc'
             portal:
               - 'apps/portal/**'
-              - 'pnpm-lock.yaml'
+              - *shared
             resume:
               - 'apps/resume/**'
-              - 'pnpm-lock.yaml'
+              - *shared
             wechat:
               - 'apps/auto-wechat/frontend/**'
-              - 'pnpm-lock.yaml'
+              - *shared
             wechat_go:
               - 'apps/auto-wechat/backend/**'
+              - *shared
             docs:
               - 'docs/adr/**'
               - 'scripts/docs/**'
@@ -56,6 +69,25 @@ jobs:
               - 'scripts/ci/**'
             workflows:
               - '.github/workflows/**'
+
+  # Secret 扫描。**刻意不做 path 过滤**：secret 可能出现在任何文件，
+  # 按路径跳过等于给自己留门。这也是唯一一个无条件跑的检查。
+  #
+  # 加它的直接原因：`.claude/hooks/pre-secret-scan.sh` 与 hooks/AGENTS.md 都写着
+  # 「CI 的 secret 扫描才是最终防线」，而在此之前**那个扫描根本不存在**——
+  # 全仓 grep gitleaks/trufflehog 命中为 0。声称两层防御、实际零层，
+  # 比明说「只有一层」更危险，因为读文档的人会以为有网。
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks 要扫历史，浅克隆会漏
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
 
   # ADR 索引表是生成物，校验它与实际 ADR 同步（见 scripts/AGENTS.md「生成物纪律」）
   docs-index:
@@ -225,7 +257,7 @@ jobs:
   # 汇总门：required check 指向这一个 job，各语言 job 按 path 跳过时也能通过。
   # skipped 与 success 都算过，failure / cancelled 不算。
   gate:
-    needs: [changes, docs-index, hooks-test, resume, resume-e2e, portal, wechat-frontend, wechat-backend]
+    needs: [changes, secret-scan, docs-index, hooks-test, resume, resume-e2e, portal, wechat-frontend, wechat-backend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -241,6 +273,7 @@ jobs:
         run: |
           bash scripts/ci/evaluate-gate.sh \
             "changes:${{ needs.changes.result }}" \
+            "secret-scan:${{ needs.secret-scan.result }}" \
             "docs-index:${{ needs.docs-index.result }}" \
             "hooks-test:${{ needs.hooks-test.result }}" \
             "resume:${{ needs.resume.result }}" \

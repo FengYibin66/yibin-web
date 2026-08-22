@@ -195,6 +195,44 @@ describe('会话认证', () => {
       expect(res.status).toBe(500)
     })
 
+    it('长度够但仍是占位值 → 视为未配置', async () => {
+      // config/env.shared.example 的占位值恰好 33 字符，能通过 ≥32 的长度检查。
+      // 若只查长度，运维漏填 + 忽略 env-build 退出码就会让生产用一个
+      // 任何读过本仓库的人都知道的 HMAC key 运行。
+      const placeholder = 'CHANGE_ME_RUN_openssl_rand_hex_32'
+      expect(placeholder.length).toBeGreaterThanOrEqual(32) // 证明长度检查挡不住它
+
+      for (const value of [
+        placeholder,
+        'REPLACE_ME_with_a_real_secret_value_here',
+        'YOUR_SECRET_KEY_GOES_RIGHT_HERE_OK',
+        'example_secret_that_is_long_enough_xx',
+        'TODO_generate_a_proper_secret_value_x',
+      ]) {
+        process.env.SESSION_SECRET = value
+        const res = await buildApp().request('/protected')
+        expect(res.status, `占位值 "${value}" 不应被接受`).toBe(500)
+      }
+    })
+
+    it('占位值检查大小写不敏感', async () => {
+      process.env.SESSION_SECRET = 'change_me_this_is_long_enough_to_pass_32'
+      const res = await buildApp().request('/protected')
+      expect(res.status).toBe(500)
+    })
+
+    it('真随机的 hex secret 被接受（不误伤正常值）', async () => {
+      // 32 字节 hex = 64 字符，openssl rand -hex 32 的产物形态
+      process.env.SESSION_SECRET = 'a3f8e1c94b7d2065fe8a1b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708'
+      const app = buildApp()
+      const login = await app.request('/login', { method: 'POST', body: PASSWORD })
+      expect(login.status).toBe(200)
+      const res = await app.request('/protected', {
+        headers: { cookie: sessionCookieFrom(login) },
+      })
+      expect(res.status).toBe(200)
+    })
+
     it('SESSION_SECRET 缺失时不签发会话（避免「登录成功却处处 401」）', async () => {
       delete process.env.SESSION_SECRET
       const res = await buildApp().request('/login', { method: 'POST', body: PASSWORD })

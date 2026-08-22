@@ -6,28 +6,54 @@ const SESSION_COOKIE = 'portal_session'
 /** 会话有效期。签名里带签发时刻，服务端据此判过期——不依赖浏览器是否遵守 maxAge。 */
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 会话 cookie 必须是**签名**的。
+//
+// 修复前的实现是 `setCookie(c, 'portal_session', 'authenticated')` + 比较字面量
+// `'authenticated'`——值固定、无签名，任何人在浏览器里手动设这个 cookie 就获得
+// 完整管理员权限（增删项目、改档案、上传文件），登录密码形同虚设。
+//
+// 现在 cookie 值是「签发时间戳 + HMAC 签名」。伪造需要 SESSION_SECRET，
+// 且服务端独立校验签发时刻，过期即拒。
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * 会话 cookie 必须是**签名**的。
+ * 未被替换的占位值标记。
  *
- * 修复前的实现是 `setCookie(c, 'portal_session', 'authenticated')` + 比较字面量
- * `'authenticated'`——值固定、无签名，任何人在浏览器里手动设这个 cookie 就获得
- * 完整管理员权限（增删项目、改档案、上传文件），登录密码形同虚设。
+ * 只靠长度下限是不够的：`config/env.shared.example` 里的占位值
+ * `CHANGE_ME_RUN_openssl_rand_hex_32` 恰好 33 字符，**能通过 ≥32 的检查**。
+ * 一旦运维没填真值又忽略了 `env-build.sh --check` 的非零退出码，
+ * 生产就会用一个**任何读过本仓库的人都知道的 HMAC key** 运行——
+ * 本次修复的认证绕过会原样复活。
  *
- * 现在 cookie 值是「签发时间戳 + HMAC 签名」。伪造需要 SESSION_SECRET，
- * 且服务端独立校验签发时刻，过期即拒。
+ * 所以除长度外，还必须拒绝一切带占位标记的值。
  */
+const PLACEHOLDER_MARKERS = ['CHANGE_ME', 'REPLACE_ME', 'YOUR_', 'EXAMPLE', 'TODO']
+
 function sessionSecret(): string | null {
   const secret = process.env.SESSION_SECRET
-  // 长度下限防止用 'x' 之类的占位值把签名削弱成没有
+  // 长度下限防止用 'x' 之类的短占位值把签名削弱成没有
   if (!secret || secret.length < 32) return null
+  // 长度够但仍是占位值的，同样不可接受（见上）
+  const upper = secret.toUpperCase()
+  if (PLACEHOLDER_MARKERS.some((marker) => upper.includes(marker))) return null
   return secret
+}
+
+/**
+ * 会话 secret 是否可用。供登录路由在**比较密码之前**先判配置，
+ * 避免 401/500 的差异变成密码正确性 oracle（见 routes/auth.ts 的说明）。
+ */
+export function sessionSecretUsable(): boolean {
+  return sessionSecret() !== null
 }
 
 /** secret 缺失或过弱时的统一处理：拒绝，并说清原因。fail-closed。 */
 function secretMisconfigured(c: Context) {
   console.error(
-    '[auth] SESSION_SECRET 未设置或短于 32 字符——所有认证请求将被拒绝。' +
-      '生成方式见 config/env.shared.example。'
+    '[auth] SESSION_SECRET 未设置、短于 32 字符，或仍是未替换的占位值' +
+      `（含 ${PLACEHOLDER_MARKERS.join(' / ')} 之一）——所有认证请求将被拒绝。` +
+      '生成：openssl rand -hex 32'
   )
   return c.json({ error: 'Server auth misconfigured' }, 500)
 }

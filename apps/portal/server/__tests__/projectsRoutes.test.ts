@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 const STRONG_SECRET = 'a'.repeat(48)
 const PASSWORD = 'test-password'
@@ -219,6 +219,55 @@ describe('projects 路由', () => {
         expect(res.status, path).toBe(200)
         expect(await res.json()).toEqual({ status: 'ok' })
       }
+    })
+  })
+
+  // 这一组打在**真实的 authRouter** 上（不是 auth.test.ts 里的合成路由），
+  // 因为要验证的正是那条路由的判定顺序。
+  describe('登录接口不得成为密码 oracle', () => {
+    const original = process.env.SESSION_SECRET
+
+    afterEach(() => {
+      process.env.SESSION_SECRET = original
+    })
+
+    async function login(password: string) {
+      return app.request('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+    }
+
+    it('SESSION_SECRET 不可用时，对错密码返回同一状态码', async () => {
+      // 若先比密码再查配置，正确密码得 500、错误密码得 401，
+      // 这个差异足以在配置错误的整段时间里离线爆破 ADMIN_PASSWORD。
+      delete process.env.SESSION_SECRET
+
+      const right = await login(PASSWORD)
+      const wrong = await login('definitely-not-the-password')
+
+      expect(right.status).toBe(500)
+      expect(wrong.status).toBe(500)
+      expect(right.status).toBe(wrong.status)
+      // 响应体也不能有差异
+      expect(await right.json()).toEqual(await wrong.json())
+    })
+
+    it('占位值 secret 同样不区分密码对错', async () => {
+      process.env.SESSION_SECRET = 'CHANGE_ME_RUN_openssl_rand_hex_32'
+
+      const right = await login(PASSWORD)
+      const wrong = await login('nope')
+      expect(right.status).toBe(500)
+      expect(wrong.status).toBe(500)
+    })
+
+    it('配置正常时才区分密码对错', async () => {
+      const right = await login(PASSWORD)
+      const wrong = await login('nope')
+      expect(right.status).toBe(200)
+      expect(wrong.status).toBe(401)
     })
   })
 })

@@ -1,0 +1,73 @@
+# gitleaks 配置。由 .github/workflows/ci.yml 的 secret-scan job 使用。
+#
+# 存在的理由：`.claude/hooks/pre-secret-scan.sh` 只在 Claude Code 的 Edit/Write
+# 时刻拦截、且只认几个有明确前缀的凭据形态；经 Bash 写入、或换个凭据类型就漏。
+# 那个 hook 的注释明说「CI 才是最终防线」——本文件与对应 job 让这句话成立。
+#
+# 本地跑：gitleaks detect --config .gitleaks.toml --no-banner
+
+title = "yibin-web gitleaks config"
+
+# 继承 gitleaks 内置的全部规则（覆盖 AWS/GCP/GitHub/Stripe/Slack/私钥等上百种）
+[extend]
+useDefault = true
+
+# ── 本仓库特有的凭据形态 ────────────────────────────────────────────────
+# 内置规则不认这些键名，而它们恰恰是本仓库最相关的两个 secret。
+
+[[rules]]
+id = "yibin-session-secret"
+description = "portal 会话签名密钥被硬编码（应只存在于 .env.*，不入库）"
+# 匹配「SESSION_SECRET = 一串足够长的字面量」，排除占位与环境变量引用
+regex = '''(?i)session_secret\s*[:=]\s*['"]?[A-Za-z0-9+/=_-]{24,}['"]?'''
+tags = ["portal", "session"]
+
+[[rules]]
+id = "yibin-admin-password"
+description = "portal 管理员密码被硬编码"
+regex = '''(?i)admin_password\s*[:=]\s*['"]?[^\s'"$#{]{8,}['"]?'''
+tags = ["portal", "password"]
+
+[[rules]]
+id = "yibin-mysql-password"
+description = "MySQL 密码被硬编码"
+regex = '''(?i)mysql_(root_)?password\s*[:=]\s*['"]?[^\s'"$#{]{8,}['"]?'''
+tags = ["mysql"]
+
+[[rules]]
+id = "yibin-dashscope-key"
+description = "DashScope / 通义千问 API key 被硬编码"
+regex = '''sk-[a-zA-Z0-9]{20,}'''
+tags = ["llm"]
+
+# ── 允许清单 ────────────────────────────────────────────────────────────
+[allowlist]
+description = "占位值、示例文件与测试固定值"
+
+# 路径级：这些文件按设计只含占位值或示例
+paths = [
+  # config/*.example 是键名模板，值一律是 CHANGE_ME_*
+  '''config/.*\.example$''',
+  # gitleaks 自身的配置里写了 regex，会自我命中
+  '''\.gitleaks\.toml$''',
+  # 测试里的固定值是刻意的合成凭据（如 'a'.repeat(48)），非真实 secret
+  '''apps/portal/server/__tests__/.*''',
+  # hook 自身的检测模式与其回归测试里的示例凭据
+  '''\.claude/hooks/pre-secret-scan\.sh$''',
+  '''\.claude/hooks/tests/.*''',
+  # 文档在解释漏洞成因时会引用示例值
+  '''docs/adr/.*\.md$''',
+]
+
+# 值级：明确的占位与非凭据形态
+regexes = [
+  '''CHANGE_ME[A-Z_a-z0-9]*''',
+  '''REPLACE_ME[A-Z_a-z0-9]*''',
+  '''YOUR_[A-Z_]+''',
+  # 环境变量引用与 compose 插值，不是字面量
+  '''\$\{?[A-Z_][A-Z0-9_]*\}?''',
+  '''process\.env\.[A-Z_][A-Z0-9_]*''',
+  # 文档里举例用的显式假值
+  '''authenticated''',
+  '''example\.com''',
+]

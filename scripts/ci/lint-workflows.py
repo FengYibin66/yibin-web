@@ -134,12 +134,76 @@ def check_gate_covers_all_needs(name: str, jobs: dict) -> list[str]:
     return problems
 
 
+def check_path_filters_cover_shared(name: str, jobs: dict) -> list[str]:
+    """C4：各 app 的 path filter 必须包含共享配置（anchor 展开）。
+
+    没有它的后果：只改 docker/ 或根 workspace 配置时，全部语言 job 因 path
+    未命中而 skipped，gate 判「全 skipped = 通过」→ 绿灯，而构建产物从未验证过。
+
+    顺带校验 anchor 真的展开成了模式列表——若哪天写成 `shared: *shared`
+    （少了 `-`）会得到字符串而非列表，filter 静默失效。
+    """
+    problems: list[str] = []
+    for job_id, job in jobs.items():
+        if not isinstance(job, dict):
+            continue
+        for step in job_steps(job):
+            if "paths-filter" not in str(step.get("uses", "")):
+                continue
+            raw = (step.get("with") or {}).get("filters")
+            if not isinstance(raw, str):
+                continue
+            try:
+                filters = yaml.safe_load(raw) or {}
+            except yaml.YAMLError as exc:
+                problems.append(f"{name} → job `{job_id}`：filters 不是合法 YAML（{exc}）")
+                continue
+
+            shared = filters.get("shared")
+            if shared is None:
+                continue  # 没用 shared anchor，不强制
+
+            if not isinstance(shared, list):
+                problems.append(
+                    f"{name} → job `{job_id}`：`shared` 应是模式列表，实际是 "
+                    f"{type(shared).__name__}——anchor 可能写成了 `shared: *x` 而非 `- *x`"
+                )
+                continue
+
+            shared_set = {p for p in shared if isinstance(p, str)}
+
+            for key, patterns in filters.items():
+                if key == "shared" or not isinstance(patterns, list):
+                    continue
+                # anchor 引用会以嵌套列表出现，展平后比对
+                flat: set[str] = set()
+                for item in patterns:
+                    if isinstance(item, str):
+                        flat.add(item)
+                    elif isinstance(item, list):
+                        flat.update(p for p in item if isinstance(p, str))
+
+                # 只要求「构建类」filter 覆盖共享配置；
+                # docs/hooks/ci_scripts/workflows 这些与应用构建无关，豁免
+                if key in {"docs", "hooks", "ci_scripts", "workflows"}:
+                    continue
+                missing = shared_set - flat
+                if missing:
+                    problems.append(
+                        f"{name} → job `{job_id}`：filter `{key}` 未包含共享配置 "
+                        f"{sorted(missing)}。改这些文件时该 app 的 job 会被跳过，"
+                        f"而 gate 把 skipped 当通过。"
+                    )
+    return problems
+
+
 def lint(workflow_dir: Path = WORKFLOW_DIR) -> list[str]:
     problems: list[str] = []
     for name, doc in load_workflows(workflow_dir).items():
         jobs = doc.get("jobs") or {}
         problems += check_checkout_present(name, jobs)
         problems += check_gate_covers_all_needs(name, jobs)
+        problems += check_path_filters_cover_shared(name, jobs)
     return problems
 
 
@@ -216,6 +280,80 @@ jobs:
           bash scripts/ci/evaluate-gate.sh "alpha:${{ needs.alpha.result }}" "beta-two:${{ needs.beta-two.result }}"
 """,
         True,
+    ),
+    (
+        "app filter 漏了共享配置 → 应报错",
+        """
+jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'docker/**'
+              - 'pnpm-lock.yaml'
+            portal:
+              - 'apps/portal/**'
+""",
+        False,
+    ),
+    (
+        "app filter 用 anchor 引入共享配置 → 应通过",
+        """
+jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'docker/**'
+              - 'pnpm-lock.yaml'
+            portal:
+              - 'apps/portal/**'
+              - *shared
+""",
+        True,
+    ),
+    (
+        "docs/hooks 等非构建 filter 无需共享配置 → 应通过",
+        """
+jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'docker/**'
+            docs:
+              - 'docs/adr/**'
+            hooks:
+              - '.claude/hooks/**'
+""",
+        True,
+    ),
+    (
+        "anchor 写成 `shared: *x` 而非 `- *x` → 应报错（filter 会静默失效）",
+        """
+jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            base: &base
+              - 'docker/**'
+            shared: *base
+            portal:
+              - 'apps/portal/**'
+""",
+        False,
     ),
 ]
 

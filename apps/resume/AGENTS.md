@@ -42,18 +42,20 @@ __tests__/               # vitest（31 个）
 
 `lab` 的真实实现在 `components/lab/`（视图）与 `lib/lab/`（逻辑）两处。**不要往 `features/` 加代码，也不要重建它**——若确需第三个落点，先说明为什么现有两处不够。
 
-## 已知未修项（P1，来自验收报告）
+## 验收报告 P1 的当前状态
 
-`docs/reviews/2026-07-12-resume-lab-room-audit.md` 的四条 P1 至今未修。动到相关文件时留意：
+`docs/reviews/2026-07-12-resume-lab-room-audit.md` 列了四条 P1。**那份报告已陈旧**，动手前按下表核对，别照报告下结论：
 
-| 位置 | 问题 |
-|------|------|
-| `components/rooms/ProjectsRoom.tsx:105` | 独立 GSAP camera tween 与 `DoorSection` 争抢 `camera.position` 写入权，未持有所有权也未在 cleanup 中 kill |
-| `components/rooms/ProjectsRoom.tsx:259-301` | 每个 `MonitorBlock` 无条件声明 monitor/TV/phone 三类共 26 个纹理 loader，即使只用其中一种 |
-| `app/gallery/` | 缺 `loading.tsx`，且动态 import 无 fallback UI，首次进入会白屏 |
-| `components/rooms/ContactRoom.tsx:156` | MESSAGE 桶 `onClick={() => {}}` 空交互，有可点击视觉但无动作 |
+| 位置 | 问题 | 状态 |
+|------|------|------|
+| `components/rooms/ProjectsRoom.tsx` camera tween | 与 `DoorSection` 争抢 `camera.position` | **已修**：tween 现在等 `roomLoadState.phase === 'entered'` 才起，且 cleanup 里 `kill()`。回归用例 `__tests__/projectsRoomCamera.test.tsx` |
+| `app/gallery/` 白屏 | `dynamic(..., {ssr:false})` 无 loading fallback，首屏可见文本只有 `<title>` | **已修**：补了两处加载态——dynamic 的 `loading` 与 `app/gallery/loading.tsx`（两个不同时机，缺一仍会白屏）。E2E 直接断言导出 HTML 含 `Loading gallery` |
+| `components/rooms/ContactRoom.tsx` MESSAGE 桶 | `onClick={() => {}}` 空交互 | **已修**：改为聚焦同场景的留言纸（`MessagePaper` 新增 `focusMessage()` imperative handle） |
+| `components/rooms/ProjectsRoom.tsx:259-301` | 每个 `MonitorBlock` 无条件声明 monitor/TV/phone 三类共 26 个纹理 loader，即使只用其中一种 | **未修**。这是性能项，需要按 platform 选纹理或做房间级 manifest 预载，改动面较大 |
 
-**相机所有权**：房间转场的 `camera.position` 动画由 `DoorSection` 统一编排。房间组件只应提供目标 pose，不要自行起 tween——上面第一条就是违反这条的后果。
+**相机所有权**：房间转场的 `camera.position` 动画由 `DoorSection` 统一编排。房间组件只应提供目标 pose，不要自行起 tween——上表第一条就是违反这条的后果，修法可作参考。
+
+**加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
 
 ## 测试环境的两个坑（都栽过）
 

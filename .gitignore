@@ -53,3 +53,6 @@ blob-report/
 # Python 字节码（scripts/docs 的单测会产生）
 __pycache__/
 *.py[cod]
+
+# TypeScript 增量构建缓存（tsc -b 产生，随机器/时间变化）
+*.tsbuildinfo

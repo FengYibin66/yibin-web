@@ -171,6 +171,47 @@ describe('projects 路由', () => {
       expect(res.status).toBe(400)
     })
 
+    it('多传的字段被剥离，不会写库也不报错', async () => {
+      // 前端 Dashboard 的 handleSave 把整个 form 展开发过来，编辑时会带上
+      // id / 以及数据库行里的其它字段。zod 的 z.object 默认剥离未声明的键，
+      // 所以这是安全的——但必须钉住：若哪天改成 .passthrough()，
+      // 客户端就能覆写 id 之类的字段。
+      const cookie = await login()
+      const res = await post(
+        '/api/projects',
+        { ...VALID_BODY, id: 999, createdBy: 'attacker', __proto__: { polluted: true } },
+        cookie
+      )
+      expect(res.status).toBe(201)
+      const row = (await res.json()) as { id: number; createdBy?: string }
+      // id 由数据库自增决定，不接受客户端指定
+      expect(row.id).not.toBe(999)
+      expect(row.createdBy).toBeUndefined()
+    })
+
+    it('techTags 传空数组也能存取（前端可能提交空标签）', async () => {
+      const res = await post('/api/projects', { ...VALID_BODY, techTags: [] }, await login())
+      expect(res.status).toBe(201)
+      const row = (await res.json()) as { techTags: string }
+      expect(JSON.parse(row.techTags)).toEqual([])
+    })
+
+    it('screenshotPath 省略时存为 null（前端新建表单不带截图）', async () => {
+      const { screenshotPath: _omit, ...withoutShot } = VALID_BODY
+      const res = await post('/api/projects', withoutShot, await login())
+      expect(res.status).toBe(201)
+      expect((await res.json() as { screenshotPath: string | null }).screenshotPath).toBeNull()
+    })
+
+    it('order 可以是 0 与负数（排序需要，别被 falsy 判断吃掉）', async () => {
+      const cookie = await login()
+      for (const order of [0, -1, 100]) {
+        const res = await post('/api/projects', { ...VALID_BODY, order }, cookie)
+        expect(res.status, `order=${order}`).toBe(201)
+        expect((await res.json() as { order: number }).order).toBe(order)
+      }
+    })
+
     it('PUT 不存在的 id 返回 404', async () => {
       const res = await app.request('/api/projects/99999', {
         method: 'PUT',

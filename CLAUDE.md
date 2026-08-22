@@ -81,11 +81,11 @@ scripts/                 # 部署、环境构建、文档索引生成
 | 负债 | 现状 | 依据 |
 |------|------|------|
 | portal 无领域层 | `routes/` 直接调 `db/`，业务逻辑在 handler 里 | 应对齐 auto-wechat 分层；尚无 ADR，动手前先写 |
-| portal client 无测试 | server 已有 46 个测试（认证 / 路由 / 库约束 / 类型派生），**client 仍为 0** | 暂不设覆盖率闸门，先让门禁跑起来（ADR 20260822120807） |
+| portal 测试覆盖仍偏薄 | server 98 个（认证攻击面 / 路由权限 / 库侧 CHECK / 上传 / 档案 / 类型派生），client 52 个（仅工具函数，无组件测试） | 暂不设覆盖率闸门，先让门禁跑起来（ADR 20260822120807） |
 | **全仓 lint 实际不可用** | portal：`client` 的 `lint` 写着 `eslint src` 但**无 eslint 依赖、无配置文件** → `command not found`。resume：`eslint.config.mjs` 按 flat config 写，装的 `eslint-config-next@15.5.20` 导出旧版 eslintrc 对象 → `nextVitals is not iterable`。**两处都是从未跑通过**，CI 刻意不跑（跑必然失败的步骤只会训练人忽略红灯） | 修它是一次独立的依赖升级决策，需先写 ADR。portal 侧要补依赖 + config；resume 侧要么升 `eslint-config-next` 到导出 flat config 的版本，要么把配置改回 eslintrc 形态。改完把 `ci.yml` 的对应步骤加回来 |
 | CI 全量构建 | 改一行简历文案也重建 portal 与 auto-wechat 前端 | ADR 20260822120801 的未偿代价，ADR 20260822120807 用 path 过滤部分偿还 |
 | 单点故障 | 一台 CVM，无滚动更新、无自愈 | ADR 20260822120804 显式接受 |
-| resume 房间层未修项 | camera 所有权竞争、纹理加载瀑布等 4 条 P1 | `docs/reviews/2026-07-12-resume-lab-room-audit.md` |
+| resume 纹理加载瀑布 | `ProjectsRoom` 每张卡无条件声明 26 个纹理 loader（其余 3 条 P1 已修，见 `apps/resume/AGENTS.md` 的状态表） | 报告 `docs/reviews/2026-07-12-resume-lab-room-audit.md` **已陈旧**，以 AGENTS.md 为准 |
 
 ## 分支与发布
 
@@ -102,11 +102,13 @@ scripts/                 # 部署、环境构建、文档索引生成
 | 位置 | 数量 | 内容 |
 |------|------|------|
 | `apps/resume/__tests__/` | 443 | 组件与逻辑单测（vitest） |
-| `apps/resume/e2e/` | 52 | Playwright E2E ×2 形态（chromium + mobile-safari） |
-| `apps/portal/server/__tests__/` | 46 | 认证攻击面、路由权限、库侧 CHECK、类型派生 |
+| `apps/resume/e2e/` | 78 | Playwright E2E ×2 形态（chromium + mobile-safari） |
+| `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
+| `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 14 文件 | Go 单测 |
-| `.claude/hooks/tests/` | 40 | 门禁脚本回归 |
-| `scripts/ci/gate-test.sh` | 11 | 门禁汇总逻辑 |
+| `.claude/hooks/tests/` | 75 | 门禁脚本回归（含 push-main 各种绕过形态） |
+| `scripts/ci/gate-test.sh` | 14 | 门禁汇总逻辑 |
+| `scripts/ci/lint-workflows.py --self-test` | 10 | workflow 接线检查 |
 | `scripts/docs/test_gen_docs_index.py` | 29 | ADR 索引生成器 |
 
 | 代码类型 | 测试方式 |

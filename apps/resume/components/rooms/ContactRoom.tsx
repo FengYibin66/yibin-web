@@ -9,7 +9,7 @@ import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useLocale } from '@/hooks/useLocale'
 import { getContactRoomLinks } from '@/lib/content/labAdapters'
 import { SocialBarrel } from './contact/SocialBarrel'
-import { MessagePaper } from './contact/MessagePaper'
+import { MessagePaper, type MessagePaperHandle } from './contact/MessagePaper'
 
 interface ContactRoomProps {
   showRoom: boolean
@@ -37,6 +37,8 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)
+  // MESSAGE 桶点击时聚焦到留言纸（见下方 SocialBarrel 的 onClick）
+  const messagePaperRef = useRef<MessagePaperHandle>(null)
   const audioRef     = useRef<{ setVolume: (v: number) => void } | null>(null)
 
   const seaTexture      = useTexture('/textures/contact/faletopdown.webp')
@@ -148,12 +150,20 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
         label="EMAIL"
         onClick={() => { window.open(links.emailMailto, '_blank'); unlockAchievement('contact_found') }}
       />
+      {/*
+        MESSAGE 桶：原先是 `onClick={() => {}}`——有可点击视觉与标签但点了
+        毫无反应，用户会判断页面坏了（触屏无 hover 线索，更明显）。
+        同场景已有留言纸，正确行为是聚焦到它。
+      */}
       <SocialBarrel
         position={isMobile ? [1.5, -0.3, -7] : [5, -0.3, -8]}
         rotation={[0, -0.3, 0]}
         texturePath="/textures/contact/beczka.webp"
         label="MESSAGE"
-        onClick={() => {}}
+        onClick={() => {
+          messagePaperRef.current?.focusMessage()
+          unlockAchievement('contact_found')
+        }}
       />
 
       {/* Dock / Molo */}
@@ -175,7 +185,7 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
       </mesh>
 
       {/* Message paper on dock */}
-      <MessagePaper position={[0, 0.07, 2]} onSend={() => unlockAchievement('contact_found')} />
+      <MessagePaper ref={messagePaperRef} position={[0, 0.07, 2]} onSend={() => unlockAchievement('contact_found')} />
     </group>
   )
 }

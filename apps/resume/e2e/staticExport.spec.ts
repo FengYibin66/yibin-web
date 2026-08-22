@@ -384,10 +384,18 @@ test.describe('主题切换', () => {
 })
 
 test.describe('Gallery 路由', () => {
-  // 验收报告 P1-3：Gallery 走独立路由、动态 import 且 ssr:false、无 loading UI，
-  // 首次进入会短暂白屏。导出的 HTML 里可见文本确实只有 <title>。
-  // 这条用例不判定「有没有 loading 态」（那是待修项），只钉住底线：
-  // **最终必须渲染出内容，不能永久空白**。P1-3 修完后可再加 loading 态断言。
+  // 验收报告 P1-3 已修：`GalleryTrack` 是 `dynamic(..., { ssr: false })`，
+  // 原先没有 loading fallback，导出的 HTML 可见文本只有 <title>——
+  // chunk 到位之前整页只剩背景色。现在补了两处加载态
+  // （dynamic 的 loading + app/gallery/loading.tsx），静态产物里能看到它。
+
+  test('静态产物自带加载态（无 JS 也不是一片空白）', async ({ request }) => {
+    // 这条直接打在导出的 HTML 上，不经浏览器执行 JS——
+    // 断言的正是「首屏那一刻用户看到什么」。
+    const body = await (await request.get('/gallery/')).text()
+    expect(body, 'Gallery 首屏应含加载提示，而非只有 <title>').toContain('Loading gallery')
+    expect(body, '加载态应对读屏器可见').toContain('role="status"')
+  })
 
   test('最终渲染出内容，不是永久空白', async ({ page }) => {
     await page.goto('/gallery/')

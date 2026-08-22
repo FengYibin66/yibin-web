@@ -169,6 +169,7 @@ jobs:
       # 那个文件靠 @ts-expect-error 双向断言派生类型没退化成 any（ADR 20260822120808）。
       - run: pnpm --filter @yibin/portal-server type-check
       - run: pnpm --filter @yibin/portal-server test
+      - run: pnpm --filter @yibin/portal-client test
       # client 侧构建即类型检查（`tsc -b && vite build`）
       - run: pnpm --filter @yibin/portal build
       #

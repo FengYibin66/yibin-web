@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react'
+import { useRef, useState, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, useTexture, Html, useCursor } from '@react-three/drei'
 import * as THREE from 'three'
@@ -140,7 +140,20 @@ interface MessagePaperProps {
   onSend?: (data: { message: string; email: string; subject: string }) => void
 }
 
-export function MessagePaper({ position = [0, 0.05, 2], onSend }: MessagePaperProps) {
+/**
+ * 供场景内其它元素聚焦到留言纸。
+ *
+ * 加它的原因：ContactRoom 的 MESSAGE 桶有可点击视觉与标签，但 onClick 是
+ * `() => {}`——点了毫无反应，用户会判断页面坏了（触屏没有 hover 线索，更明显）。
+ * 同场景已有这张留言纸，正确行为是让那个桶聚焦到它，而不是空转。
+ */
+export interface MessagePaperHandle {
+  /** 聚焦留言正文字段，等价于用户点了纸上的 message 区域。 */
+  focusMessage: () => void
+}
+
+export const MessagePaper = forwardRef<MessagePaperHandle, MessagePaperProps>(
+  function MessagePaper({ position = [0, 0.05, 2], onSend }, ref) {
   const groupRef   = useRef<THREE.Group>(null)
   const paperRef   = useRef<THREE.Mesh>(null)
   const hiddenInputRef   = useRef<HTMLTextAreaElement>(null)
@@ -155,6 +168,19 @@ export function MessagePaper({ position = [0, 0.05, 2], onSend }: MessagePaperPr
   const [errors,       setErrors]       = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+
+  // 对外暴露聚焦能力。与纸面点击走同一套逻辑（setActiveField + 延时 focus），
+  // 不另写一份——两份实现会漂移。
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusMessage: () => {
+        setActiveField('message')
+        setTimeout(() => hiddenInputRef.current?.focus(), 10)
+      },
+    }),
+    []
+  )
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
 
@@ -286,4 +312,4 @@ export function MessagePaper({ position = [0, 0.05, 2], onSend }: MessagePaperPr
       )}
     </group>
   )
-}
+})

@@ -29,6 +29,7 @@ jobs:
       docs: ${{ steps.filter.outputs.docs }}
       hooks: ${{ steps.filter.outputs.hooks }}
       ci_scripts: ${{ steps.filter.outputs.ci_scripts }}
+      workflows: ${{ steps.filter.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -53,6 +54,8 @@ jobs:
               - '.claude/hooks/**'
             ci_scripts:
               - 'scripts/ci/**'
+            workflows:
+              - '.github/workflows/**'
 
   # ADR 索引表是生成物，校验它与实际 ADR 同步（见 scripts/AGENTS.md「生成物纪律」）
   docs-index:
@@ -70,7 +73,10 @@ jobs:
   # 改 hooks 或改门禁汇总逻辑都要跑对应回归测试。
   hooks-test:
     needs: changes
-    if: needs.changes.outputs.hooks == 'true' || needs.changes.outputs.ci_scripts == 'true'
+    if: >-
+      needs.changes.outputs.hooks == 'true' ||
+      needs.changes.outputs.ci_scripts == 'true' ||
+      needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +86,17 @@ jobs:
       - name: 门禁汇总逻辑回归测试
         if: needs.changes.outputs.ci_scripts == 'true'
         run: bash scripts/ci/gate-test.sh
+      # workflow 的**接线**检查（区别于上面那条测脚本逻辑的）。
+      # 加它的直接原因：gate job 曾把逻辑抽成脚本却漏了 checkout，
+      # CI 上 exit 127。脚本测试测不到接线，这一层补的正是那个缺口。
+      - name: workflow 接线自测
+        if: needs.changes.outputs.ci_scripts == 'true'
+        run: python3 scripts/ci/lint-workflows.py --self-test
+      - name: workflow 接线检查
+        if: needs.changes.outputs.workflows == 'true' || needs.changes.outputs.ci_scripts == 'true'
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 scripts/ci/lint-workflows.py
 
   resume:
     needs: changes
@@ -212,6 +229,11 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      # 必需：Evaluate 跑的是仓库里的脚本，没有 checkout 就是 exit 127
+      # （"No such file or directory"）。这一步曾被漏掉——逻辑内联在 YAML 里时
+      # 不需要 checkout，抽成脚本文件后才需要，抽的时候没补上。
+      # 由 scripts/ci/lint-workflows.py 门禁化，防复发。
+      - uses: actions/checkout@v4
       - name: Evaluate
         # 逻辑抽到脚本里，本地可测（scripts/ci/gate-test.sh）。
         # 刻意不用关联数组：macOS 自带 bash 3.2 不支持，本地就无法验证门禁逻辑，

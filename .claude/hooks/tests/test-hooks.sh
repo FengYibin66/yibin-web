@@ -47,6 +47,24 @@ expect 0 pre-push-main.sh "$(bash_in 'git log --oneline maintenance')"         "
 expect 0 pre-push-main.sh "$(bash_in 'git push origin HEAD:feat/x')"          "放行 refspec 指向 feature"
 expect 0 pre-push-main.sh "$(bash_in 'git push -u origin worktree-x')"        "放行带 -u 的 feature 分支"
 
+# 误报回归：早期版本扫整条命令串，导致 commit message 里出现 "main" 就被拦。
+# 误报会训练人绕过守卫，比漏报更伤——所以只检查 git push 那一段。
+expect 0 pre-push-main.sh "$(bash_in "$(printf 'git commit -m "fix: 在 main 尚未 fetch 时探测"\ngit push origin feat/x')")" \
+  "commit message 含 main 但 push 指向 feature → 放行"
+expect 0 pre-push-main.sh "$(bash_in "$(printf 'git commit -F - <<MSG\n讲 main 分支的事\nMSG\ngit push')")" \
+  "heredoc 正文含 main 且裸 push（当前非 main）→ 放行"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin feat/x && echo "已推到 main 之外"')" \
+  "push 之后的其他子命令含 main → 放行"
+expect 0 pre-push-main.sh "$(bash_in 'echo "main" && git push origin feat/x')" \
+  "push 之前的其他子命令含 main → 放行"
+# 但复合命令里真的 push main 仍必须拦
+expect 2 pre-push-main.sh "$(bash_in 'git add -A && git push origin main')" \
+  "复合命令里 push main → 拦下"
+expect 2 pre-push-main.sh "$(bash_in "$(printf 'git commit -m x\ngit push origin main')")" \
+  "多行命令里 push main → 拦下"
+expect 2 pre-push-main.sh "$(bash_in 'git push origin feat/x; git push origin main')" \
+  "第二个 push 指向 main → 拦下"
+
 # 不带分支名的 push 会推当前分支——命令字符串里看不出目标，守卫须查 HEAD。
 # 本测试运行在 worktree 分支上，所以这些应放行；在 main 上则应拦（见下一组）。
 expect 0 pre-push-main.sh "$(bash_in 'git push')"                            "非 main 分支上裸 push 放行"

@@ -19,7 +19,7 @@ services:
       - ./apps/resume/out:/usr/share/nginx/html/resume:ro
       - ./apps/auto-wechat/frontend/dist:/usr/share/nginx/html/wechat:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot:ro
+      - /var/www/certbot:/var/www/certbot:ro
     # Partner remote server — partner-api resolves via PARTNER_API_HOST (docs/specs/partner-api.md)
     extra_hosts:
       - "partner-api:${PARTNER_API_HOST:-212.56.40.104}"
@@ -236,8 +236,6 @@ volumes:
   portal_data:
     driver: local
   portal_uploads:
-    driver: local
-  certbot-webroot:
     driver: local
 
 networks:

@@ -28,10 +28,26 @@ docker compose -f docker-compose.prod.yml logs --tail=100 nginx
 ```bash
 # Check remaining days
 sudo certbot certificates
-
-# Certbot auto-renewal runs daily via cron (no action needed)
-# But verify occasionally to be safe
 ```
+
+自动续期由 `scripts/ssl-renew.sh` + cron 完成（webroot 模式，零停机）。
+
+**前提**：证书的续期方式必须是 webroot，不能是 standalone。standalone 要独占 80 端口，
+而 nginx 容器常驻占用 → 续期静默失败直到证书过期。用下面这条确认：
+
+```bash
+# 应输出 authenticator = webroot；若是 standalone，见 DEPLOYMENT.md「切换到 webroot 续期」
+sudo grep -E 'authenticator|webroot_path' /etc/letsencrypt/renewal/www.yibinfeng.com.conf
+
+# 验证续期链路可用（不消耗签发额度）
+sudo certbot renew --dry-run
+
+# 确认 cron 已装
+sudo crontab -l | grep ssl-renew
+```
+
+Let's Encrypt 有效期仅 90 天，务必在 [https://letsencrypt.org/docs/expiration-emails/](https://letsencrypt.org/docs/expiration-emails/)
+登记的邮箱里保留过期提醒，作为 cron 失效时的兜底。
 
 ---
 

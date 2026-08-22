@@ -97,18 +97,51 @@ docker --version && docker compose --version
 
 ### Step 2: SSL Certificates (Let's Encrypt)
 
+**首次签发**（此时 nginx 容器还没起，用 `--standalone` 独占 80 端口是安全的）：
+
 ```bash
 sudo apt-get install -y certbot
 
+# 注意：必须含裸域 yibinfeng.com —— nginx-prod.conf 的 server_name 包含它，
+# 漏掉会导致访问 https://yibinfeng.com 报证书不匹配。
 sudo certbot certonly --standalone \
   -d www.yibinfeng.com \
+  -d yibinfeng.com \
   -d resume.yibinfeng.com \
   -d mpauto.yibinfeng.com \
   -d partner.yibinfeng.com \
   --agree-tos \
   --email your-email@example.com
+```
 
-sudo certbot renew --dry-run  # Verify auto-renewal
+**切换到 webroot 续期**（关键步骤，否则续期永远失败）：
+
+```bash
+# certbot 会记住首次签发用的 standalone 方式，而 standalone 续期需要独占 80 端口，
+# 此时 nginx 容器已常驻占用 → 无人值守续期必然失败、证书过期。
+# 下面这条把该证书的续期方式改写为 webroot，之后即可零停机续期。
+sudo mkdir -p /var/www/certbot
+
+sudo certbot certonly --webroot --webroot-path /var/www/certbot \
+  --cert-name www.yibinfeng.com --force-renewal \
+  -d www.yibinfeng.com \
+  -d yibinfeng.com \
+  -d resume.yibinfeng.com \
+  -d mpauto.yibinfeng.com \
+  -d partner.yibinfeng.com \
+  --agree-tos -m your-email@example.com
+
+# 验证续期链路（不消耗签发额度）
+sudo certbot renew --dry-run
+```
+
+**配置自动续期 cron**：
+
+```bash
+# 每天 03:17 检查一次；剩余有效期 > 30 天时 certbot 自动跳过
+sudo crontab -e
+# 添加（路径按实际仓库位置调整）：
+# 17 3 * * * /data/yibin-web/scripts/ssl-renew.sh >> /var/log/ssl-renew.log 2>&1
 ```
 
 ### Step 3: Clone & Configure
@@ -184,16 +217,19 @@ dig +short partner.yibinfeng.com
 
 ```bash
 cd ~/yibin-web
-docker compose --env-file .env.production -f docker-compose.prod.yml stop nginx
 
-sudo certbot certonly --standalone --expand \
+# webroot 模式追加域名，无需停 nginx（nginx-prod.conf 已提供 acme-challenge 入口）
+sudo certbot certonly --webroot --webroot-path /var/www/certbot --expand \
+  --cert-name www.yibinfeng.com \
   -d www.yibinfeng.com \
+  -d yibinfeng.com \
   -d resume.yibinfeng.com \
   -d mpauto.yibinfeng.com \
   -d partner.yibinfeng.com \
   --agree-tos \
   -m your@email.com
 
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T nginx nginx -s reload
 sudo certbot certificates
 # 应看到 Certificate Name: www.yibinfeng.com，Domains 含 partner.yibinfeng.com
 ```

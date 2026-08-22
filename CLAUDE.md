@@ -81,7 +81,7 @@ scripts/                 # 部署、环境构建、文档索引生成
 | 负债 | 现状 | 依据 |
 |------|------|------|
 | portal 无领域层 | `routes/` 直接调 `db/`，业务逻辑在 handler 里 | 应对齐 auto-wechat 分层；尚无 ADR，动手前先写 |
-| portal 无测试 | 0 个测试；`server/package.json` 连 `test` / `lint` script 都没有 | ADR 20260822120807 决定先让门禁跑起来、不设当前必然失败的覆盖率闸门 |
+| portal client 无测试 | server 已有 46 个测试（认证 / 路由 / 库约束 / 类型派生），**client 仍为 0** | 暂不设覆盖率闸门，先让门禁跑起来（ADR 20260822120807） |
 | **全仓 lint 实际不可用** | portal：`client` 的 `lint` 写着 `eslint src` 但**无 eslint 依赖、无配置文件** → `command not found`。resume：`eslint.config.mjs` 按 flat config 写，装的 `eslint-config-next@15.5.20` 导出旧版 eslintrc 对象 → `nextVitals is not iterable`。**两处都是从未跑通过**，CI 刻意不跑（跑必然失败的步骤只会训练人忽略红灯） | 修它是一次独立的依赖升级决策，需先写 ADR。portal 侧要补依赖 + config；resume 侧要么升 `eslint-config-next` 到导出 flat config 的版本，要么把配置改回 eslintrc 形态。改完把 `ci.yml` 的对应步骤加回来 |
 | CI 全量构建 | 改一行简历文案也重建 portal 与 auto-wechat 前端 | ADR 20260822120801 的未偿代价，ADR 20260822120807 用 path 过滤部分偿还 |
 | 单点故障 | 一台 CVM，无滚动更新、无自愈 | ADR 20260822120804 显式接受 |
@@ -97,13 +97,26 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 ## 测试策略
 
-新代码先写测试再写实现。现存测试分布不均（resume 31 / auto-wechat 33 / portal 0），CI 跑全部已有测试但暂不设覆盖率闸门（ADR 20260822120807）。
+新代码先写测试再写实现。CI 跑全部已有测试，暂不设覆盖率闸门（ADR 20260822120807）。
+
+| 位置 | 数量 | 内容 |
+|------|------|------|
+| `apps/resume/__tests__/` | 443 | 组件与逻辑单测（vitest） |
+| `apps/resume/e2e/` | 52 | Playwright E2E ×2 形态（chromium + mobile-safari） |
+| `apps/portal/server/__tests__/` | 46 | 认证攻击面、路由权限、库侧 CHECK、类型派生 |
+| `apps/auto-wechat/backend` | 14 文件 | Go 单测 |
+| `.claude/hooks/tests/` | 40 | 门禁脚本回归 |
+| `scripts/ci/gate-test.sh` | 11 | 门禁汇总逻辑 |
+| `scripts/docs/test_gen_docs_index.py` | 29 | ADR 索引生成器 |
 
 | 代码类型 | 测试方式 |
 |----------|----------|
 | 业务逻辑、数据访问 | 单测先行 |
+| 认证 / 权限 | 必须有**攻击用例**（伪造凭据、越权访问），并做变异测试确认用例真能抓到漏洞——见 ADR 20260822132001 的验证一节 |
+| 数据库约束 | 用**裸 SQL** 断言，绕过 ORM 的类型层。只走 ORM 测不出约束到底在哪一层（ADR 20260822120808 曾因此写错结论） |
 | 外部集成（微信回调、LLM 调用、CDN） | 集成测试 + 契约测试 |
 | UI / 3D 交互 | 组件测试（vitest）；关键路径 E2E |
+| 门禁脚本 / 生成器 | 必须有回归测试——它们静默失效时没有症状，只有下一次事故 |
 
 ## AI 协作硬约束
 
@@ -129,9 +142,16 @@ pnpm dev:portal           # 仅 portal
 pnpm dev:resume           # 仅 resume（:3000）
 pnpm lint                 # 全仓 lint（-r，缺 lint script 的包会跳过）
 
-cd apps/resume && pnpm test        # resume 测试（vitest）
-cd apps/auto-wechat && make dev-up # 起后端依赖（MySQL/Redis/API/worker）
+pnpm --filter @yibin/resume test               # resume 单测（vitest）
+pnpm --filter @yibin/resume build              # E2E 前置：先出静态产物
+pnpm --filter @yibin/resume test:e2e           # resume E2E（Playwright）
+pnpm --filter @yibin/portal-server test        # portal 后端测试
+pnpm --filter @yibin/portal-server type-check  # 含类型层测试（@ts-expect-error 探针）
+cd apps/auto-wechat && make dev-up             # 起后端依赖（MySQL/Redis/API/worker）
 
+bash .claude/hooks/tests/test-hooks.sh         # 门禁 hooks 回归
+bash scripts/ci/gate-test.sh                   # CI 汇总门禁逻辑
+python3 scripts/docs/test_gen_docs_index.py    # ADR 索引生成器单测
 python3 scripts/docs/gen_docs_index.py         # 重新生成 ADR 索引
 python3 scripts/docs/gen_docs_index.py --check # 校验索引同步（CI 用）
 ./scripts/env-build.sh production --check      # 校验生产环境变量完整

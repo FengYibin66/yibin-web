@@ -43,3 +43,13 @@ coverage/
 
 # Misc
 .turbo/
+
+# Playwright E2E 产物（apps/resume/e2e 的报告、trace、失败截图）
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Python 字节码（scripts/docs 的单测会产生）
+__pycache__/
+*.py[cod]

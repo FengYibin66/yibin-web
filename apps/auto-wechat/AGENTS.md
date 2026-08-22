@@ -62,6 +62,14 @@ interface  →  application  →  domain
 
 > **注意**：`contracts/api/openapi.yaml` 目前**没有接入代码生成**（前后端类型仍各自定义）。这是已知差距，不是"契约已生效"。若要接入生成，先写 ADR——参考 ADR 20260822120808 对 portal 的同类判断（契约形式要匹配消费端数量）。
 
+## Go 版本：≥1.24，别下调
+
+`backend/go.mod` 声明 `go 1.24`。这不是随手写的上限而是**实际下限**：`internal/infrastructure/rss/collector_test.go` 用了 `testing.Context`（Go 1.24 引入）。
+
+**踩过的坑**：go.mod 原先声明 `go 1.22.0`，与实际所需不符。症状是分裂的——现代工具链下 `go test` 照常通过（stdlib API 可用），但 `go vet` 会报 `testing.Context requires go1.24 or later (file is go1.22)` 并以 rc=1 失败；而在真正的 1.23 工具链上则直接编译失败。CI 的 `setup-go` 版本也必须 ≥1.24。
+
+教训：**`go.mod` 的 `go` 指令是声明，不是事实**。它低于代码实际所需时，故障会以"vet 红而 test 绿"这种令人困惑的形态出现。改 CI 的 Go 版本前先看这里。
+
 ## 命令
 
 ```bash
@@ -72,5 +80,8 @@ make dev-down
 make migrate-up
 make health
 make frontend-dev
-go test ./...        # 在 backend/ 下，14 个测试文件
+
+cd backend
+go vet ./...         # 门禁项，须 rc=0
+go test ./...        # 14 个测试文件
 ```

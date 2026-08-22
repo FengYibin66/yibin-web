@@ -24,35 +24,40 @@ echo "evaluate-gate.sh"
 
 # 只改了 README：全部 path-filter 跳过，应通过
 expect 0 "全跳过（只改文档）通过" \
-  changes:success docs-index:skipped hooks-test:skipped resume:skipped \
+  changes:success docs-index:skipped hooks-test:skipped resume:skipped resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 # 全部跑且全过
 expect 0 "全成功通过" \
-  changes:success docs-index:success hooks-test:success resume:success \
+  changes:success docs-index:success hooks-test:success resume:success resume-e2e:success \
   portal:success wechat-frontend:success wechat-backend:success
 
 # 单个 job 失败必须拦
 expect 1 "resume 失败被拦" \
-  changes:success docs-index:skipped hooks-test:skipped resume:failure \
+  changes:success docs-index:skipped hooks-test:skipped resume:failure resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 expect 1 "go test 失败被拦" \
-  changes:success docs-index:skipped hooks-test:skipped resume:skipped \
+  changes:success docs-index:skipped hooks-test:skipped resume:skipped resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:failure
+
+# E2E 失败必须拦——单测过了不代表页面能用
+expect 1 "E2E 失败被拦（单测通过也不放行）" \
+  changes:success docs-index:skipped hooks-test:skipped resume:success resume-e2e:failure \
+  portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 # cancelled 不等于通过
 expect 1 "cancelled 被拦" \
-  changes:success docs-index:skipped hooks-test:skipped resume:cancelled \
+  changes:success docs-index:skipped hooks-test:skipped resume:cancelled resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 # changes 自身跳过/失败：无法判定范围，必须拦（否则一堆 skipped 会伪装成通过）
 expect 1 "changes 跳过被拦" \
-  changes:skipped docs-index:skipped hooks-test:skipped resume:skipped \
+  changes:skipped docs-index:skipped hooks-test:skipped resume:skipped resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 expect 1 "changes 失败被拦" \
-  changes:failure docs-index:skipped hooks-test:skipped resume:skipped \
+  changes:failure docs-index:skipped hooks-test:skipped resume:skipped resume-e2e:skipped \
   portal:skipped wechat-frontend:skipped wechat-backend:skipped
 
 # 结果为空串（表达式未求值）不能当通过

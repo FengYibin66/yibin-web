@@ -44,6 +44,52 @@ expect 0 pre-push-main.sh "$(bash_in 'git push origin feat/x-y')"              "
 expect 0 pre-push-main.sh "$(bash_in 'git status')"                            "放行非 push git 命令"
 expect 0 pre-push-main.sh "$(bash_in 'ls main')"                               "放行非 git 命令"
 expect 0 pre-push-main.sh "$(bash_in 'git log --oneline maintenance')"         "放行含 main 子串的分支名"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin HEAD:feat/x')"          "放行 refspec 指向 feature"
+expect 0 pre-push-main.sh "$(bash_in 'git push -u origin worktree-x')"        "放行带 -u 的 feature 分支"
+
+# 不带分支名的 push 会推当前分支——命令字符串里看不出目标，守卫须查 HEAD。
+# 本测试运行在 worktree 分支上，所以这些应放行；在 main 上则应拦（见下一组）。
+expect 0 pre-push-main.sh "$(bash_in 'git push')"                            "非 main 分支上裸 push 放行"
+expect 0 pre-push-main.sh "$(bash_in 'git push origin')"                     "非 main 分支上 push origin 放行"
+
+# 模拟处于 main：用一个临时 git 仓库把 HEAD 指向 main，验证裸 push 被拦。
+echo "H1 裸 push 在 main 上必须被拦（临时仓库）"
+tmp_repo=$(mktemp -d)
+(
+  cd "$tmp_repo" || exit 1
+  git init -q -b main . >/dev/null 2>&1
+  git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init >/dev/null 2>&1
+  for c in 'git push' 'git push origin' 'git push -u origin' 'git push --force'; do
+    got=$(printf '{"tool_input":{"command":"%s"}}' "$c" \
+      | bash "$HOOKS_DIR/pre-push-main.sh" >/dev/null 2>&1; echo $?)
+    if [ "$got" = 2 ]; then
+      printf '  ✅ 在 main 上拦截 %s\n' "$c"
+    else
+      printf '  ❌ 在 main 上未拦截 %s（exit %s）\n' "$c" "$got"
+      exit 1
+    fi
+  done
+) && pass=$((pass + 4)) || fail=$((fail + 1))
+rm -rf "$tmp_repo"
+
+# 副作用检查：守卫自身绝不能执行 git push（曾因拦截消息里用反引号而真的触发过命令替换）
+echo "H1 守卫不得产生副作用"
+side_repo=$(mktemp -d)
+(
+  cd "$side_repo" || exit 1
+  git init -q -b main . >/dev/null 2>&1
+  git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init >/dev/null 2>&1
+  # 指向一个不存在的路径作为 remote：真的执行 push 会在 stderr 留下痕迹
+  git remote add origin /nonexistent/repo.git
+  out=$(printf '{"tool_input":{"command":"git push"}}' \
+    | bash "$HOOKS_DIR/pre-push-main.sh" 2>&1)
+  if printf '%s' "$out" | grep -qiE "does not appear to be a git repository|Could not read from remote"; then
+    printf '  ❌ 守卫执行了真实的 git push\n'
+    exit 1
+  fi
+  printf '  ✅ 守卫未执行 git push\n'
+) && pass=$((pass + 1)) || fail=$((fail + 1))
+rm -rf "$side_repo"
 
 echo "H2 pre-no-verify.sh"
 expect 2 pre-no-verify.sh "$(bash_in 'git commit --no-verify -m x')"           "拦截 commit --no-verify"

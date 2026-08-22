@@ -76,6 +76,27 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 这两条合起来是同一个教训：**CI 从不跑测试期间，main 分支的 16 个失败一直没人发现**。现在 `ci.yml` 会跑，保持它绿。
 
+## E2E（Playwright）
+
+`e2e/` 下 52 个用例，跑 chromium + mobile-safari 两个形态。
+
+**打在静态产物 `out/` 上，不打 `next dev`。** 这是刻意的：生产由 nginx 直接提供 `out/`，而 `next dev` 有 HMR、按需编译、不同的路由解析——测它测不到真实部署形态，尤其是 `trailingSlash: true` 的 `dir/index.html` 结构（`next.config.js` 的注释记着一次真实故障：`/gallery` 直接访问返回 403）。
+
+`e2e/staticServer.mjs` 是手写的极简静态服务器，**刻意不做 SPA fallback**——找不到就 404。现成 dev server 的自动兜底会把"页面根本没导出"掩盖成"页面正常"。
+
+```bash
+pnpm build               # 必须先构建，E2E 打的是产物
+pnpm test:e2e            # 全部形态
+pnpm test:e2e --project=chromium   # 只跑一个形态
+pnpm test:e2e:ui         # 带 UI 调试
+pnpm exec playwright install chromium webkit   # 首次需装浏览器
+```
+
+写 E2E 时的两条经验（都踩过）：
+
+- **选择器用 `aria-label` 等可访问性属性**，别用 class。本项目 class 是 Tailwind 生成的长串，一改样式就断。
+- **断言要基于真实机制，别照直觉猜**。主题不是改 `body` 的 backgroundColor（那是透明的），而是 `<html data-theme>`；且深色是"属性缺失"而非 `data-theme="dark"`——详见 `e2e/staticExport.spec.ts` 主题那一节的注释。
+
 ## 命令
 
 ```bash

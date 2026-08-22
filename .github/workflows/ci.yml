@@ -61,6 +61,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 先跑生成器自己的单测，再校验同步。顺序有意：生成器坏了的话
+      # `--check` 的结论不可信，先证明工具本身正确。
+      - run: python3 scripts/docs/test_gen_docs_index.py
       - run: python3 scripts/docs/gen_docs_index.py --check
 
   # 门禁脚本是生产代码：静默失效时没有症状，只有下一次事故。
@@ -113,17 +116,58 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # portal 的真实可用检查只有构建（client 是 `tsc -b && vite build`，含类型检查）。
+      # server 的类型检查覆盖 __tests__，含 derivedTypes.test-d.ts——
+      # 那个文件靠 @ts-expect-error 双向断言派生类型没退化成 any（ADR 20260822120808）。
+      - run: pnpm --filter @yibin/portal-server type-check
+      - run: pnpm --filter @yibin/portal-server test
+      # client 侧构建即类型检查（`tsc -b && vite build`）
+      - run: pnpm --filter @yibin/portal build
       #
       # 刻意不跑 `pnpm --filter @yibin/portal-client lint`：那个 script 声明了 `eslint src`，
       # 但 portal 既没有 eslint 依赖也没有 eslint 配置文件——执行必然 command not found。
       # 跑一个已知必然失败的步骤会让每个 portal PR 都红，等于让人习惯忽略红灯。
-      # 这条已登记为负债（见根 CLAUDE.md「已知负债」与 apps/portal/AGENTS.md）；
-      # 要补 lint 就先补依赖与配置，然后把这一步加回来。
+      # 这条已登记为负债（见根 CLAUDE.md「已知负债」）；要补 lint 先补依赖与配置。
       #
-      # 同理不设覆盖率闸门（portal 现在 0 测试）：
-      # 设一个当前必然失败的闸门等于没有闸门（ADR 20260822120807）。
-      - run: pnpm --filter @yibin/portal build
+      # 暂不设覆盖率闸门：server 刚有第一批测试（46 个），client 仍为 0。
+      # 先让门禁跑起来，闸门等有稳定基线再设（ADR 20260822120807）。
+
+  # E2E 独立成 job：要装浏览器（~100MB）且必须先构建静态产物，
+  # 与单测的运行代价差一个量级，混在一个 job 里会让快反馈也变慢。
+  resume-e2e:
+    needs: changes
+    if: needs.changes.outputs.resume == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # 只装用到的两个引擎，别用 `playwright install`（会拉全部三个）
+      - name: 装浏览器
+        run: pnpm --filter @yibin/resume exec playwright install --with-deps chromium webkit
+
+      # E2E 打在静态产物上（见 playwright.config.ts 的说明），必须先 build
+      - name: 构建静态产物
+        run: pnpm --filter @yibin/resume build
+
+      - name: 跑 E2E
+        run: pnpm --filter @yibin/resume test:e2e
+
+      - name: 上传失败时的 trace 与截图
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/resume/test-results/
+            apps/resume/playwright-report/
+          retention-days: 7
 
   wechat-frontend:
     needs: changes
@@ -149,7 +193,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          # 必须 ≥1.24：internal/infrastructure/rss/collector_test.go 用了
+          # testing.Context（1.24 引入）。用 1.23 会直接编译失败。
+          # go.mod 原先声明 go 1.22.0 与此不符，已同步改为 1.24。
+          go-version: '1.24'
           cache-dependency-path: apps/auto-wechat/backend/go.sum
       - name: go vet
         working-directory: apps/auto-wechat/backend
@@ -161,7 +208,7 @@ jobs:
   # 汇总门：required check 指向这一个 job，各语言 job 按 path 跳过时也能通过。
   # skipped 与 success 都算过，failure / cancelled 不算。
   gate:
-    needs: [changes, docs-index, hooks-test, resume, portal, wechat-frontend, wechat-backend]
+    needs: [changes, docs-index, hooks-test, resume, resume-e2e, portal, wechat-frontend, wechat-backend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -175,6 +222,7 @@ jobs:
             "docs-index:${{ needs.docs-index.result }}" \
             "hooks-test:${{ needs.hooks-test.result }}" \
             "resume:${{ needs.resume.result }}" \
+            "resume-e2e:${{ needs.resume-e2e.result }}" \
             "portal:${{ needs.portal.result }}" \
             "wechat-frontend:${{ needs.wechat-frontend.result }}" \
             "wechat-backend:${{ needs.wechat-backend.result }}"

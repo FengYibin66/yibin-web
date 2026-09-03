@@ -49,21 +49,35 @@ function stampPath(name) {
   return join(STAMP_DIR, `${name}.json`)
 }
 
-/** 写下指纹。生成流程的最后一步 */
-export function writeStamp(name, digest) {
+/**
+ * 写下指纹。生成流程的最后一步。
+ *
+ * `outputs` 是可选的第三个参数：给了就同时记下**产物**的指纹，于是手改
+ * `public/` 下的派生文件也会被 `--check` 抓到。不给的话只记输入指纹
+ * （`entry-firstframe` 那条的"源"是整个 `out/`，不适用）。
+ */
+export function writeStamp(name, digest, outputs) {
   mkdirSync(STAMP_DIR, { recursive: true })
-  writeFileSync(
-    stampPath(name),
-    `${JSON.stringify({ digest, note: '内容指纹，见 scripts/media/freshness.mjs' }, null, 2)}\n`,
-  )
+  const payload = { digest, note: '内容指纹，见 scripts/media/freshness.mjs' }
+  if (outputs !== undefined) payload.outputDigest = digestOf(outputs)
+  writeFileSync(stampPath(name), `${JSON.stringify(payload, null, 2)}\n`)
 }
 
 /** 读回指纹。没有 stamp 时返回 null（视为过期） */
 export function readStamp(name) {
+  return readStampField(name, 'digest')
+}
+
+/** 读回产物指纹。没记过（旧 stamp）时返回 null */
+export function readOutputStamp(name) {
+  return readStampField(name, 'outputDigest')
+}
+
+function readStampField(name, field) {
   const path = stampPath(name)
   if (!existsSync(path)) return null
   try {
-    return JSON.parse(readFileSync(path, 'utf8')).digest ?? null
+    return JSON.parse(readFileSync(path, 'utf8'))[field] ?? null
   } catch {
     return null
   }
@@ -87,7 +101,23 @@ export function checkFresh(name, inputs, outputs) {
   }
 
   const digest = digestOf(inputs)
-  return digest === stamp
-    ? { fresh: true, reason: '指纹一致' }
-    : { fresh: false, reason: '源或生成脚本变了，指纹不一致' }
+  if (digest !== stamp) {
+    return { fresh: false, reason: '源或生成脚本变了，指纹不一致' }
+  }
+
+  /*
+    产物指纹。只记输入的话，**手改 public/ 下的派生文件完全静默**——追加一个
+    字节、换一张图，`--check` 依然全绿。根 CLAUDE.md 的「[机制] 不手改派生
+    产物」这条红线，对素材产物原本没有机制。
+
+    旧 stamp 没记过产物指纹（值为 null），此时跳过而不是判过期：否则升级这段
+    代码本身会让全部四条流水线一起变红，而那不是"产物过期"。重跑一次生成就会
+    补上。
+  */
+  const outputStamp = readOutputStamp(name)
+  if (outputStamp !== null && digestOf(outputs) !== outputStamp) {
+    return { fresh: false, reason: '产物被手改过（产物指纹与生成时不一致）' }
+  }
+
+  return { fresh: true, reason: '指纹一致' }
 }

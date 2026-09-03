@@ -144,24 +144,41 @@ def digest_of(sources: list[Path]) -> str:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()
 
 
-def read_stamp() -> str | None:
+def digest_of_files(paths: list[Path]) -> str:
+    """一组文件的内容指纹（用于产物侧）。"""
+    parts = [
+        f"{path.name}:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+        for path in sorted(paths)
+        if path.exists()
+    ]
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()
+
+
+def read_stamp(field: str = "digest") -> str | None:
     if not STAMP.exists():
         return None
     try:
-        return json.loads(STAMP.read_text())["digest"]
+        return json.loads(STAMP.read_text()).get(field)
     except Exception:
         return None
 
 
-def write_stamp(digest: str) -> None:
+def write_stamp(digest: str, outputs: list[Path] | None = None) -> None:
+    """写下指纹。
+
+    `outputs` 给了就同时记下**产物**指纹——只记输入的话，手改 `public/fonts/`
+    下的产物完全静默（追加一个字节、换一份 woff2，`--check` 依然全绿），
+    而根 CLAUDE.md 的「[机制] 不手改派生产物」对素材产物原本没有机制。
+    """
     STAMP.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, str] = {
+        "digest": digest,
+        "note": "内容指纹，见 scripts/media/freshness.mjs",
+    }
+    if outputs is not None:
+        payload["outputDigest"] = digest_of_files(outputs)
     STAMP.write_text(
-        json.dumps(
-            {"digest": digest, "note": "内容指纹，见 scripts/media/freshness.mjs"},
-            indent=2,
-            ensure_ascii=False,
-        )
-        + "\n"
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
     )
 
 
@@ -178,7 +195,8 @@ def main() -> int:
         return 1
 
     if check_only:
-        missing = [d.name for d in expected_outputs(sources) if not d.exists()]
+        expected = expected_outputs(sources)
+        missing = [d.name for d in expected if not d.exists()]
         if missing:
             print(f"  ! 字体产物缺失：{', '.join(missing)}")
             print("\n[待处理] 跑 python3 scripts/media/subset-fonts.py")
@@ -186,10 +204,15 @@ def main() -> int:
 
         stamp = read_stamp()
         digest = digest_of(sources)
+        output_stamp = read_stamp("outputDigest")
         if stamp is None:
             print(f"  ! 字体产物  没有指纹（{STAMP.relative_to(APP)}）")
         elif stamp != digest:
             print("  ! 字体产物  源、字符集或本脚本变了，指纹不一致")
+        # 旧 stamp 没记过产物指纹时跳过：否则升级这段代码本身会让流水线变红，
+        # 而那不是"产物过期"。重跑一次生成就会补上。
+        elif output_stamp is not None and digest_of_files(expected) != output_stamp:
+            print("  ! 字体产物  被手改过（产物指纹与生成时不一致）")
         else:
             print("  · 字体产物  指纹一致")
             print("\n[同步] 字体已是最新")
@@ -218,7 +241,7 @@ def main() -> int:
             line += f"  (+ {ttf.stat().st_size // 1024} KB TTF，troika 用)"
         print(line)
 
-    write_stamp(digest_of(sources))
+    write_stamp(digest_of(sources), expected_outputs(sources))
 
     print(f"\n合计 {total_before // 1024} KB → {total_after // 1024} KB"
           f"（省下 {(total_before - total_after) // 1024} KB）")

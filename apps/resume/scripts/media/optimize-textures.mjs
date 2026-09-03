@@ -178,7 +178,7 @@ for (const file of readdirSync(join(SRC, PLAN.dir)).sort()) {
   )
 }
 
-if (problems === 0) writeStamp(STAMP_NAME, digestOf(stampInputs))
+if (problems === 0) writeStamp(STAMP_NAME, digestOf(stampInputs), stampOutputs)
 
 console.log(
   `\n合计 ${before.toFixed(0)} KB → ${after.toFixed(0)} KB` +

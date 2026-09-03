@@ -1,9 +1,12 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { content } from '@/lib/content'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
+
+import type { UserString } from './helpers/sourceScan'
+import { scanTree, userStrings } from './helpers/sourceScan'
 
 /**
  * Lab 界面文案的门禁（审计 E7）。
@@ -121,118 +124,240 @@ function flatten(value: unknown, prefix = '', out: Record<string, string> = {}):
   return out
 }
 
-// ─── Lab 组件里不再有硬编码界面英文 ──────────────────────────────────────────
 
-/** 只扫 Lab 的界面组件；房间内容自己接 useLocale，走 content 的其余部分 */
+// ─── Lab 壳子里不再有硬编码界面英文 ─────────────────────────────────────────
+
+/**
+ * 扫描范围：中文访客从落地到进房这条路上会看到的**界面壳子**。
+ *
+ * 不含 `app/` 的 `<head>` metadata（`title` / `description`）：静态导出下要做
+ * per-locale metadata 得先有 per-locale 路由（`/zh/...`），那是一次独立的路由
+ * 结构变更、需要单独的 ADR，与 E7「Lab 界面中文化」不是一件事。混进来会让这道
+ * 门禁永远红着，而「跑必然失败的步骤只会训练人忽略红灯」。
+ *
+ * 房间**内容**不在这里——它们各自接 `useLocale` 走 `content` 的其余部分。
+ */
 const LAB_UI_DIRS = [
   'components/lab',
   'components/ui',
+  'components/entry',
 ] as const
 
-/**
- * 这些文件里的英文字面量不算违规，各有原因。
- */
+/** 纯 3D / 数学 / 样式，无面向用户的文案 */
 const EXEMPT_FILES = new Set<string>([
-  // 纯 3D / 数学 / 样式，无面向用户的文案
   'components/lab/CorridorGeometry.tsx',
   'components/lab/shaders/RevealMaterial.ts',
 ])
 
 /**
- * 允许出现的英文短语。
+ * 会被用户看到的 **JSX 属性**。
  *
- * 判断标准是「中文用户看到它不会觉得没翻译」：品牌名、技术名、键名、
- * 以及本站固有称呼。
+ * `aria-label` 在列：它是屏幕阅读器用户唯一能读到的文案，不翻译等于对他们
+ * 完全没做 i18n。`className` / `style` / `data-*` 不在列，所以 CSS 值那一大类
+ * 天然不进视野——这是换 AST 之后才能做到的区分（正则眼里
+ * `display: 'none'` 与 `label: 'none'` 一样）。
  */
-const ALLOWED_PHRASES = [
+const VISIBLE_ATTRS = new Set([
+  'aria-label', 'aria-description', 'aria-valuetext', 'aria-placeholder',
+  'title', 'alt', 'placeholder', 'label',
+])
+
+/** 会被用户看到的**对象属性名**（组件 props、配置对象里的文案字段） */
+const VISIBLE_PROPS = new Set([
+  'label', 'text', 'title', 'hint', 'message', 'caption', 'tooltip',
+  'ariaLabel', 'description', 'heading', 'subtitle', 'placeholder', 'detail',
+])
+
+/**
+ * 允许出现的英文：品牌名、技术名、键名、域名、本站固有称呼。
+ *
+ * 判断标准是「中文用户看到它不会觉得没翻译」。
+ */
+const ALLOWED_EXACT = new Set([
   'Lab', 'Classic', 'Gallery', 'GitHub', 'LinkedIn', 'WeChat',
-  'Esc', 'Escape', 'Enter', 'Shift', 'Tab',
-  'ITOM', 'yibinfeng.com',
-]
+  'Esc', 'Escape', 'Enter', 'Shift', 'Tab', 'WebGL',
+  'ITOM', 'yibinfeng.com', 'resume.yibinfeng.com', 'Yibin Feng',
+  '<', '/>', '—', '→', '←',
+])
 
-/** 看起来像面向用户的英文句子/短语（两个以上英文单词，首字母大写开头） */
-const SENTENCE = /\b[A-Z][a-z]+(?: [a-z]+){1,8}\b/
+const HAS_LATIN = /[A-Za-z]/
+const HAS_CJK = /[一-鿿]/
 
-function walk(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    if (name === 'node_modules') continue
-    const full = join(dir, name)
-    if (statSync(full).isDirectory()) walk(full, out)
-    else if (/\.tsx?$/.test(name)) out.push(full)
-  }
-  return out
+/**
+ * 已知的漏译，按文件记**条数**。
+ *
+ * 与相机门禁同一个形态：棘轮只能往下。这些是 2026-09-03 复核查出的存量
+ * （审计把 E7 记成「已做」，实际这一批一直在），修法（新增 `labUi` 键 +
+ * `useLabLabels()` 取用）属于 ADR 20260903211302 那一批，不在换门禁这一步里
+ * ——所以先如实登记，而不是把门禁调松到看不见它们。
+ *
+ * 修完一个文件就把它整行删掉；那是完成标记。
+ */
+const KNOWN_LEAKS: Readonly<Record<string, { count: number, note: string }>> = {
+  'components/entry/ClassicPanel.tsx': {
+    count: 5,
+    note: 'AI Research / Frontend / Structural 三个标签 + Classic View + ENTER →。' +
+      '`entry.classicTitle` 与 `entry.classicTagline` 两个键已翻译但没接线',
+  },
+  'components/entry/EntryPreviewScene.tsx': {
+    count: 2,
+    note: 'BUG FIXED! 与 Drawing… ——3D 场景里的彩蛋文字',
+  },
+  'components/entry/ExplorerBar.tsx': {
+    count: 2,
+    note: 'EXPLORER 与「a door to enter. Audio is currently」。后者被 `{isTouch ? ...}` ' +
+      '切成两段，正则版连这条最长的都抓不到（跨插值）',
+  },
+  'components/lab/BugEaster.tsx': { count: 1, note: 'BUG FIXED! 彩蛋' },
+  'components/lab/HeroText.tsx': {
+    count: 1,
+    note: '走廊欢迎区的 3D 标语 `<AI Engineer />`。职称属于简历内容，应走 ' +
+      '`content[locale]` 而不是 labUi',
+  },
+  'components/lab/LabClient.tsx': {
+    count: 3,
+    note: 'WebGL 不可用时的兜底页。这一屏只有不支持 3D 的设备会看到，' +
+      '所以从来没人注意到它没翻译',
+  },
+  'components/lab/LabLoader.tsx': { count: 1, note: '「Slow connection? Open Classic View →」' },
+  'components/lab/LabTutorial.tsx': {
+    count: 3,
+    note: 'How to explore / Skip / Start exploring。`hints.howToExplore` 已翻译但只用在 ' +
+      'aria-label，可见文字仍是英文；`hints.dismissTutorial` 已翻译未接线',
+  },
+  'components/ui/ImagePreview.tsx': {
+    count: 1,
+    note: '`aria-label={`Preview ${alt}`}` ——模板串，正则版抓不到',
+  },
+  'components/ui/NavigationUI.tsx': {
+    count: 1,
+    note: '返回按钮的可见文字是 Back（它的 aria-label 反倒是本地化的）。' +
+      '`panels.mute` / `panels.unmute` 已翻译未接线',
+  },
 }
 
-/** 去注释、去 import、去 className / style 里的值 */
-function uiCode(source: string): string {
-  let out = ''
-  let i = 0
-  while (i < source.length) {
-    const two = source.slice(i, i + 2)
-    if (two === '//') {
-      while (i < source.length && source[i] !== '\n') i += 1
-      continue
-    }
-    if (two === '/*') {
-      i += 2
-      while (i < source.length && source.slice(i, i + 2) !== '*/') i += 1
-      i += 2
-      continue
-    }
-    if (two === '{/') {
-      // JSX 注释 {/* ... */}
-      const close = source.indexOf('*/}', i)
-      if (close !== -1) { i = close + 3; continue }
-    }
-    out += source[i]
-    i += 1
-  }
-  return out
-    .split('\n')
-    .filter(line => !/^\s*import\b/.test(line))
-    // className / style / 路径 / aria 之外的属性名不看
-    .filter(line => !/className=|styles\.|font-|fontFamily|\/textures\/|\/sounds\/|\/fonts\//.test(line))
-    .join('\n')
+/** 一个字符串是否处在「用户会看到」的语法位置 */
+function isUserFacing(hit: UserString): boolean {
+  if (hit.context === 'import' || hit.context === 'path' || hit.context === 'key') return false
+  // 开发者可见文案：用**语法位置**豁免，而不是放宽匹配
+  if (hit.context === 'error' || hit.context === 'console') return false
+  if (hit.kind === 'jsx') return true
+  if (hit.owner === null) return false
+  return VISIBLE_ATTRS.has(hit.owner) || VISIBLE_PROPS.has(hit.owner)
 }
 
-describe('Lab 界面组件不再硬编码英文', () => {
-  it('没有漏在外面的英文句子', () => {
-    const offenders: string[] = []
-    for (const dir of LAB_UI_DIRS) {
-      for (const file of walk(join(ROOT, dir))) {
-        const rel = relative(ROOT, file)
-        if (EXEMPT_FILES.has(rel)) continue
-        const code = uiCode(readFileSync(file, 'utf8'))
-        for (const [i, line] of code.split('\n').entries()) {
-          // 只看字符串字面量与 JSX 文本
-          const literals = [
-            ...line.matchAll(/'([^']{4,60})'/g),
-            ...line.matchAll(/"([^"]{4,60})"/g),
-            ...line.matchAll(/>\s*([A-Z][^<>{}]{3,60})\s*</g),
-          ].map(m => m[1]!)
-          for (const literal of literals) {
-            if (!SENTENCE.test(literal)) continue
-            if (ALLOWED_PHRASES.some(p => literal.trim() === p)) continue
-            offenders.push(`${rel}:${i + 1}  「${literal.trim()}」`)
-          }
-        }
-      }
-    }
+/** 看起来是未翻译的英文文案 */
+function looksUntranslated(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length === 0) return false
+  if (ALLOWED_EXACT.has(trimmed)) return false
+  if (!HAS_LATIN.test(trimmed)) return false
+  // 含汉字说明已经翻译过（`退出 Lab` 这类混合文案是合法的）
+  if (HAS_CJK.test(trimmed)) return false
+  return true
+}
+
+function scanLeaks(): Map<string, UserString[]> {
+  const found = new Map<string, UserString[]>()
+  const all = scanTree(ROOT, LAB_UI_DIRS, userStrings)
+  for (const [file, hits] of all) {
+    if (EXEMPT_FILES.has(file)) continue
+    const leaks = hits.filter(h => isUserFacing(h) && looksUntranslated(h.text))
+    if (leaks.length > 0) found.set(file, leaks)
+  }
+  return found
+}
+
+describe('Lab 壳子不硬编码英文', () => {
+  const leaks = scanLeaks()
+  const describeLeaks = (file: string) =>
+    (leaks.get(file) ?? []).map(h => `${h.line} [${h.owner ?? h.kind}] 「${h.text}」`).join('\n      ')
+
+  it('没有新增的漏译', () => {
+    const unlisted = [...leaks.keys()].filter(f => !(f in KNOWN_LEAKS)).sort()
     expect(
-      offenders,
-      '这些界面文案还是硬编码英文（审计 E7）。放进 content[locale].labUi 并用 ' +
-      'useLabLabels() 取：\n' + offenders.join('\n'),
+      unlisted,
+      '这些文件有硬编码的界面英文（审计 E7）。放进 `content[locale].labUi` 并用 ' +
+      '`useLabLabels()` 取：\n' +
+      unlisted.map(f => `\n  ${f}\n      ${describeLeaks(f)}`).join(''),
     ).toEqual([])
   })
 
-  it('扫描器能抓到硬编码，也不误伤（自检）', () => {
-    expect(SENTENCE.test('Back to corridor')).toBe(true)
-    expect(SENTENCE.test('Close achievements')).toBe(true)
-    // 单个词、驼峰标识符、路径不算句子
-    expect(SENTENCE.test('Projects')).toBe(false)
-    expect(SENTENCE.test('useLabLabels')).toBe(false)
-    // 注释里的内容被剥掉
-    expect(uiCode("// aria-label='Back to corridor'\nconst a = 1")).not.toContain('corridor')
-    expect(uiCode('{/* Back to corridor */}\nconst a = 1')).not.toContain('corridor')
+  it('已知漏译没有变多 —— 棘轮只能往下', () => {
+    const grown: string[] = []
+    for (const [file, { count }] of Object.entries(KNOWN_LEAKS)) {
+      const actual = leaks.get(file)?.length ?? 0
+      if (actual > count) {
+        grown.push(`${file}：登记 ${count} 条，实际 ${actual} 条\n      ${describeLeaks(file)}`)
+      }
+    }
+    expect(grown, '这些文件的漏译变多了：\n' + grown.join('\n\n')).toEqual([])
+  })
+
+  it('登记数与实测一致 —— 修好了就把数字改小，否则棘轮留空档', () => {
+    const stale: string[] = []
+    for (const [file, { count }] of Object.entries(KNOWN_LEAKS)) {
+      const actual = leaks.get(file)?.length ?? 0
+      if (actual < count) stale.push(`${file}：登记 ${count}，实际 ${actual}`)
+    }
+    expect(
+      stale,
+      '这些文件的漏译比登记的少（修了一部分）。把数字改成实际值，' +
+      '改成 0 就删掉整行：\n' + stale.join('\n'),
+    ).toEqual([])
+  })
+
+  it('KNOWN_LEAKS 里没有僵尸条目', () => {
+    const zombies = Object.keys(KNOWN_LEAKS).filter(f => !leaks.has(f))
+    expect(zombies, '这些文件已经没有漏译了，从 KNOWN_LEAKS 删掉').toEqual([])
+  })
+
+  it('每条已知漏译都写了它是什么', () => {
+    for (const [file, { note }] of Object.entries(KNOWN_LEAKS)) {
+      expect(note.length, file).toBeGreaterThan(10)
+    }
+  })
+})
+
+describe('漏译扫描器没有退化', () => {
+  /*
+    正则版对这几种形态返回"无漏译"，而它们是最常见的写法。这几条防的是有人
+    为了消红灯把判定改弱。扫描器本身的双向锁定在 `sourceScan.test.ts`。
+  */
+  const shouldCatch: readonly [name: string, code: string][] = [
+    ['单个词的 JSX 文本（Back / Skip / Mute）', '<button>Back</button>'],
+    ['✗ 模板字符串', 'const a = { label: `Back to corridor` }'],
+    ['✗ 跨行 JSX 文本（prettier 折行后）', '<p>\n  Slow connection?\n  Open Classic View\n</p>'],
+    ['✗ 带插值的模板串', 'const a = { label: `Preview ${alt}` }'],
+    ['✗ URL 之后的同行文案', "const u = 'https://x.com'; const t = { label: 'Back to corridor' }"],
+    ['aria-label（屏幕阅读器唯一能读到的文案）', '<b aria-label="Close panel" />'],
+  ]
+
+  it.each(shouldCatch)('抓到：%s', (_name, code) => {
+    const hits = userStrings(code, 'probe.tsx').filter(h => isUserFacing(h) && looksUntranslated(h.text))
+    expect(hits, code).not.toEqual([])
+  })
+
+  const shouldIgnore: readonly [name: string, code: string][] = [
+    ['CSS 值', "const s = { display: 'none', position: 'absolute' }"],
+    ['className', '<div className="flex items-center" />'],
+    ['import 路径', "import x from 'some-module'"],
+    ['资源路径', "const p = '/textures/corridor/a.webp'"],
+    ['对象键名', "const o = { 'aria-hidden': true }"],
+    ['开发者错误文案', "throw new Error('Missing room definition for door')"],
+    ['console 输出', "console.warn('Something went wrong')"],
+    ['已翻译（含汉字）', 'const a = { label: \'退出 Lab\' }'],
+    ['混合文案也算已翻译', 'const a = { label: \'退出 Lab\' }'],
+    ['品牌名与键名', '<span>Lab</span>'],
+    ['注释里的英文句子', '// This is an English sentence\nconst a = 1'],
+  ]
+
+  it.each(shouldIgnore)('不误伤：%s', (_name, code) => {
+    const hits = userStrings(code, 'probe.tsx').filter(h => isUserFacing(h) && looksUntranslated(h.text))
+    expect(hits.map(h => h.text), code).toEqual([])
+  })
+
+  it('扫描确实覆盖到了文件 —— 目录写错会让门禁静默变成空扫描', () => {
+    expect(scanTree(ROOT, LAB_UI_DIRS, userStrings).size).toBeGreaterThan(10)
   })
 })

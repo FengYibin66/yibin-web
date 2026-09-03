@@ -13,6 +13,16 @@
 /** 走廊纸白 —— 覆盖层文案的实际背景（取最亮的那面墙，最坏情况） */
 export const CORRIDOR_PAPER = '#f4f0e8'
 
+/**
+ * 入口页的米色底（`app/page.tsx` 的 `background: '#f5f0e8'`）。
+ *
+ * 与 `CORRIDOR_PAPER` 只差一点，但对比度门禁必须按各自的背景算——用错背景
+ * 得到的是一个看起来很精确的错数字。入口页的文案色目前不在 `OVERLAY_COLORS`
+ * 里（还是散在 `ClassicPanel` 与 `page.tsx` 的内联样式里），门禁用棘轮登记着，
+ * 见 `__tests__/labContrast.test.ts` 的 `KNOWN_LOW_CONTRAST`。
+ */
+export const ENTRY_PAPER = '#f5f0e8'
+
 export const OVERLAY_COLORS = {
   /**
    * 走廊底部的操作提示（"滚动" / "上下滑动"）。

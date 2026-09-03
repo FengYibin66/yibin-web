@@ -50,7 +50,8 @@ context/                 # React Context（Scene / Performance / Achievements）
 hooks/                   # 通用 hooks
 scripts/
 ├── lab/                 # 预载表生成器
-└── media/               # 音频重编码
+└── media/               # 四条素材流水线：音频 / 门贴纸 / 纹理 / 字体子集
+                         # 都支持 --check，CI 会跑（见 media-src/AGENTS.md）
 __tests__/               # vitest
 ```
 
@@ -155,9 +156,16 @@ pnpm exec playwright install chromium webkit   # 首次需装浏览器
 ```bash
 pnpm dev:resume          # 从仓库根起（:3000）
 cd apps/resume
-pnpm test                # vitest run —— 当前 443 个全绿
+pnpm test                # vitest run
 pnpm type-check          # tsc --noEmit
 pnpm build               # 静态导出到 out/
+
+# 素材流水线（改了 media-src/ 下的源才需要跑；--check 只报告）
+node scripts/lab/gen-asset-manifest.mjs      # 纹理预载表（派生生成物）
+node scripts/media/encode-audio.mjs          # 音频重编码
+node scripts/media/gallery-door.mjs          # Gallery 门贴纸
+node scripts/media/optimize-textures.mjs     # 入口页纹理
+python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
 ```
 
 > `pnpm lint` **当前跑不起来**：`eslint.config.mjs` 按 flat config 写，但装的

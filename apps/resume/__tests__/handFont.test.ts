@@ -136,9 +136,16 @@ describe('手写字体', () => {
     expect(existsSync(path), `${HAND_FONT_FILE} 不在 public/ 下`).toBe(true)
   })
 
-  it('globals.css 的 @font-face 指向同一个文件 —— 不然 3D 与 DOM 是两款字体', () => {
+  /*
+    早先这里断言的是"CSS 与 3D 指向**同一个文件**"。前提已经变了：字体
+    子集化之后**刻意发两份**——CSS 用 woff2（小 60%+），3D 用 TTF（troika
+    不支持 woff2）。现在要守的是"同源"：两份必须来自同一款字体，
+    即同名不同扩展名。
+  */
+  it('globals.css 用同一款字体的 woff2 —— 不同源会让 3D 与 DOM 是两款字体', () => {
     const css = readFileSync(join(ROOT, 'app/globals.css'), 'utf8')
-    expect(css).toContain(HAND_FONT_FILE)
+    const woff2 = HAND_FONT_FILE.replace(/\.ttf$/, '.woff2')
+    expect(css, `globals.css 里没有 ${woff2}`).toContain(woff2)
   })
 
   it('CSS 族名与文件在同一款字体上对得起来', () => {
@@ -162,10 +169,19 @@ describe('手写字体', () => {
     ).toEqual([])
   })
 
-  it('public/fonts 下没有孤立的 woff2 版本 —— 两份都会被拉，白费流量', () => {
-    const fonts = readdirSync(join(PUBLIC, 'fonts'))
-    const stem = HAND_FONT_FILE.split('/').pop()!.replace(/\.[^.]+$/, '')
-    expect(fonts.filter(f => f.startsWith(stem) && f.endsWith('.woff2'))).toEqual([])
+  /*
+    这条原先禁止 woff2 与 TTF 并存（"两份都会被拉，白费流量"）。子集化之后
+    并存是**必要的**：CSS 侧的 woff2 与 3D 侧的 TTF 各有其用，而且各自只在
+    需要时被拉——CSS 的那份由 @font-face 触发，TTF 的那份只有渲染 3D 文字时
+    troika 才去取。所以改成断言两份都在、且 woff2 明显更小。
+  */
+  it('woff2 与 TTF 并存，且 woff2 明显更小（子集化的意义）', () => {
+    const stem = HAND_FONT_FILE.replace(/\.ttf$/, '')
+    const ttf = join(PUBLIC, HAND_FONT_FILE.replace(/^\//, ''))
+    const woff2 = join(PUBLIC, `${stem}.woff2`.replace(/^\//, ''))
+    expect(existsSync(ttf), 'troika 用的 TTF 不在').toBe(true)
+    expect(existsSync(woff2), 'CSS 用的 woff2 不在').toBe(true)
+    expect(statSync(woff2).size, 'woff2 没有比 TTF 小').toBeLessThan(statSync(ttf).size)
   })
 
   it('每一处 drei <Text> 都传了 font —— 不传的话 troika 去 fonts.gstatic.com 拉，大陆访客加载失败', () => {

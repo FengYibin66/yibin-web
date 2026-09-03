@@ -14,10 +14,26 @@
 ## 内容
 
 ```
-sounds/    环境音原始 mp3（szum*.mp3）——scripts/media/encode-audio.mjs 的输入
-doors/     Gallery 门的原图（带旧的技术 / 社媒贴纸）
-           ——scripts/media/gallery-door.mjs 的输入
+sounds/            环境音原始 mp3（szum*.mp3）
+                   → scripts/media/encode-audio.mjs
+doors/             Gallery 门的原图（带旧的技术 / 社媒贴纸）
+                   → scripts/media/gallery-door.mjs
+fonts/             原始 TTF（未子集化，共 2.9MB）
+                   → scripts/media/subset-fonts.py
+textures/entrance/ 入口页纹理原图（砖墙一张 604KB）
+                   → scripts/media/optimize-textures.mjs
 ```
+
+四条流水线的产物都在 `public/` 下，四个脚本都支持 `--check`（只报告不写），
+CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**——这是这类生成物
+的共同失败模式：
+
+| 忘了重跑 | 症状 |
+|---------|------|
+| 音频 | 播的是旧码率，白多下几 MB |
+| 门贴图 | 摄影相册的门上还是 HTML5 / TikTok |
+| 字体 | 新加的汉字落到兜底字体（一句话里蹦出一个不同字形的字） |
+| 纹理 | 入口页多下 900KB |
 
 `doors/` 里是**原始**门板：Classic 页那两扇贴着 HTML5 / JS / React /
 node.js / CSS3，走廊侧那两扇贴着 Instagram / TikTok / YouTube。它们与
@@ -30,13 +46,32 @@ node.js / CSS3，走廊侧那两扇贴着 Instagram / TikTok / YouTube。它们�
 的 `AMBIENCE` / `MUSIC` 表里加一项，然后：
 
 ```bash
-node scripts/media/encode-audio.mjs          # 只编码有变化的
-node scripts/media/encode-audio.mjs --force  # 强制重编
-node scripts/media/encode-audio.mjs --check  # 只报告（CI 可用）
+# 音频（需要系统 ffmpeg：brew install ffmpeg）
+node scripts/media/encode-audio.mjs
+node scripts/media/encode-audio.mjs --force   # 强制重编
+node scripts/media/encode-audio.mjs --check   # 只报告，CI 用
+
+# Gallery 门贴纸（贴哪在 lib/lab/domain/galleryDoorPlan.mjs，
+#                 长什么样在 scripts/media/stickerArt.mjs）
+node scripts/media/gallery-door.mjs
+
+# 入口页纹理（上限在脚本的 PLAN 里逐个声明，不是一刀切）
+node scripts/media/optimize-textures.mjs
+
+# 字体子集 + woff2（需要 fonttools 与 brotli）
+python3 -m pip install fonttools brotli
+python3 scripts/media/subset-fonts.py
 ```
 
-需要系统 `ffmpeg`（`brew install ffmpeg`）。刻意不把 ffmpeg 装成 devDependency：
-那是 30MB+ 的二进制，而这是一次性构建步骤，不进 CI。
+刻意不把 ffmpeg 装成 devDependency：那是 30MB+ 的二进制，而它只在换素材时
+用一次。`sharp` 与 `fonttools` 则是常规依赖（sharp 已在 devDependencies）。
+
+## 字体的一个坑
+
+CSS 用 woff2、3D 文字用 TTF，**两份都要发**——drei 的 `<Text>`（troika）
+不支持 woff2。哪些字体需要 TTF 副本，见脚本里的 `TROIKA_FONTS`；那张名单
+要与源码里的 `font=` 和 `*_FONT_URL` 常量对得上，
+`__tests__/fontSubset.test.ts` 守这一条。
 
 ## 例外
 

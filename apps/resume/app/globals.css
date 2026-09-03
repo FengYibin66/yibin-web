@@ -1,14 +1,23 @@
 @import "tailwindcss";
 
+/*
+  CSS 侧一律用 woff2（子集化后的）。3D 文字仍用同名的 `.ttf`——troika 不支持
+  woff2（见 lib/lab/domain/sketch/types.ts 的 HAND_FONT_FILE 注释）。
+
+  两份文件都由 `python3 scripts/media/subset-fonts.py` 从 media-src/fonts 的
+  原始 TTF 生成，按仓库里实际出现过的字符做子集：2992 KB → 1300 KB，
+  其中中文那份 1479 KB → 135 KB（woff2）。原始全字符集里 99% 的汉字字形
+  永远不会被渲染。
+*/
 @font-face {
   font-family: 'CabinSketch';
-  src: url('/fonts/CabinSketch-Bold.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Bold.woff2') format('woff2');
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: 'CabinSketch';
-  src: url('/fonts/CabinSketch-Regular.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Regular.woff2') format('woff2');
   font-weight: 400;
   font-display: swap;
 }
@@ -24,7 +33,7 @@
 */
 @font-face {
   font-family: 'CabinSketch Bold';
-  src: url('/fonts/CabinSketch-Bold.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Bold.woff2') format('woff2');
   font-weight: 400 900;
   font-display: swap;
 }
@@ -49,7 +58,7 @@
 */
 @font-face {
   font-family: 'Patrick Hand';
-  src: url('/fonts/PatrickHand-Regular.ttf') format('truetype');
+  src: url('/fonts/PatrickHand-Regular.woff2') format('woff2');
   font-weight: 400;
   font-display: swap;
 }

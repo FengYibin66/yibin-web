@@ -57,31 +57,39 @@ export const SOUND_MANIFEST = {
   door_open: { src: ['/sounds/door_open.mp3'], bus: 'sfx', pool: 2 },
   door_close: { src: ['/sounds/door_close.mp3'], bus: 'sfx', pool: 2 },
   paper_tear: { src: ['/sounds/papersound.mp3'], bus: 'sfx', pool: 2 },
+  // 成就解锁的双音（A4 → E5，0.56s）。ffmpeg 合成，8KB。
+  // 原实现是裸 AudioContext 现场合成同一组音——那条路径忽略静音、泄漏
+  // AudioContext、且非手势触发时基本不响（审计 C4）。做成音频文件后它和
+  // 其余音效走同一条总线。生成命令见 scripts/media/encode-audio.mjs 顶部。
+  achievement_chime: { src: ['/sounds/achievement_chime.m4a'], bus: 'sfx', pool: 1 },
 
   // ── 房间环境音（3D 定位，由 RoomDefinition.ambience 引用）──
   // 这三段原先经 drei 的 <PositionalAudio> 播放，那层包装走 useLoader 会
   // Suspend，于是它们**阻塞房间 READY**（审计 A5），且各自建一个
   // AudioListener 与全局静音断开（A6）。
+  // 单声道 64kbps m4a（scripts/media/encode-audio.mjs 生成）。
+  // 原始 mp3 是 320kbps 立体声，四段共 6.8MB → 1.7MB。
+  // 单声道不损失 3D 效果：定位由 PannerNode 做，源本身是不是立体声无关。
   amb_about: {
-    src: ['/sounds/szumwiatru.mp3'],
+    src: ['/sounds/amb_about.m4a'],
     bus: 'ambience',
     loop: true,
     spatial: { refDistance: 2, rolloffFactor: 0.8, distanceModel: 'exponential' },
   },
   amb_projects: {
-    src: ['/sounds/szummonitorow.mp3'],
+    src: ['/sounds/amb_projects.m4a'],
     bus: 'ambience',
     loop: true,
     spatial: { refDistance: 2, rolloffFactor: 1.0, distanceModel: 'exponential' },
   },
   amb_contact: {
-    src: ['/sounds/szummorza.mp3'],
+    src: ['/sounds/amb_contact.m4a'],
     bus: 'ambience',
     loop: true,
     spatial: { refDistance: 2, rolloffFactor: 1.2, distanceModel: 'exponential' },
   },
   amb_publications: {
-    src: ['/sounds/szummiasta.mp3'],
+    src: ['/sounds/amb_publications.m4a'],
     bus: 'ambience',
     loop: true,
     spatial: { refDistance: 3, rolloffFactor: 1.0, distanceModel: 'exponential' },
@@ -89,6 +97,18 @@ export const SOUND_MANIFEST = {
 } as const satisfies Record<string, SoundDef>
 
 export type SoundName = keyof typeof SOUND_MANIFEST
+
+/**
+ * 按名字取定义，类型是 `SoundDef` 而不是字面量。
+ *
+ * 需要它是因为 `as const satisfies` 会把每一项窄化成它自己的字面量类型，
+ * 于是 `SOUND_MANIFEST[name].spatial` 在联合类型上不可访问——只有声明了
+ * spatial 的那几项有这个字段。`as const` 的好处（key 是字面量联合、
+ * 值不可变）要保留，所以在这里做一次收窄到公共接口。
+ */
+export function soundDef(name: SoundName): SoundDef {
+  return SOUND_MANIFEST[name] as SoundDef
+}
 
 /** MIME 类型：`canPlayType` 需要它来判断能否解码 */
 const MIME_BY_EXTENSION: Record<string, string> = {

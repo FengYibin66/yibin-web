@@ -150,30 +150,32 @@ export const ROOM_ASSETS: Readonly<Record<string, readonly string[]>> = {
 
 /** 音频清单里出现的全部文件 */
 export const SOUND_FILES: readonly string[] = [
+  '/sounds/achievement_chime.m4a',
+  '/sounds/amb_about.m4a',
+  '/sounds/amb_contact.m4a',
+  '/sounds/amb_projects.m4a',
+  '/sounds/amb_publications.m4a',
   '/sounds/bg_corridor.m4a',
   '/sounds/bg_corridor.ogg',
   '/sounds/door_close.mp3',
   '/sounds/door_hover.mp3',
   '/sounds/door_open.mp3',
   '/sounds/papersound.mp3',
-  '/sounds/szummiasta.mp3',
-  '/sounds/szummonitorow.mp3',
-  '/sounds/szummorza.mp3',
-  '/sounds/szumwiatru.mp3',
 ] as const
 
 /** 全部资源的扁平去重列表（供存在性校验用） */
 export const ALL_ASSETS: readonly string[] = [
+  '/sounds/achievement_chime.m4a',
+  '/sounds/amb_about.m4a',
+  '/sounds/amb_contact.m4a',
+  '/sounds/amb_projects.m4a',
+  '/sounds/amb_publications.m4a',
   '/sounds/bg_corridor.m4a',
   '/sounds/bg_corridor.ogg',
   '/sounds/door_close.mp3',
   '/sounds/door_hover.mp3',
   '/sounds/door_open.mp3',
   '/sounds/papersound.mp3',
-  '/sounds/szummiasta.mp3',
-  '/sounds/szummonitorow.mp3',
-  '/sounds/szummorza.mp3',
-  '/sounds/szumwiatru.mp3',
   '/textures/about/awatarnachmurce.webp',
   '/textures/about/freelancewyspa.webp',
   '/textures/about/uowyspa.webp',

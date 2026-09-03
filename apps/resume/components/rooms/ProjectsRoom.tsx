@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, memo, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
-import { Text, PositionalAudio } from '@react-three/drei'
+import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAchievements } from '@/context/AchievementsContext'
@@ -200,12 +200,7 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
 
   return (
     <group position={[0, -1.2, 0]}>
-      <PositionalAudio
-        url="/sounds/szummonitorow.mp3"
-        distanceModel="exponential"
-        refDistance={2} rolloffFactor={1.0}
-        loop autoplay volume={1}
-      />
+      {/* 环境音见 AboutRoom 同处注释 */}
 
       <FloatingCodeParticles
         towerRotationRef={particleTowerRotation}

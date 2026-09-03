@@ -10,6 +10,8 @@ import {
 } from '@/components/rooms/publications/PublicationsRoom'
 import { ContactRoom } from '@/components/rooms/ContactRoom'
 import { RoomReadyBoundary } from '@/components/lab/RoomReadyBoundary'
+import { RoomAmbience } from '@/components/lab/RoomAmbience'
+import { ROOMS } from '@/lib/lab/domain/rooms'
 
 interface RoomInteriorProps {
   roomId: RoomId
@@ -52,14 +54,28 @@ export function RoomInterior({
   const props = { showRoom, isExiting }
 
   return (
-    <RoomReadyBoundary
-      key={`${roomId}:${attempt}`}
-      attempt={attempt}
-      onLoading={onLoading}
-      onReady={onReady}
-      onError={onError}
-    >
-      {renderRoom(roomId, props)}
-    </RoomReadyBoundary>
+    <>
+      {/*
+        环境音**刻意放在 RoomReadyBoundary 之外**。
+
+        这是审计 A5 的核心：原先环境音是各房间内部的 drei `<PositionalAudio>`，
+        它走 `useLoader` 会 Suspend——于是 Projects 的 2.35MB 与 Contact 的
+        1.66MB 音频挂在房间的 Suspense 边界里，8 秒加载超时很容易被一段装饰性
+        音频撑爆。放在边界外之后，房间 READY 与音频彻底解耦。
+      */}
+      <RoomAmbience
+        ambience={ROOMS[roomId].ambience}
+        active={showRoom && !isExiting}
+      />
+      <RoomReadyBoundary
+        key={`${roomId}:${attempt}`}
+        attempt={attempt}
+        onLoading={onLoading}
+        onReady={onReady}
+        onError={onError}
+      >
+        {renderRoom(roomId, props)}
+      </RoomReadyBoundary>
+    </>
   )
 }

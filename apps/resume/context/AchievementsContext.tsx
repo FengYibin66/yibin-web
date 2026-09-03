@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react'
 
 import { loadAchievements, saveAchievements } from '@/lib/lab/achievementStorage'
+import { audioMixer } from '@/lib/lab/app/audio/AudioMixer'
 
 // ─── Achievement definitions ──────────────────────────────────────────────────
 
@@ -47,31 +48,20 @@ export interface AchievementsState {
 // 读写下沉到 lib/lab/achievementStorage，因为 /gallery 独立路由在本 Provider
 // 之外也要能记成就（审计 D1）。本 Provider 现在是那份存储的 React 视图。
 
-function playUnlockChime() {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    if (!AudioCtx) return
-
-    const ctx = new AudioCtx()
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-    if (ctx.state !== 'running') return
-
-    const gain = ctx.createGain()
-    const osc = ctx.createOscillator()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(440, ctx.currentTime)
-    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15)
-    gain.gain.setValueAtTime(0, ctx.currentTime)
-    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.05)
-    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.15)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.5)
-  } catch {
-    // silently fail
-  }
+/**
+ * 解锁提示音。
+ *
+ * 原实现是裸 `new AudioContext()` 合成的双音，有三个缺陷（审计 C4）：
+ *   - **忽略静音**：它绕过 `AudioProvider`，用户关了声音照样响
+ *   - **泄漏 AudioContext**：每次解锁新建一个且从不 close，7 个成就就接近
+ *     浏览器上限（Chrome 约 6 个并发 AudioContext）
+ *   - **基本不响**：`ctx.resume()` 未 await 就检查 `ctx.state`，非用户手势
+ *     触发时 state 还是 suspended，于是直接 return
+ *
+ * 现在走 Mixer 的 sfx 总线：静音、音量、自动播放解锁全部由它统一处理。
+ */
+function playUnlockChime(): void {
+  audioMixer.play('achievement_chime', { volume: 0.7 })
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────

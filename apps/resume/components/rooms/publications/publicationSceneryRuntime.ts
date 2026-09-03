@@ -1,11 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { useAudio } from '@/context/AudioContext'
-import { PUBLICATION_AUDIO_ASSETS } from '@/lib/lab/roomAssets'
 
-const CITY_AMBIENCE_PATH = PUBLICATION_AUDIO_ASSETS[1]
 const SAFE_FRAME_DELTA = 0.05
 
 export interface PublicationBirdState {
@@ -67,36 +63,17 @@ export function advancePublicationBird(
   }
 }
 
-export function usePublicationCityAmbience(enabled: boolean): void {
-  const { isMuted, bgmVolume } = useAudio()
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const mutedRef = useRef(isMuted)
-  const volumeRef = useRef(bgmVolume)
-  mutedRef.current = isMuted
-  volumeRef.current = bgmVolume
-
-  useEffect(() => {
-    if (!enabled) return
-    const audio = new Audio(CITY_AMBIENCE_PATH)
-    audio.loop = true
-    audio.muted = mutedRef.current
-    audio.volume = THREE.MathUtils.clamp(volumeRef.current, 0, 1)
-    audioRef.current = audio
-    try {
-      void audio.play().catch(() => undefined)
-    } catch {
-      // Decorative ambience must not participate in room readiness.
-    }
-    return () => {
-      audio.pause()
-      audio.currentTime = 0
-      if (audioRef.current === audio) audioRef.current = null
-    }
-  }, [enabled])
-
-  useEffect(() => {
-    if (!enabled || !audioRef.current) return
-    audioRef.current.muted = isMuted
-    audioRef.current.volume = THREE.MathUtils.clamp(bgmVolume, 0, 1)
-  }, [bgmVolume, enabled, isMuted])
+/**
+ * 城市环境音。
+ *
+ * 原先这里自己 `new Audio()`、自己管音量与静音——是全站**第四套**音频实现
+ * （另三套见 `AudioMixer` 顶部注释）。现在环境音统一由
+ * `RoomAmbience` + `RoomDefinition.ambience` 负责，本 hook 只保留一个空壳
+ * 以免调用点大改；`enabled` 参数已无用（房间的 active 状态由 RoomInterior
+ * 传给 RoomAmbience）。
+ *
+ * @deprecated 房间组件改用 RoomDefinition 后删除
+ */
+export function usePublicationCityAmbience(_enabled: boolean): void {
+  // 有意为空：见上方注释
 }

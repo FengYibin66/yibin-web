@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
-import { Text, PositionalAudio } from '@react-three/drei'
+import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
@@ -331,16 +331,9 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
 
   return (
     <group position={[0, 0, -25]}>
-      {/* Ambient wind sound */}
-      <PositionalAudio
-        url="/sounds/szumwiatru.mp3"
-        distanceModel="exponential"
-        refDistance={2}
-        rolloffFactor={0.8}
-        loop
-        autoplay
-        volume={2.5}
-      />
+      {/* 环境音由 RoomAmbience + 房间声明负责（ADR 20260903140618）：
+          原先这里是 drei 的 <PositionalAudio autoplay>，它走 useLoader 会
+          Suspend，于是音频阻塞房间 READY（审计 A5），且与静音开关脱钩（A6）。 */}
 
       {/* Sky backdrop */}
       <mesh position={[0, 0, -200]}>

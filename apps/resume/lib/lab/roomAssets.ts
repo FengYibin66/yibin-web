@@ -9,9 +9,20 @@ type OrdinaryRoomId = Exclude<RoomId, 'gallery'>
 // CLOUD_TEXTURES 现在从 ./cloudTextures 导入（原先此处、SkyChunk、GalleryClouds
 // 三个文件各有一份拷贝，见那个文件顶部注释）
 
+/**
+ * 只剩纸张音效。
+ *
+ * 原先第二项是 `/sounds/szummiasta.mp3`（2.55MB，320kbps 立体声城市环境音），
+ * 由 `usePublicationCityAmbience` 用裸 `new Audio()` 播放——那是全站第四套
+ * 音频实现。环境音已按 ADR 20260903140618 收归 `RoomAmbience` + AudioMixer，
+ * 走 `amb_publications.m4a`（单声道 64kbps，525KB）**且按需加载**。
+ *
+ * 留着它的代价不是"多一个没用的常量"：这份清单会被 `preloadRoomAssets`
+ * 预载，所以每个进 Publications 房间的访客都在下载一个再也不会播放的
+ * 2.55MB 文件。
+ */
 export const PUBLICATION_AUDIO_ASSETS = [
   '/sounds/papersound.mp3',
-  '/sounds/szummiasta.mp3',
 ] as const
 
 export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = {

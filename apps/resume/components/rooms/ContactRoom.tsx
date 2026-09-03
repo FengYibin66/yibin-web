@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useTexture, PositionalAudio } from '@react-three/drei'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
@@ -40,7 +40,6 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   const statekRef    = useRef<THREE.Mesh>(null)
   // MESSAGE 桶点击时聚焦到留言纸（见下方 SocialBarrel 的 onClick）
   const messagePaperRef = useRef<MessagePaperHandle>(null)
-  const audioRef     = useRef<{ setVolume: (v: number) => void } | null>(null)
 
   const seaTexture      = useTexture('/textures/contact/faletopdown.webp')
   const moloTexture     = useTexture('/textures/contact/molo.webp')
@@ -97,7 +96,7 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
 
   return (
     <group position={[0, -0.7, -5]}>
-      <PositionalAudio ref={audioRef as never} url="/sounds/szummorza.mp3" distanceModel="exponential" refDistance={2} rolloffFactor={1.2} loop autoplay volume={2} />
+      {/* 环境音见 AboutRoom 同处注释 */}
 
       {/*
         海上的云。

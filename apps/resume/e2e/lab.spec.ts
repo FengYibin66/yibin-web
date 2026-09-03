@@ -440,10 +440,20 @@ test.describe('教程气泡', () => {
       test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
       await teleportTo(page, 'about')
-      // 房间教程在进房 2 秒后弹出
-      await expect(page.getByTestId('achievement-popup')).toBeVisible({ timeout: 10_000 })
-      await expect(page.getByTestId('achievement-popup'))
-        .toHaveAttribute('data-popup-kind', 'tutorial')
+
+      /*
+        直接定位**教程类**气泡，不要"取第一个可见的再断言它的 kind"。
+
+        进房会解锁 `corridor_enter`，而庆祝气泡**插队到队首**（那是刻意的：
+        它是对刚才动作的反馈，排在一条不自动消失的教程后面就失去因果关系）。
+        所以第一个可见的气泡很可能是庆祝而不是教程——CI 上就是这么红的，
+        本地跑不出来是因为时序更快。
+      */
+      const roomTutorial = page.locator(
+        '[data-testid="achievement-popup"][data-popup-kind="tutorial"]',
+      )
+      // 房间教程在进房 2 秒后弹出，前面还可能排着一条 2 秒的庆祝
+      await expect(roomTutorial).toBeVisible({ timeout: 20_000 })
 
       await page.getByTestId('nav-back').click()
       await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false', {

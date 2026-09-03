@@ -29,6 +29,25 @@
   font-display: swap;
 }
 
+/*
+  手写体。ADR 20260903140619 的手写层（便签、白板标题、胶带标签）用它。
+
+  'Patrick Hand' 这个族名在仓库里被引用了很久却从未加载过——原作者本意就是
+  这一款（见上方 CabinSketch 别名那段注释里记的审计 E1）。现在把字体真的装上：
+  Google Fonts 的 latin 子集，OFL，14KB woff2，自托管（不打 fonts.gstatic
+  的外链，静态站不该有第三方阻塞请求）。许可文本在 /fonts/PatrickHand-OFL.txt。
+
+  注意它同时被 canvas 用来画手写层的文字——`font-display: swap` 意味着字体
+  到位前 `fillText` 会用兜底字体栅格化，而画完就是像素了。
+  `infra/sketch/rasterize.ts` 的 `ensureHandFont()` 处理这个时序。
+*/
+@font-face {
+  font-family: 'Patrick Hand';
+  src: url('/fonts/PatrickHand-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* ============================================================
    Design Tokens — Tailwind v4 @theme block
    These become utility-class-accessible (e.g. bg-bg-base)

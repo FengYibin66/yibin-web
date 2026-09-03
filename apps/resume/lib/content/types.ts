@@ -274,6 +274,22 @@ export interface LabUiLabels {
     imagePreview: string
     previewImage: string
   }
+  /**
+   * 入口页。
+   *
+   * 放在 labUi 里而不是另开一组：入口页就是 Lab 的门，两处文案要一起改
+   * （比如 Lab 改了名字）。审计 E7 也把它算在同一条里（"入口页也无语言切换"）。
+   */
+  entry: {
+    labEyebrow: string
+    labTitle: string
+    labTagline: string
+    labCta: string
+    labCtaTouch: string
+    classicTitle: string
+    classicTagline: string
+    classicCta: string
+  }
   /** 「这个操作能做什么」的结果说明 */
   results: {
     walkCorridor: string

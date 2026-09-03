@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useCallback, Suspense, useEffect, useState } from 'react'
+import { OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
 import { Canvas } from '@react-three/fiber'
 
 import gsap from 'gsap'
@@ -145,7 +146,7 @@ function LabCanvas() {
           pointerEvents: 'none',
           zIndex: 10,
         }}>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: 'rgba(42,31,14,0.4)', margin: 0 }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: OVERLAY_COLORS.hint, margin: 0 }}>
             {(isTouch ? labels.hints.swipeUpDown : labels.hints.scroll).toUpperCase()}
           </p>
         </div>
@@ -156,7 +157,7 @@ function LabCanvas() {
           href="/"
           style={{
             position: 'fixed', top: '20px', left: '20px', zIndex: 50,
-            fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'rgba(200,169,110,0.6)',
+            fontFamily: 'var(--font-mono)', fontSize: '12px', color: OVERLAY_COLORS.exitLab,
             textDecoration: 'none', letterSpacing: '0.1em',
           }}
         >

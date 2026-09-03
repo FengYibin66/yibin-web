@@ -76,6 +76,16 @@ export const en: SiteContent = {
       imagePreview: 'Image preview',
       previewImage: 'Preview image',
     },
+    entry: {
+      labEyebrow: 'Enter',
+      labTitle: 'The Lab',
+      labTagline: 'Immersive · 3D · Interactive',
+      labCta: 'Click the door',
+      labCtaTouch: 'Tap the door',
+      classicTitle: 'Classic Résumé',
+      classicTagline: 'Fast · Readable · Printable',
+      classicCta: 'Open the résumé',
+    },
     results: {
       walkCorridor: 'walk the corridor',
       lookAround: 'look around',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback } from 'react'
+import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
@@ -74,18 +75,21 @@ export function useCorridorCamera({
     return () => { unsub(); router.deactivate('corridor') }
   }, [router, handleWheel])
 
+  /**
+   * 键盘前进。
+   *
+   * 判断在 `domain/corridor/keyboard` 里（纯函数、可测）：焦点在可交互元素
+   * 上时这次按键归控件，走廊不动也不 `preventDefault`。
+   *
+   * 原实现只排除 `INPUT` / `TEXTAREA`，于是 Lab 里所有按钮都没法用空格激活
+   * ——键盘用户 Tab 到"打开地图"按空格，走廊往前走一步，地图没开（审计 E4）。
+   */
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!scrollEnabledRef.current) return
-    const tag = (e.target as HTMLElement).tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return
-    const delta: Record<string, number> = {
-      ArrowDown: 80, ArrowUp: -80, PageDown: 300, PageUp: -300, ' ': 150,
-    }
-    const d = delta[e.key]
-    if (d !== undefined) {
-      e.preventDefault()
-      targetZ.current = targetZ.current - d * scrollSpeed
-    }
+    const d = corridorKeyDelta(e.key, e.target as HTMLElement | null)
+    if (d === null) return
+    e.preventDefault()
+    targetZ.current = targetZ.current - d * scrollSpeed
   }, [scrollSpeed])
 
   // After any touch, browsers fire a synthetic mousemove at the tap position.

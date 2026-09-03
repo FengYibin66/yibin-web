@@ -76,6 +76,16 @@ export const zh: SiteContent = {
       imagePreview: '图片预览',
       previewImage: '预览图片',
     },
+    entry: {
+      labEyebrow: '进入',
+      labTitle: '实验室',
+      labTagline: '沉浸 · 三维 · 可交互',
+      labCta: '点这扇门',
+      labCtaTouch: '点这扇门',
+      classicTitle: '常规简历',
+      classicTagline: '快 · 好读 · 可打印',
+      classicCta: '打开简历',
+    },
     results: {
       walkCorridor: '沿走廊走',
       lookAround: '环顾四周',

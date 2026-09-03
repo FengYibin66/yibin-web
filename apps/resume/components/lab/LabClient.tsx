@@ -28,6 +28,7 @@ function webglSupported(): boolean {
 function WebglFallback() {
   return (
     <div
+      data-testid="lab-webgl-fallback"
       style={{
         width: '100vw',
         height: '100vh',

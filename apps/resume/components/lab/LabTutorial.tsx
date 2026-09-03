@@ -119,6 +119,7 @@ export function LabTutorial() {
       onClick={dismiss}
       role="dialog"
       aria-label={labels.hints.howToExplore}
+      data-testid="lab-tutorial"
       style={{
         position: 'fixed',
         inset: 0,
@@ -205,6 +206,7 @@ export function LabTutorial() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <button
               onClick={dismiss}
+              data-testid="tutorial-skip"
               style={{
                 background: 'none',
                 border: 'none',
@@ -222,6 +224,7 @@ export function LabTutorial() {
             </button>
             <button
               onClick={dismiss}
+              data-testid="tutorial-start"
               autoFocus
               style={{
                 background: '#2a1f0e',

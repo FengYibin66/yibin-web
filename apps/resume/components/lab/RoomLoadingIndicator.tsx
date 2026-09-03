@@ -92,7 +92,7 @@ function FailureContent({
   labels: LabUiLabels
 }) {
   return (
-    <div className={styles.card} role="alert">
+    <div className={styles.card} role="alert" data-testid="room-load-failed">
       <p className={styles.label}>{labels.loading.failed}</p>
       <p className={styles.error}>{error.text}</p>
       {error.detail !== null && (

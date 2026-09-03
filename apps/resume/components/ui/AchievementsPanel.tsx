@@ -16,11 +16,21 @@ export function AchievementsPanel({ isOpen, onClose }: AchievementsPanelProps) {
   const total = COLLECTABLE_ACHIEVEMENT_IDS.length
 
   return (
-    <div className={`achievements-panel${isOpen ? ' open' : ''}`} aria-hidden={!isOpen}>
+    <div
+      className={`achievements-panel${isOpen ? ' open' : ''}`}
+      aria-hidden={!isOpen}
+      data-testid="achievements-panel"
+      data-open={isOpen}
+    >
         <div className="achievements-card">
           <div className="achievements-header">
             <h3>{labels.panels.achievements}</h3>
-            <button className="close-btn" onClick={onClose} aria-label={labels.panels.closeAchievements}>
+            <button
+              className="close-btn"
+              onClick={onClose}
+              aria-label={labels.panels.closeAchievements}
+              data-testid="achievements-close"
+            >
               <svg viewBox="0 0 24 24">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>

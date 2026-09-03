@@ -145,7 +145,21 @@ export function NavigationUI() {
   if (!hasEntered) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50 }}>
+    <div
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50 }}
+      /*
+        E2E 的状态出口。这几个属性是**唯一**能让 Playwright 知道 Lab 处于什么
+        状态的东西——门是 R3F 里的 mesh，不在 DOM 里；而 aria-label 全是本地化
+        的，不能用来定位（LocaleToggle 那次三个 E2E 一起红就是这个原因）。
+
+        用 data 属性而不是再挂一个 window 钩子：DOM 属性能被 Playwright 的
+        `toHaveAttribute` 直接等待，不需要 `waitForFunction` 轮询。
+      */
+      data-testid="lab-ui"
+      data-lab-room={currentRoom ?? ''}
+      data-lab-in-room={isInRoom}
+      data-lab-teleporting={isTeleporting}
+    >
       {/* Global achievement popup */}
       <AchievementPopup />
 
@@ -175,6 +189,7 @@ export function NavigationUI() {
             transition: 'opacity 0.3s ease',
           }}
           aria-label={labels.loading.backToCorridor}
+          data-testid="nav-back"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -202,6 +217,7 @@ export function NavigationUI() {
           active={mapOpen}
           aria-label={labels.panels.openMap}
           aria-expanded={mapOpen}
+          data-testid="nav-map"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="12" x2="21" y2="12" />
@@ -216,6 +232,7 @@ export function NavigationUI() {
           active={audioOpen}
           aria-label={labels.panels.audio}
           aria-expanded={audioOpen}
+          data-testid="nav-audio"
         >
           {isMuted ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -236,6 +253,7 @@ export function NavigationUI() {
           active={achievementsOpen}
           aria-label={labels.panels.achievements}
           aria-expanded={achievementsOpen}
+          data-testid="nav-achievements"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M8 21h8M12 17v4M7 4h10M5 4h14v5a7 7 0 0 1-7 7 7 7 0 0 1-7-7z" />
@@ -247,6 +265,7 @@ export function NavigationUI() {
         <NavButton
           onClick={() => { closeAll(); window.dispatchEvent(new Event(TUTORIAL_OPEN_EVENT)) }}
           aria-label={labels.panels.help}
+          data-testid="nav-help"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .6-1.6 1.2-1.6 2.5" />
@@ -262,6 +281,7 @@ export function NavigationUI() {
           onKeyDown={handleMapKeyDown}
           role="dialog"
           aria-label={labels.panels.map}
+          data-testid="map-panel"
           style={{
             position: 'absolute',
             top: 0, right: 16,
@@ -302,6 +322,7 @@ export function NavigationUI() {
               ref={mapCloseRef}
               onClick={() => setMapOpen(false)}
               aria-label={labels.panels.closeMap}
+              data-testid="map-close"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.6, display: 'flex', alignItems: 'center' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round">
@@ -315,6 +336,7 @@ export function NavigationUI() {
               <button
                 key={roomId}
                 onClick={() => handleRoomClick(roomId)}
+                data-testid={`map-room-${roomId}`}
                 disabled={isRoomNavigationDisabled}
                 aria-disabled={isRoomNavigationDisabled}
                 style={{

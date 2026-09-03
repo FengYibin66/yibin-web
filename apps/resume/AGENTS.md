@@ -199,12 +199,43 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 78 个用例（39 条 spec × chromium / mobile-safari 两个形态），全部集中在
-`staticExport.spec.ts` 一个文件里。
+`e2e/` 下 116 个用例（58 条 spec × chromium / mobile-safari 两个形态），分两个文件：
 
-**覆盖缺口：E2E 完全不进 Lab。** `/lab` 只断言了返回 200，进房 / 退房 / 传送 / ESC
-一条都没有。ADR [20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)
-把补这批 E2E 列为状态图接线的**前置条件**——没有它，那次改动的回归无从发现。
+| 文件 | 覆盖 |
+|------|------|
+| `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化 |
+| `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 首访 / 无 JS 兜底 |
+
+`lab.spec.ts` 是 ADR
+[20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)
+要求的安全网——它之前 `/lab` 只断言了返回 200。写这一批时踩到的五件事，改它之前先读：
+
+1. **`fullyParallel` 对 Lab 不成立。** 每条用例都要起一个 WebGL 上下文并加载
+   1.5MB 资源，而 headless 是 SwiftShader 软渲染；并行跑会互相饿死，表现为一批
+   用例集体超时在「点不到按钮」上（单独跑每条都过）。该文件用
+   `test.describe.configure({ mode: 'default', timeout: 120_000 })`：单 worker 顺序跑，
+   且放宽用例超时（最慢那条实测 29 秒，贴着默认的 30 秒）。用 `default` 而不是
+   `serial`，因为 serial 下一条失败会跳过后面全部，而这里有刻意的预期失败用例。
+2. **选择器只能用 `data-testid`。** aria-label 全是本地化的（`LocaleToggle` 那次
+   三个 E2E 一起红就是这个原因）；门是 R3F 的 mesh，根本不在 DOM 里，所以
+   「点门进房」走地图面板的传送按钮代替。Lab 的状态从 `[data-testid=lab-ui]` 上的
+   `data-lab-room` / `data-lab-in-room` / `data-lab-teleporting` 读。
+3. **首访的操作说明是 `inset: 0` 的遮罩，会拦下所有点击。** 不要去猜它什么时候
+   出现（时机是「加载进度稳定 600ms」再加 2.4 秒，软渲染下不确定）——在
+   `addInitScript` 里把 `lab_tutorial_seen` 置上，以回访用户身份进场；首访那条
+   路径本身另有一条专门用例。
+4. **ESC 处理器都在 `useEffect` 里，而 `useEffect` 在绘制之后才跑。** 元素可见 ≠
+   监听已挂上，直接按一次 ESC 会间歇性失败。用 `pressEscapeUntil()`（内部是
+   `expect().toPass()` 重试），不要用 `waitForTimeout` 猜延迟。
+5. **退房要 2–3 秒**（两段各 1 秒的 gsap 加关门）。断言「没有退房」必须先等，
+   否则查得太早会假绿——「ESC 关面板不该连带退房」那条第一版就是这么"通过"的。
+
+**已知缺陷用 `test.fail()` / `test.fixme()` 固化，不用 TODO 注释。**
+`test.fail()` 在缺陷修好时会报错，强迫人回来把标记去掉；TODO 不会提醒任何人。
+依平台而异的竞态用 `fixme`——`fail` 会在「碰巧通过」的那个形态上报
+"Expected to fail, but passed"，把真实缺陷变成 CI 噪声。当前固化的三条：
+房间内 ESC 连带退房、退房后教程气泡残留、地图开着时点不到别的导航按钮
+（面板盖住整排按钮）。
 
 **打在静态产物 `out/` 上，不打 `next dev`。** 这是刻意的：生产由 nginx 直接提供 `out/`，而 `next dev` 有 HMR、按需编译、不同的路由解析——测它测不到真实部署形态，尤其是 `trailingSlash: true` 的 `dir/index.html` 结构（`next.config.js` 的注释记着一次真实故障：`/gallery` 直接访问返回 403）。
 

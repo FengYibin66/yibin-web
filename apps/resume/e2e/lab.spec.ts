@@ -329,18 +329,24 @@ test.describe('面板', () => {
   })
 
   /*
-    ── 已核实的缺陷：ESC 在房间里被两个监听同时消费 ──────────────────────────
+    ── ESC 在房间里只关最内层的那个东西 ──────────────────────────────────────
 
-    `NavigationUI` 与 `LabTutorial` 各自挂了 window 的 keydown，都不走
-    `lib/lab/app/escapeStack`，也都不 stopPropagation。于是在房间里按 ESC：
-    面板关掉的**同时**房间开始退场。
+    这条曾是 `test.fail()`：改造前有 17 个 window keydown 监听在抢 ESC
+    （15 个 `DoorSection` 实例 + `NavigationUI` + `LabTutorial`），后两者不走
+    消费栈也不 stopPropagation，于是在房间里按一次 ESC 会同时关面板**并**让房间
+    退场。`apps/resume/AGENTS.md` 的「ESC 的优先级」一节早就写明这个形态被禁止
+    ——而被禁止的形态正是当时的代码。
 
-    修法（三处统一 `pushEscapeConsumer`）见 ADR 20260903211244；
-    `apps/resume/AGENTS.md` 的「ESC 的优先级」一节其实早就写明「自己挂 window
-    监听会让两者同时触发」——被禁止的形态正是现在的代码。
+    监听收成一个（`components/lab/useEscapeRouter.ts`，ADR 20260903211244）之后
+    它开始通过，`test.fail()` 随即报 "Expected to fail, but passed"，标记就得
+    去掉——这正是用 `test.fail()` 而不是 TODO 注释的理由：**修好时它会主动提醒**。
+
+    时序上踩过两次，保留下面那段等待逻辑的写法：缺陷的表现是"房间**最终**退掉"，
+    而退房要好几秒，固定等待猜不对（第一版在面板关闭瞬间就查，第二版等 4 秒，
+    在 CI 的 WebKit 上仍然不够）。
   */
-  test.fail(
-    '（已知缺陷）房间里按 ESC 关面板不该连带退房',
+  test(
+    '房间里按 ESC 只关面板，不连带退房',
     async ({ page }) => {
       test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
@@ -354,20 +360,11 @@ test.describe('面板', () => {
       await expect(page.getByTestId('achievements-panel')).toHaveAttribute('data-open', 'false')
 
       /*
-        ── 这条断言的时序踩了两次，记下来 ──────────────────────────────────
+        等**退房这件事发生**，而不是等一个固定时长。
 
-        缺陷的表现是"房间**最终**退掉了"，而退房是两段各 1 秒的 gsap 加关门，
-        `contextExitRoom()` 要好几秒后才执行。所以断言点的选择很关键：
-
-        1. 第一版在面板关闭的瞬间就查 → 那时还没退完，`test.fail()` 报
-           "Expected to fail, but passed"。我先怀疑 review 的结论错了，
-           实际是**断言查得太早**。
-        2. 第二版改成固定等 4 秒 → 本地 chromium 过了，**CI 的 mobile-safari
-           仍然报"预期失败但通过"**：WebKit 上那套动画比 4 秒慢。
-
-        固定等待猜不对，因为它要猜的是动画时长 × 平台 × 机器负载。改成
-        **等退房这件事发生**：等到了说明缺陷复现（下面的断言随即失败，
-        正是 `test.fail()` 期望的）；等不到说明行为正确。
+        退房是两段各 1 秒的 gsap 加关门，`contextExitRoom()` 要好几秒后才执行。
+        固定等待在这里猜不对，因为要猜的是动画时长 × 平台 × 机器负载：第一版在
+        面板关闭瞬间就查、第二版等 4 秒，两次都在某个平台上得出了相反的结论。
       */
       const inRoom = page.getByTestId('lab-ui')
       let exited = false

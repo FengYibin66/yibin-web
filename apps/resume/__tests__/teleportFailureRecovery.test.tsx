@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react'
 import { useRef } from 'react'
 import { describe, expect, it } from 'vitest'
 
+import { ROOM_LOAD_TIMEOUT_CODE } from '@/components/lab/useDoorEntryOrchestrator'
 import { SceneProvider, useScene, type SceneState } from '@/context/SceneContext'
 
 /**
@@ -17,8 +18,10 @@ import { SceneProvider, useScene, type SceneState } from '@/context/SceneContext
  * 根因是 `cancelTeleport` **零调用方**——失败路径上没有任何地方重置
  * `isTeleporting` / `teleportPhase`。这台状态机只写了成功路径。
  *
- * 目标形态是 ADR 20260903140616 的 `corridorMachine`，它的 `teleporting`
- * 子状态里有一条显式的 `aborted` 出口。本测试锁的是当下的行为契约。
+ * 房间侧已经接上状态图（ADR 20260903211338），`failed --RESET--> idle` 是显式边；
+ * 而**取消传送仍在 React 里**——`resetRoomLoad` 顺手调 `cancelTeleport`。
+ * 走廊那台 `corridorMachine` 的 `teleporting.aborted` 出口还没接线，
+ * 所以这几条断言仍是"当下的行为契约"而非"机器保证的性质"。
  */
 
 function harness() {
@@ -41,7 +44,9 @@ function driveToFailedTeleport(scene: { current: SceneState }) {
   // 门被 pendingDoorClick 自动点击后走的正常流程
   act(() => { scene.current.beginRoomLoad('projects', 0) })
   act(() => { scene.current.markRoomAligned() })
-  act(() => { scene.current.timeoutRoomLoad('Room loading timed out') })
+  // 超时本身现在是 `loading` 状态的 `after`；这里直接送等价的失败事件，
+  // 免得为了等 8 秒去动假定时器（超时那条边在 roomMachineFlow 里测）
+  act(() => { scene.current.failRoomLoad(ROOM_LOAD_TIMEOUT_CODE) })
 }
 
 describe('传送中房间加载失败', () => {

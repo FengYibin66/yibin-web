@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { isCorridorIdle } from '@/lib/lab/roomLoadMachine'
+import { isCorridorIdle } from '@/lib/lab/domain/machines/room.machine'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { useScene } from '@/context/SceneContext'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'

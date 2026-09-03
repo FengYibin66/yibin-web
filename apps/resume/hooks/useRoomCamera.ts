@@ -14,7 +14,7 @@ import { ROOMS } from '@/lib/lab/domain/rooms'
  *
  * ## 为什么必须等 `phase === 'entered'`
  *
- * 房间在 `CAMERA_ALIGNED` 就挂载（`doorEntryFlow` 的 `MOUNT_ROOM`），而
+ * 房间在 `CAMERA_ALIGNED` 就挂载（`room.machine` 的 `CAMERA_ALIGNED → mounting`），而
  * `DoorSection` 的进房飞行 tween 要到 `OPEN_DOOR` 之后才开始。第一版在**挂载时**
  * 就接管，于是两个写者重叠约 2 秒：
  *

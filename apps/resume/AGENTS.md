@@ -93,12 +93,12 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | ADR | 目标 | 实际状态 |
 |-----|------|-----------|
 | [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已接线**（`20260903211338`）：`RoomInterior` 按 `components/rooms/registry.ts` 分发（`React.lazy`，没有 `switch`）、教程从 `RoomDefinition.tutorial` 读、预载走 `lib/lab/app/assets/preload.ts`（读生成物），手写的 `roomAssets.ts` 与 `texturePreload.ts` 的走廊部分已删。首屏壁画 3 段 → 1 段，**省 1466 KB**。`view` 已移出 domain（它曾让 domain import react）。<br>**仍未落地**：`entryPose` / `cameraFreedom` **只有 Projects 消费**——About / Contact 的房间级相机（审计 A1 / A3）需要一次带截图的取景标定，见下方相机一节第 5 条。<br>**已核实为误判**：PR #12 说「生成物未加入 hook 保护名单」是错的——`.claude/hooks/pre-generated-edit.sh` 按 `\.gen\.(ts|tsx|go|py)$` 匹配，`manifest.gen.ts` 天然受保护（实测被拦）。|
-| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：音频 store（zustand）与成就队列 reducer 已接线；三台状态图**只有 `dockMachine` 接线了**（且只有 Projects 用，Publications 仍用 `publicationMotionMachine`），`room.machine` / `corridor.machine` 运行时零引用——`labMachines.test.ts` 守的是死代码，其中为审计 A8 加的 `entered → failed` 边**运行时不存在**，A8 未修。`@xstate/graph` 装了没用 |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **房间生命周期已接线**（`20260903211338`）：`SceneContext` 用 `useMachine(roomMachine)`，手写的 `roomLoadMachine.ts` + `doorEntryFlow.ts` 已删；8 秒超时是 `loading` 的一行 `after`（取代 `setTimeout` + 3 个互相看护的 ref），进房所有权从机器 context 派生，**审计 A8 的 `entered → failed` 边现在运行时真的存在**。`useDoorEntryOrchestrator` 从 5 个 effect / 4 个 ref 缩到 2 个 effect / 1 个 ref。`@xstate/graph` 已用于全路径覆盖（`roomMachineFlow.test.ts`）。<br>**仍未接线**：`corridor.machine` 运行时零引用（走廊传送仍是 `SceneContext` 里的手写 state + `cancelTeleport`，`teleporting.aborted` 那条边没有消费方）；`dockMachine` 只有 Projects 用，Publications 仍是 `publicationMotionMachine`。<br>**接线时发现的五个缺口**（机器定义好但从未被运行时走过，所以没人发现）：① `mounting` 缺 `READY` 边——纹理已缓存的房间不 Suspend、拿不到 `MOUNTED`，会永久卡住（即「第二次进同一间房」这条最常见路径）；② `tryRoom` 若读渲染快照而非 actor，同一 tick 内连点两下门会两次都判合法；③ **`MOUNTED` 没有发送方**（`RoomInterior.onLoading` 默认 NOOP、`DoorSection` 没传）→ `loading` 生产不可达 → **8 秒加载超时永远不启动**；④ **`EXIT_DONE` 没有发送方**——退场收尾复用了 `RESET`，现已拆成 `finishRoomExit()`；⑤ **`BACK` 4 条边全是死的**——目标与动作和 `RESET` 逐字相同且无人发送，已删。③④⑤ 由新门禁 `__tests__/machineEventWiring.test.ts` 抓出：**图上有边 ≠ 运行时有人发**，而机器测试与全路径覆盖都会自己 `send()`，照样全绿 |
 | [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **部分落地，且所有权形态已被 [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md) 修订**：`suspended` 布尔让三处出错——进房时导演与 DoorSection 的 gsap **同帧双写约 2 秒**（靠 rAF 顺序侥幸不出事）、传送的 `moveToWorld({duration:0})` 在挂起态是**空操作**、About 的 `setLean` 是**死代码**。手势未迁移，`@use-gesture` 未安装 |
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |
 | [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做 + 平台隐喻已去 + Gallery 门贴纸已换。许可记录（`public/CREDITS.md`）当时**未创建**，已补；ADR 表里列的 Doodle Icons / Open Doodles / freesound / Excalidraw **实际一个都没用**，出入见 `public/CREDITS.md` 文末 |
 
-### 源码门禁：一个 AST 扫描器，三条规则
+### 源码门禁：一个 AST 扫描器，三条规则 + 一条接线检查
 
 三条门禁（相机所有权、Lab 漏译、覆盖层对比度）共用
 `__tests__/helpers/sourceScan.ts`——基于 `typescript` 编译器 API，提供
@@ -121,6 +121,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | `labI18n.test.ts` | `KNOWN_LEAKS`（按文件记漏译条数） | 1 文件 / 1 条 |
 | `labContrast.test.ts` | `KNOWN_LOW_CONTRAST`（同上） | **空** |
 | `labFonts.test.ts` | 无棘轮（全禁写死路径） | 0 |
+| `machineEventWiring.test.ts` | 无棘轮（全禁孤儿事件） | 0 |
 
 漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
 **换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
@@ -136,6 +137,20 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 **验收标准在 `__tests__/gateMutations.test.ts`**：那 20 个变异形态固化成清单，
 每条标明当年是被杀还是存活。这份清单只能增不能删——删一条就是把一个已知的
 绕过形态重新变成盲区。
+
+**第四条门禁：状态机事件必须有运行时发送方**（`machineEventWiring.test.ts`）。
+它不用那个 AST 扫描器（只需 `type: 'X'` 字面量），但属于同一类机制：
+**「定义了」与「接上了」是两件事，而只有后者用户能感知到。**
+接线 `room.machine` 时它抓出三个孤儿事件：`MOUNTED` 没人发（于是 8 秒加载超时
+永远不启动）、`EXIT_DONE` 没人发（退场收尾复用了 `RESET`）、`BACK` 的 4 条边
+与 `RESET` 逐字相同且无人发送（已删）。三者的机器测试、`@xstate/graph` 全路径
+覆盖都是绿的，因为那些测试自己 `send()`。
+
+**它自己也踩了一次同样的坑。** 第一版按文本匹配 `type:` 后跟大写串，于是
+`DoorSection.tsx` 里一句解释旧实现的**注释**被当成了 `BACK` 的发送方——门禁绿着，
+4 条死边照样在。改走 AST（`sourceScan.eventTypeLiterals`）之后才暴露，
+理由与那三条门禁改用 AST 完全一样。变异形态记在 `gateMutations.test.ts` 的
+`EVENT_WIRING_MUTATIONS`（W1–W3）。
 
 **扫描器的已知边界**（写在这里以免被当成已覆盖）：别名只追一层；CSS module 里
 的颜色与祖先节点的 `opacity` 看不到（`RoomLoadingIndicator` 的错误详情就落在
@@ -230,7 +245,7 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 116 个用例（58 条 spec × chromium / mobile-safari 两个形态），分两个文件：
+`e2e/` 下 122 个用例（61 条 spec × chromium / mobile-safari 两个形态），分两个文件：
 
 | 文件 | 覆盖 |
 |------|------|
@@ -250,7 +265,11 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 2. **选择器只能用 `data-testid`。** aria-label 全是本地化的（`LocaleToggle` 那次
    三个 E2E 一起红就是这个原因）；门是 R3F 的 mesh，根本不在 DOM 里，所以
    「点门进房」走地图面板的传送按钮代替。Lab 的状态从 `[data-testid=lab-ui]` 上的
-   `data-lab-room` / `data-lab-in-room` / `data-lab-teleporting` 读。
+   `data-lab-room` / `data-lab-in-room` / `data-lab-teleporting` /
+   `data-lab-phase`（房间状态机的相位）/ `data-lab-teleport-phase`（纸动画相位）读。
+   后两个是诊断「传送卡住」时唯一能分辨卡在哪一步的信息——`test.fail` 那条
+   「返回走廊后还能再进房」的根因就是靠它们从"编排器 ref 记账"纠正到
+   "drei 缓存了被拒绝的 promise"的。
 3. **首访的操作说明是 `inset: 0` 的遮罩，会拦下所有点击。** 不要去猜它什么时候
    出现（时机是「加载进度稳定 600ms」再加 2.4 秒，软渲染下不确定）——在
    `addInitScript` 里把 `lab_tutorial_seen` 置上，以回访用户身份进场；首访那条

@@ -4,7 +4,7 @@ import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { RoomLoadState } from '@/lib/lab/roomLoadMachine'
+import type { RoomLoadState } from '@/context/SceneContext'
 
 const sceneMocks = vi.hoisted(() => ({
   roomLoadState: {

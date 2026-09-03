@@ -119,13 +119,37 @@ function LabCanvas() {
     setCameraOverrideRef.current(active)
   }, [])
 
-  const handleRetryRoomLoad = useCallback(() => {
+  /**
+   * 清掉这间房被"毒化"的纹理缓存。
+   *
+   * drei 的 `useTexture` 会把**失败的 promise 也缓存起来**。所以一次加载失败之后，
+   * 下一次读同一批纹理会立刻拿到同一个 rejection——不重新发请求、不管网络是否
+   * 已经恢复。
+   *
+   * 不清的表现：加载失败 → 返回走廊 → 再进这间房 **立刻又失败**（实测约 1 秒内
+   * 就到 `failed`，比第一次的超时快得多）。也就是说那间房**永久坏掉**，
+   * 直到用户恰好选了"重试"而不是"返回走廊"——只有重试那条路径清了缓存。
+   *
+   * 这条是写失败路径 E2E 时查出来的，而我一开始把根因判断成了门的 ref 记账
+   * （`ownedEntryRef` / `previousPhaseRef`）。实测数据推翻了那个判断：返回走廊后
+   * `phase: idle` / `teleporting: false`，清理其实完全正常。**是缓存的问题，
+   * 不是状态机的问题。**
+   */
+  const clearFailedRoomAssets = useCallback(() => {
     const roomId = roomLoadState.roomId
-    if (roomId && roomId !== 'gallery') {
-      reloadRoomAssets(roomId)
-    }
+    if (roomId && roomId !== 'gallery') reloadRoomAssets(roomId)
+  }, [roomLoadState.roomId])
+
+  const handleRetryRoomLoad = useCallback(() => {
+    clearFailedRoomAssets()
     retryRoomLoad()
-  }, [retryRoomLoad, roomLoadState.roomId])
+  }, [clearFailedRoomAssets, retryRoomLoad])
+
+  /** 放弃这次失败，回到走廊。同样要清缓存，否则这间房再也进不去 */
+  const handleBackFromFailure = useCallback(() => {
+    clearFailedRoomAssets()
+    resetRoomLoad()
+  }, [clearFailedRoomAssets, resetRoomLoad])
 
   useEffect(() => {
     playBgm('corridor_bg')
@@ -158,7 +182,7 @@ function LabCanvas() {
       <RoomLoadingIndicator
         state={roomLoadState}
         onRetry={handleRetryRoomLoad}
-        onBack={resetRoomLoad}
+        onBack={handleBackFromFailure}
       />
 
       {!isInRoom && (

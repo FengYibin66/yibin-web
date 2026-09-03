@@ -1,8 +1,8 @@
 'use client'
 
-import type { RoomId } from '@/context/SceneContext'
+import type { RoomId, RoomLoadState } from '@/context/SceneContext'
 import { ROOM_LOAD_TIMEOUT_CODE } from './useDoorEntryOrchestrator'
-import type { RoomLoadState } from '@/lib/lab/roomLoadMachine'
+import { isRoomLoading } from '@/lib/lab/domain/machines/room.machine'
 
 import styles from './RoomLoadingIndicator.module.css'
 import { useLabLabels } from '@/hooks/useLabLabels'

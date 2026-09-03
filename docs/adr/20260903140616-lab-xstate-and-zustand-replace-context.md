@@ -1,7 +1,7 @@
 # 20260903140616. Lab 生命周期改用 XState 状态图，共享状态改用 zustand，替换手写 reducer 与 Context
 
 - 状态：已接受
-- 索引：resume 的 Lab 用 XState v5 表达走廊/房间/停靠三条生命周期（失败边与超时是状态图的一等公民，`@xstate/graph` 生成全路径测试），共享状态从 35 字段的 `SceneContext` 迁到 zustand（selector 订阅 + persist 中间件）；替换 `doorEntryFlow` / `roomLoadMachine` / `publicationMotionMachine` 三套手写 reducer。注记：三台状态图中**仅 `dockMachine` 已接线**（且只有 Projects 使用，Publications 仍用 `publicationMotionMachine`）；`room.machine` / `corridor.machine` 在运行时零引用，`SceneContext` 仍是手写 Context + `doorEntryFlow` / `roomLoadMachine`，因此本文关于审计 A8（entered 后失败无出口）与 B1 的修复描述**尚未在运行时生效**；`@xstate/graph` 全路径测试亦未兑现。接线计划见 `20260903211338`。zustand 部分（音频 store）已落地。
+- 索引：resume 的 Lab 用 XState v5 表达走廊/房间/停靠三条生命周期（失败边与超时是状态图的一等公民，`@xstate/graph` 生成全路径测试），共享状态从 35 字段的 `SceneContext` 迁到 zustand（selector 订阅 + persist 中间件）；替换 `doorEntryFlow` / `roomLoadMachine` / `publicationMotionMachine` 三套手写 reducer。注记（2026-09-04，ADR 20260903211338 接线后）：`room.machine` **已接线**——`SceneContext` 用 `useMachine(roomMachine)`，手写的 `roomLoadMachine.ts` / `doorEntryFlow.ts` 已删，8 秒超时是 `loading` 的一行 `after`，审计 A8 的 `entered → failed` 边现在运行时真的存在；`@xstate/graph` 的全路径测试已兑现（`__tests__/roomMachineFlow.test.ts`）。**`corridor.machine` 仍零引用**：走廊传送与其失败取消仍是 `SceneContext` 里的手写 state + `cancelTeleport`，因此本文关于审计 B1 的修复描述仍未在运行时生效。`dockMachine` 只有 Projects 使用，Publications 仍用 `publicationMotionMachine`。zustand 部分（音频 store）已落地。
 - 日期：2026-09-03
 
 ## 背景

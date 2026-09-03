@@ -97,27 +97,42 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |
 | [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做 + 平台隐喻已去 + Gallery 门贴纸已换。许可记录（`public/CREDITS.md`）当时**未创建**，已补；ADR 表里列的 Doodle Icons / Open Doodles / freesound / Excalidraw **实际一个都没用**，出入见 `public/CREDITS.md` 文末 |
 
-### 相机所有权（机制的**覆盖边界**要连着读）
+### 源码门禁：一个 AST 扫描器，三条规则
 
-**只有 `lib/lab/app/camera/CameraDirector` 能写相机。** 房间组件只声明目标
-pose（`RoomDefinition.entryPose`，房间局部坐标），换算与插值由所有者做。
-`__tests__/cameraOwnership.test.ts` 是**白名单**形态：现存写点逐一登记并写明
-理由，任何**新增**写点立刻红灯，白名单只能缩。
-
-**但这道门禁当前的覆盖边界比它看起来窄得多**，改这块之前必须知道：
-
-- 它用正则匹配写法，**不认** `camera.rotation.set(`、`camera.position.setZ(`、
-  `camera.rotateX(`、`camera.position.applyMatrix4(`、`gsap.to(camera.rotation`，
-  也不认别名 `const cam = camera; cam.position.set(...)`。变异测试 20 个绕过形态
-  **活了 10 个**。其中 `camera.rotation.set` 正是 `DoorSection.tsx` 眼下在用的写法
-  ——门禁连自己白名单注释里登记过的形态都抓不到。
-- 手写的字符串剥离器把 JSX 文本里的撇号当字符串起点，一个 `Don't` 就能让同文件
-  后面所有写点隐身。
-- 白名单是**文件级**的：已在名单里的文件再加 20 个写点也是绿的。
-
-换成 TS AST 扫描 + 写点计数棘轮的决策见 ADR
+三条门禁（相机所有权、Lab 漏译、覆盖层对比度）共用
+`__tests__/helpers/sourceScan.ts`——基于 `typescript` 编译器 API，提供
+`cameraWrites` / `userStrings` / `colorLiterals` 三个查询。决策与理由见 ADR
 [20260903211320](../../docs/adr/20260903211320-source-gates-use-ts-ast-not-regex.md)。
-**在那之前，不要把「测试绿了」当成「没有新增写点」。**
+
+**为什么不是正则。** 第一版三条都是 grep + 手写字符串剥离器，独立 review 构造
+20 个绕过形态**活了 10 个**：`camera.rotation.set(`（`DoorSection.tsx` 眼下在用、
+白名单注释里也登记过的写法）、`position.setZ(`、`rotateX(`、
+`gsap.to(camera.rotation`、别名 `const cam = camera` 全不认；一个 JSX 里的
+`Don't` 撇号或一条含 `//` 的 URL 就能吞掉同文件后面所有代码；漏译那条要求
+「2 个以上单词」，于是 `Back` / `Skip` / `Mute` 全溜过去、门禁报告「无漏译」而
+截图满屏英文；对比度那条只认 `rgba()`，`#hex` 与 `opacity` 的二次衰减都看不见。
+
+**三条共同的形态是棘轮，不是布尔。**
+
+| 门禁 | 棘轮 | 当前基线 |
+|------|------|---------|
+| `cameraOwnership.test.ts` | `{ 文件: 期望写点数 }` | 8 文件 / 34 写点 |
+| `labI18n.test.ts` | `KNOWN_LEAKS`（按文件记漏译条数） | 10 文件 / 20 条 |
+| `labContrast.test.ts` | `KNOWN_LOW_CONTRAST`（同上） | 4 文件 / 9 条 |
+
+数字只能往下：写点变少了要把数字改小（有一条断言专门管这个），否则棘轮留一截
+空档，下一个人可以在不触发红灯的情况下加回去。文件级白名单的漏洞正是这个
+——已在名单里的文件再加 20 个写点也是绿的。
+
+**验收标准在 `__tests__/gateMutations.test.ts`**：那 20 个变异形态固化成清单，
+每条标明当年是被杀还是存活。这份清单只能增不能删——删一条就是把一个已知的
+绕过形态重新变成盲区。
+
+**扫描器的已知边界**（写在这里以免被当成已覆盖）：别名只追一层；CSS module 里
+的颜色与祖先节点的 `opacity` 看不到（`RoomLoadingIndicator` 的错误详情就落在
+这个盲区，实算约 2.5 而门禁测得 0 条）；Tailwind 的透明度工具类看不到；
+`app/` 下页面的文案与 `<head>` metadata 不在漏译门禁范围内。各条的理由写在
+`labContrast.test.ts` 顶部与 `sourceScan.ts` 的文档注释里。
 
 四个踩过的坑，改这块前先读：
 

@@ -133,5 +133,5 @@ if (problems > 0) {
   process.exit(1)
 }
 
-writeStamp(STAMP_NAME, digestOf(stampInputs))
+writeStamp(STAMP_NAME, digestOf(stampInputs), stampOutputs)
 console.log('\n完成')

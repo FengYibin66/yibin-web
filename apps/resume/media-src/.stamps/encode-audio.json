@@ -1,4 +1,5 @@
 {
-  "digest": "9136a295d1d7085465bddf8ace88d84f829baba7702d321409a132e3ba4dfa2d",
-  "note": "内容指纹，见 scripts/media/freshness.mjs"
+  "digest": "82988b2a7d438c43575e637ad828250f98a8d006a6d23eaf4e7463321a1dec32",
+  "note": "内容指纹，见 scripts/media/freshness.mjs",
+  "outputDigest": "6f14d5aaffe8f34159505584e462ea9cd87067fa789b4d20681dff87f5be2cfa"
 }

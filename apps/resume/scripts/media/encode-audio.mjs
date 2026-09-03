@@ -177,7 +177,7 @@ if (checkOnly) {
   process.exit(problems === 0 ? 0 : 1)
 }
 
-writeStamp(STAMP_NAME, digestOf(stampInputs))
+writeStamp(STAMP_NAME, digestOf(stampInputs), stampOutputs)
 
 console.log(`\n重编码 ${encoded} 个文件，共省下 ${savedKb} KB`)
 if (problems > 0) process.exit(1)

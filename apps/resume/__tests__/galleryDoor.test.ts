@@ -191,17 +191,48 @@ describe('形状的 silhouette 必须是实的', () => {
   })
 
   it('衬底画在最前面 —— 画在后面会把图案盖掉', () => {
+    /*
+      这一条原来是**空断言**：只检查了「衬底存在」与「衬底之后还有图元」，
+      从不检查衬底**之前**有没有图元——而那才是它名字所说的事。
+      变异测试把一个红圆插到 `fullBleed()` 之前，这条测试照样是绿的。
+
+      SVG 是后画的盖前画的，所以衬底必须是第一个可见图元。`pencil()` 产生的
+      `<filter>`（连同它内部的 `<fe*>`）是定义而非绘制，排除掉。
+    */
+    const PAINTABLE = /<(rect|circle|ellipse|line|polyline|polygon|path|text|image|use)\b/g
+
     for (const kind of new Set(DOOR_PLANS.flatMap(d => d.patches.map(p => p.kind)))) {
       const svg = STICKER_ART[kind].body(1)
       const box = STICKER_VIEWBOXES[kind]
       const bleedAt = svg.indexOf(`<rect x="0" y="0" width="${box.width}"`)
-      // 第一个"内容"元素：衬底之后才该出现别的可见图元
-      const firstOther = svg.slice(bleedAt + 10).search(/<(rect|circle|path|g|text)\b/)
       expect(bleedAt, `${kind} 找不到衬底`).toBeGreaterThan(-1)
-      expect(firstOther, `${kind} 衬底之后没有图案`).toBeGreaterThan(-1)
+
+      // 衬底之前：只允许 <defs>/<filter> 这类定义，不允许任何绘制
+      const before = stripDefs(svg.slice(0, bleedAt))
+      const painted = [...before.matchAll(PAINTABLE)].map(m => m[1])
+      expect(
+        painted,
+        `${kind} 在满幅衬底之前就画了 ${painted.join(', ')}——` +
+        `衬底会把它们盖掉（SVG 后画的在上）。把衬底移到最前面`,
+      ).toEqual([])
+
+      // 衬底之后必须真的有图案，否则这张贴纸只是一块色块
+      const after = svg.slice(bleedAt + 1)
+      expect(
+        PAINTABLE.test(after),
+        `${kind} 衬底之后没有任何图案`,
+      ).toBe(true)
+      PAINTABLE.lastIndex = 0
     }
   })
 })
+
+/** 去掉 `<defs>` 与 `<filter>`：它们是定义，不产生像素 */
+function stripDefs(svg: string): string {
+  return svg
+    .replace(/<defs\b[\s\S]*?<\/defs>/g, '')
+    .replace(/<filter\b[\s\S]*?<\/filter>/g, '')
+}
 
 describe('产物', () => {
   it('原图在 media-src/doors（不随 public 部署）', () => {

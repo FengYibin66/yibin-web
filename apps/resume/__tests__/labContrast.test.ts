@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -9,7 +9,10 @@ import {
   parseColor,
   relativeLuminance,
 } from '@/lib/a11y/contrast'
-import { CORRIDOR_PAPER, OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
+import { CORRIDOR_PAPER, ENTRY_PAPER, OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
+
+import type { ColorHit } from './helpers/sourceScan'
+import { colorLiterals, scanTree } from './helpers/sourceScan'
 
 /**
  * Lab 覆盖层文案的对比度（审计 E10）。
@@ -79,42 +82,286 @@ describe('Lab 覆盖层文案在走廊纸白上可读', () => {
   })
 })
 
-// ─── 门禁：Lab 组件里不再内联写低对比的文字颜色 ──────────────────────────────
+// ─── 门禁：界面组件里不再内联写低对比的颜色 ──────────────────────────────────
 
 const ROOT = join(import.meta.dirname, '..')
 
-function walk(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name)
-    if (statSync(full).isDirectory()) walk(full, out)
-    else if (/\.tsx?$/.test(name)) out.push(full)
-  }
-  return out
+/**
+ * 扫描范围与各自的背景色。
+ *
+ * 背景要按区域给，不能一刀切：Lab 的覆盖层压在走廊纸白上，入口页压在它自己的
+ * 米色上，两者不同。用错背景算出来的对比度是个看起来很精确的错数字。
+ */
+const SCAN_AREAS: readonly { dir: string, background: string, why: string }[] = [
+  {
+    dir: 'components/lab',
+    background: CORRIDOR_PAPER,
+    why: 'Lab 覆盖层压在走廊的纸白上（取最亮那面墙，最坏情况）',
+  },
+  {
+    dir: 'components/ui',
+    background: CORRIDOR_PAPER,
+    why: '导航 / 成就 / 音频面板都浮在 Lab 之上',
+  },
+  {
+    dir: 'components/entry',
+    background: ENTRY_PAPER,
+    why: '入口页压在它自己的米色底上，与走廊纸白不同（差一点，但要分开算）',
+  },
+]
+
+/**
+ * 这道门禁**看不到**的地方，列在这里以免被当成"已覆盖"。
+ *
+ * 1. **CSS module 里的颜色。** 扫描器读的是 TS/TSX 里的内联对象字面量；
+ *    `.module.css` 需要 CSS 解析器，是另一件事。`RoomLoadingIndicator` 的错误
+ *    详情就落在这个盲区里：颜色在 `styles.error`、`opacity: 0.6` 在 JSX 上，
+ *    两处都不在同一个对象字面量里——实算约 2.5，而本门禁测得 0 条违规。
+ *    2026-09-03 的复核是靠人同时读 CSS 与 JSX 才发现的。
+ * 2. **祖先节点的 `opacity`。** 只查同一个 style 对象里的 `opacity`；
+ *    父元素上的 `opacity` 会再乘一次，看不到。
+ * 3. **Tailwind 的透明度工具类**（`text-ink` 加斜杠 40 那种写法）。颜色不以
+ *    字面量形式出现。（这里刻意不写出那个斜杠形态——它含 `*` 加斜杠，会把本
+ *    块注释提前关掉，第一版就栽在这上面。）
+ * 4. **`app/` 下的页面。** 入口页 `app/page.tsx` 的 tagline / footer 实算
+ *    2.71 / 1.67，但那一批与 `<head>` metadata 的本地化一起属于入口页的独立
+ *    整理，不在 Lab 覆盖层这道门禁的范围里。
+ *
+ * 前两条的正解都是**把颜色收进 `OVERLAY_COLORS` 之类的常量**——那样就落进本
+ * 文件顶部那组显式断言的覆盖范围，不再依赖扫描。
+ */
+
+/**
+ * WCAG 2.1 的门槛，按属性分。
+ *
+ * 正则版只看 `color:` 且一律用 3:1（大字标准）。实际上这些覆盖层文案大多是
+ * 9–12px 的小字，该按 4.5:1 的正文标准；而边框 / 背景这类非文字图形才是 3:1
+ * （1.4.11 Non-text Contrast）。一刀切 3:1 会放过一整批小字。
+ */
+const THRESHOLDS: Readonly<Record<string, number>> = {
+  color: WCAG_AA.normalText,
+  borderColor: WCAG_AA.uiComponent,
+  borderTopColor: WCAG_AA.uiComponent,
+  borderBottomColor: WCAG_AA.uiComponent,
+  borderLeftColor: WCAG_AA.uiComponent,
+  borderRightColor: WCAG_AA.uiComponent,
+  outlineColor: WCAG_AA.uiComponent,
 }
 
-describe('Lab 组件不内联写低对比文字色', () => {
-  it('没有 alpha 低到读不出的 color', () => {
-    const offenders: string[] = []
-    for (const dir of ['components/lab', 'components/ui']) {
-      for (const file of walk(join(ROOT, dir))) {
-        const source = readFileSync(file, 'utf8')
-        for (const [i, line] of source.split('\n').entries()) {
-          // 只看 color: 的值；背景与边框另有标准（3:1）
-          for (const m of line.matchAll(/\bcolor:\s*'(rgba?\([^')]*\))'/g)) {
-            const ratio = contrastRatio(m[1]!, CORRIDOR_PAPER)
-            if (Number.isNaN(ratio)) continue
-            if (ratio >= WCAG_AA.largeText) continue
-            offenders.push(
-              `${relative(ROOT, file)}:${i + 1}  ${m[1]}  对比度 ${ratio.toFixed(2)}`,
-            )
-          }
-        }
+/**
+ * 已知的低对比，按文件记条数。棘轮只能往下。
+ *
+ * 这些是 2026-09-03 复核实算出来的存量——审计 E10 只修了 `OVERLAY_COLORS` 里
+ * 那两个常量，而正则版门禁只认 `rgba()`、不认 `#hex`、也不看 `opacity` 的二次
+ * 衰减，所以入口页这一批一直是绿的。修法属于 ADR 20260903211302 那一批
+ * （统一收进 `overlayColors` 或对应的 token），不在换门禁这一步里。
+ */
+const KNOWN_LOW_CONTRAST: Readonly<Record<string, { count: number, note: string }>> = {
+  'components/entry/ClassicPanel.tsx': {
+    count: 4,
+    note: 'eyebrow 是 rgba(200,169,110,0.7) 的 10px 小字 → 1.59；' +
+      'ENTER → 的 #c8a96e 出现两处 → 1.98；标签 #9c8570 → 3.08。' +
+      '金色在米底上本来就浅，再乘 alpha 就没了。四处全是 `#hex` 或带 alpha 的' +
+      '金色——正则版一条都不认',
+  },
+  'components/lab/LabTutorial.tsx': {
+    count: 3,
+    note: '两处 rgba(42,31,14,0.5) 的 11–12px 说明文字 → 3.11，' +
+      '一处 rgba(42,31,14,0.55) 的 11px 等宽小字 → 3.58。' +
+      '三条都过得了大字门槛 3 却过不了正文门槛 4.5——正则版一刀切用 3，所以全绿',
+  },
+  'components/entry/EntryPreviewScene.tsx': {
+    count: 1,
+    note: '鸭子对话框的提示文字 rgba(42,31,14,0.55) → 3.58',
+  },
+  'components/lab/LabClient.tsx': {
+    count: 1,
+    note: 'WebGL 兜底页的说明文字 rgba(42,31,14,0.6) → 4.14，差一点点。' +
+      '这一屏只有不支持 3D 的设备会看到，所以从来没人注意到',
+  },
+}
+
+interface Violation {
+  readonly line: number
+  readonly color: string
+  readonly property: string
+  readonly ratio: number
+  readonly threshold: number
+  readonly opacity: number | null
+}
+
+/**
+ * 按文件覆盖背景色。
+ *
+ * 区域默认背景对个别组件是错的，而**用错背景算出来的对比度是个看起来很精确的
+ * 错数字**——第一版据此把 `ImagePreview` 的青色文字判成 1.23（实际它压在深色
+ * 遮罩上，是高对比）。宁可显式登记，不要让门禁产出假结论：门禁误报的代价是
+ * 逼人加豁免，而豁免加多了就等于门禁不存在。
+ */
+const BACKGROUND_OVERRIDES: Readonly<Record<string, { background: string, why: string }>> = {
+  'components/ui/ImagePreview.tsx': {
+    background: 'rgb(7,11,18)',
+    why: '灯箱不在 Lab 的纸白上：遮罩是 rgba(7,11,18,0.88)，悬浮层还叠 bg-black/45',
+  },
+}
+
+/** 把颜色的 alpha 与同级 opacity 相乘后算对比度；有局部背景就用它 */
+function effectiveRatio(hit: ColorHit, areaBackground: string, fileBackground?: string): number {
+  const parsed = parseColor(hit.color)
+  if (!parsed) return Number.NaN
+  const alpha = hit.opacity === null ? parsed.alpha : parsed.alpha * hit.opacity
+  const { r, g, b } = parsed.rgb
+  // 优先级：同一个 style 对象自己声明的背景 > 按文件覆盖 > 区域默认
+  const under = hit.localBackground ?? fileBackground ?? areaBackground
+  const background = resolveBackground(under, fileBackground ?? areaBackground)
+  return contrastRatio(`rgba(${r},${g},${b},${alpha})`, background)
+}
+
+/** 半透明背景要先压到它下面那层上，否则 `parseColor` 的 alpha 会被丢掉 */
+function resolveBackground(background: string, beneath: string): string {
+  const parsed = parseColor(background)
+  const base = parseColor(beneath)
+  if (!parsed || !base || parsed.alpha >= 1) return background
+  const { r, g, b } = composite(parsed.rgb, parsed.alpha, base.rgb)
+  return `rgb(${r},${g},${b})`
+}
+
+function scanContrast(): Map<string, Violation[]> {
+  const found = new Map<string, Violation[]>()
+  for (const area of SCAN_AREAS) {
+    const hits = scanTree(ROOT, [area.dir], colorLiterals)
+    for (const [file, colors] of hits) {
+      const override = BACKGROUND_OVERRIDES[file]
+      const bad: Violation[] = []
+      for (const hit of colors) {
+        // 不是 CSS 样式对象就不判：`CORRIDOR_FOG = { color, near, far }` 是
+        // three.js 的雾配置，属性名也叫 color
+        if (!hit.inStyle) continue
+        const threshold = THRESHOLDS[hit.property]
+        if (threshold === undefined) continue
+        const ratio = effectiveRatio(hit, area.background, override?.background)
+        if (Number.isNaN(ratio) || ratio >= threshold) continue
+        bad.push({
+          line: hit.line,
+          color: hit.color,
+          property: hit.property,
+          ratio,
+          threshold,
+          opacity: hit.opacity,
+        })
       }
+      if (bad.length > 0) found.set(file, bad)
     }
+  }
+  return found
+}
+
+describe('界面组件不内联写低对比颜色', () => {
+  const violations = scanContrast()
+  const show = (file: string) =>
+    (violations.get(file) ?? [])
+      .map(v =>
+        `${v.line} ${v.property}: ${v.color}` +
+        (v.opacity === null ? '' : ` × opacity ${v.opacity}`) +
+        ` → ${v.ratio.toFixed(2)}（需 ${v.threshold}）`)
+      .join('\n      ')
+
+  it('没有新增的低对比颜色', () => {
+    const unlisted = [...violations.keys()].filter(f => !(f in KNOWN_LOW_CONTRAST)).sort()
     expect(
-      offenders,
-      '这些文字色在走廊纸白上对比度低于 3（审计 E10）。放进 ' +
-      'lib/lab/domain/overlayColors 并让本文件的断言覆盖它：\n' + offenders.join('\n'),
+      unlisted,
+      '这些内联颜色在各自背景上达不到 WCAG AA（审计 E10）。放进 ' +
+      '`lib/lab/domain/overlayColors` 并让本文件的常量断言覆盖它：\n' +
+      unlisted.map(f => `\n  ${f}\n      ${show(f)}`).join(''),
     ).toEqual([])
+  })
+
+  it('已知低对比没有变多 —— 棘轮只能往下', () => {
+    const grown: string[] = []
+    for (const [file, { count }] of Object.entries(KNOWN_LOW_CONTRAST)) {
+      const actual = violations.get(file)?.length ?? 0
+      if (actual > count) grown.push(`${file}：登记 ${count} 条，实际 ${actual}\n      ${show(file)}`)
+    }
+    expect(grown, grown.join('\n\n')).toEqual([])
+  })
+
+  it('登记数与实测一致 —— 修好了就把数字改小', () => {
+    const stale: string[] = []
+    for (const [file, { count }] of Object.entries(KNOWN_LOW_CONTRAST)) {
+      const actual = violations.get(file)?.length ?? 0
+      if (actual < count) stale.push(`${file}：登记 ${count}，实际 ${actual}`)
+    }
+    expect(stale, '改成实际值，为 0 则删掉整行：\n' + stale.join('\n')).toEqual([])
+  })
+
+  it('KNOWN_LOW_CONTRAST 里没有僵尸条目', () => {
+    const zombies = Object.keys(KNOWN_LOW_CONTRAST).filter(f => !violations.has(f))
+    expect(zombies, '这些文件已经没有低对比颜色了，删掉').toEqual([])
+  })
+})
+
+describe('对比度扫描器没有退化', () => {
+  /*
+    正则版只匹配 `color: 'rgba(...)'`。下面前三条它一条都抓不到，而第三条
+    （opacity 二次衰减）是最隐蔽的一类：颜色本身看着够，乘上同级 opacity 之后
+    不够，而代码里两个数字离得很远。
+  */
+  const probes: readonly [name: string, code: string, expectBad: boolean][] = [
+    ['✗ hex 小字', "const s = { color: '#c8a96e', fontSize: 10 }", true],
+    ['✗ rgb()', "const s = { color: 'rgb(200,180,150)', fontSize: 10 }", true],
+    ['✗ opacity 二次衰减', "const s = { color: 'rgba(42,31,14,0.68)', opacity: 0.3, fontSize: 10 }", true],
+    ['rgba 低 alpha', "const s = { color: 'rgba(42,31,14,0.2)', fontSize: 10 }", true],
+    ['不透明深墨色是合格的', "const s = { color: '#2a1f0e', fontSize: 10 }", false],
+    ['背景色不按文字标准判', "const s = { background: '#f8f6f0', padding: 4 }", false],
+    ['认不出的颜色不假装算出结果', "const s = { color: 'var(--ink)', fontSize: 10 }", false],
+    // 领域配置对象不判：属性名叫 color，但它不是 CSS
+    ['三维雾配置不算样式', "const f = { color: '#f0ece4', near: 15, far: 60 }", false],
+    ['材质参数不算样式', "const m = { color: '#ffffff', roughness: 0.4 }", false],
+    // 局部背景优先：浅色文字压在自己声明的深底上是合格的
+    ['自带深色背景时按它算', "const s = { color: '#7fe9ff', background: 'rgb(7,11,18)', padding: 4 }", false],
+  ]
+
+  it.each(probes)('%s', (_name, code, expectBad) => {
+    const bad = colorLiterals(code, 'probe.ts').filter(hit => {
+      if (!hit.inStyle) return false
+      const threshold = THRESHOLDS[hit.property]
+      if (threshold === undefined) return false
+      const ratio = effectiveRatio(hit, CORRIDOR_PAPER)
+      return !Number.isNaN(ratio) && ratio < threshold
+    })
+    expect(bad.length > 0, code).toBe(expectBad)
+  })
+
+  it('style={{…}} 里的颜色即使没有别的 CSS 属性也算样式', () => {
+    const code = "const el = <p style={{ color: '#c8a96e' }} />"
+    const [hit] = colorLiterals(code, 'probe.tsx')
+    expect(hit!.inStyle).toBe(true)
+  })
+
+  it('每条背景覆盖都写了理由', () => {
+    for (const [file, { background, why }] of Object.entries(BACKGROUND_OVERRIDES)) {
+      expect(why.length, file).toBeGreaterThan(10)
+      expect(parseColor(background), file).not.toBeNull()
+    }
+  })
+
+  it('小字按 4.5 判而不是 3 —— 一刀切 3 会放过一整批', () => {
+    expect(THRESHOLDS.color).toBe(WCAG_AA.normalText)
+    expect(WCAG_AA.normalText).toBeGreaterThan(WCAG_AA.uiComponent)
+  })
+
+  it('扫描确实覆盖到了文件 —— 目录写错会让门禁静默变成空扫描', () => {
+    const total = SCAN_AREAS.reduce(
+      (sum, area) => sum + scanTree(ROOT, [area.dir], colorLiterals).size,
+      0,
+    )
+    expect(total).toBeGreaterThan(5)
+  })
+
+  it('每个扫描区域都写了背景色的理由', () => {
+    for (const area of SCAN_AREAS) {
+      expect(area.why.length, area.dir).toBeGreaterThan(10)
+      expect(parseColor(area.background), area.dir).not.toBeNull()
+    }
   })
 })

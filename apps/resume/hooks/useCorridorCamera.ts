@@ -5,6 +5,7 @@ import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
+import { registerCorridorRail } from '@/lib/lab/app/camera/corridorRail'
 import { hasExploredCorridor } from '@/lib/lab/domain/corridor/exploration'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { nextTargetZ, nextLookX } from '@/lib/lab/touchControls'
@@ -59,6 +60,25 @@ export function useCorridorCamera({
   /** 进走廊时的起点，用于算「探索位移」 */
   const startZRef     = useRef(28)
   const exploredRef   = useRef(false)
+
+  /*
+    把导轨登记到模块级注册表，让 `TeleportRoom` 能给它下命令。
+
+    传送原先走 `cameraDirector.moveToWorld({ duration: 0 })`，而那在导演不持有
+    相机时是**空操作**（`push()` 只写 controls 的内部球面坐标，位姿要等
+    `update()` 才应用，而 `update()` 在非持有态直接 return）。
+    详见 `lib/lab/app/camera/corridorRail.ts` 的说明。
+  */
+  useEffect(() => registerCorridorRail({
+    jumpTo(z) {
+      // 目标与当前值一起设：只设目标的话相机会平滑滑过去，而传送要的是瞬移
+      targetZ.current = z
+      currentZ.current = z
+      // 传送本身就算"探索过了"——否则那条教程气泡会在落地后才弹出来
+      exploredRef.current = true
+      startZRef.current = z
+    },
+  }), [])
   const glance        = useRef(0)
   const targetGlance  = useRef(0)
 

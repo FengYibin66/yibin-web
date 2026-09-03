@@ -65,8 +65,11 @@ const ALLOWED: Readonly<Record<string, { count: number, reason: string }>> = {
     count: 10,
     reason:
       '门对齐 + 开门推进的编排。它是"原本正确的那一方"（约定就是它统一编排）。' +
-      'ADR 20260903211244 要把其中的**进房飞行**迁进导演（那是与导演同帧双写的' +
-      '那一处），迁完这个数字会下降',
+      '与导演的同帧双写已经解决，但**不是靠把飞行迁进导演**：改成了让房间等到 ' +
+      '`phase === \'entered\'` 才 `claim()`，于是两个写者前后相继而不是同时。' +
+      '「同时」这件事本身由 `CameraRig` 的开发态断言守着（持有期间相机被别人写过' +
+      '就抛）——那比静态扫描强，因为写点棘轮看不出"在错误的时刻写"。' +
+      '真要迁的话是把整套编排搬进导演，改动面大且收益只是少一条白名单',
   },
   'components/rooms/publications/usePublicationBrowseCamera.ts': {
     count: 2,

@@ -112,7 +112,7 @@ describe('CameraDirector', () => {
 
   it('duration <= 0 立即到位 —— 传送的快速模式要求这一条', () => {
     const arrived = vi.fn()
-    director.enterRoom(pose, null, null, { duration: 0, onArrive: arrived })
+    director.claim(pose, null, null, { duration: 0, onArrive: arrived })
     const s = director.snapshot()
     expect([s.px, s.py, s.pz]).toEqual([0, 0, 6])
     expect([s.tx, s.ty, s.tz]).toEqual([0, 0, 0])
@@ -124,7 +124,7 @@ describe('CameraDirector', () => {
     root.position.set(0, 0, -90)
     root.rotation.y = -Math.PI / 3
 
-    director.enterRoom(pose, root, null, { duration: 0 })
+    director.claim(pose, root, null, { duration: 0 })
     const s = director.snapshot()
     // 不是 [0,0,6]：局部 +Z 被门的旋转与位置带走了
     expect(s.pz).toBeLessThan(-85)
@@ -134,19 +134,19 @@ describe('CameraDirector', () => {
   })
 
   it('有时长时进入 scripted 模式并禁用输入 —— 不禁的话拖拽和 tween 抢同一个 pose', () => {
-    director.enterRoom(pose, null, null)
+    director.claim(pose, null, null)
     expect(director.currentMode).toBe('scripted')
   })
 
   it('freedom 为 null 时到位后完全锁死', () => {
     const arrived = vi.fn()
-    director.enterRoom(pose, null, null, { duration: 0, onArrive: arrived })
+    director.claim(pose, null, null, { duration: 0, onArrive: arrived })
     expect(arrived).toHaveBeenCalled()
     expect(director.currentMode).toBe('idle')
   })
 
   it('给了 freedom 时到位后进入 free 模式', () => {
-    director.enterRoom(pose, null, {
+    director.claim(pose, null, {
       azimuth: [-0.5, 0.5],
       polar: [-0.3, 0.3],
       distance: [3, 10],
@@ -155,7 +155,7 @@ describe('CameraDirector', () => {
   })
 
   it('对焦物体时强制锁死自由度 —— 一边看细节一边能 orbit 只会让人转丢', () => {
-    director.enterRoom(pose, null, {
+    director.claim(pose, null, {
       azimuth: [-1, 1], polar: [-0.3, 0.3], distance: [2, 12],
     }, { duration: 0 })
     expect(director.currentMode).toBe('free')
@@ -173,7 +173,7 @@ describe('CameraDirector', () => {
 
   it('取消对焦回到进房位姿并恢复自由度', () => {
     const freedom = { azimuth: [-1, 1] as const, polar: [-0.3, 0.3] as const, distance: [2, 12] as const }
-    director.enterRoom(pose, null, freedom, { duration: 0 })
+    director.claim(pose, null, freedom, { duration: 0 })
     const entered = director.snapshot()
 
     director.frameObject(new THREE.Vector3(5, 5, 5), new THREE.Vector3(6, 6, 6), { duration: 0 })
@@ -196,7 +196,7 @@ describe('CameraDirector', () => {
   })
 
   it('detach 后再动作不炸（房间卸载与动画竞态）', () => {
-    director.enterRoom(pose, null, null)
+    director.claim(pose, null, null)
     director.detach()
     expect(() => {
       director.update(0.016)
@@ -216,7 +216,7 @@ describe('CameraDirector', () => {
 
   it('distance 范围反了也不会得到 min > max 的限位', () => {
     expect(() => {
-      director.enterRoom(pose, null, {
+      director.claim(pose, null, {
         azimuth: [-1, 1],
         polar: [-0.3, 0.3],
         // 故意给一个退化区间
@@ -246,55 +246,54 @@ describe('CameraDirector —— 所有权交接', () => {
   })
 
   it('attach 后默认挂起 —— 走廊与进出房还由别处写相机，不挂起会被抹掉', () => {
-    expect(director.isSuspended).toBe(true)
+    expect(director.owner !== 'director').toBe(true)
   })
 
-  it('挂起期间 update 完全不碰相机', () => {
+  it('默认不持有相机', () => {
+    expect(director.owner).toBe('corridor')
+  })
+
+  it('不持有时 update 完全不碰相机', () => {
     camera.position.set(1, 2, 3)
     director.update(0.016)
     director.update(0.016)
     expect([camera.position.x, camera.position.y, camera.position.z]).toEqual([1, 2, 3])
   })
 
-  it('恢复时以相机当前实际位姿为准 —— 挂起期间别处移动过它', () => {
-    // 挂起期间"别处"把相机搬走
+  it('claim 就是接管 —— 房间不必自己记得 resume', () => {
+    expect(director.owner).toBe('corridor')
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
+    expect(director.owner).toBe('director')
+  })
+
+  it('接管时以相机当前实际位姿为准 —— 交还期间别处移动过它', () => {
+    /*
+      交还期间"别处"（走廊导轨 / DoorSection 的编排）把相机搬走了，而 controls
+      记的还是交还那一刻的值。不同步的话接管第一帧会猛地跳回去。
+
+      用一个零时长、目标就是"相机现在这个位置"的 claim 来触发接管：这样能观察
+      同步行为而不引入额外的位移。
+    */
     camera.position.set(0, 0.2, -87)
     camera.lookAt(0, 0.2, -95)
     camera.updateMatrixWorld()
 
-    director.resume()
-    const s = director.snapshot()
-    expect(s.px).toBeCloseTo(0, 4)
-    expect(s.pz).toBeCloseTo(-87, 4)
-    // target 在相机正前方，不是世界原点
-    expect(s.tz).toBeLessThan(-87)
-  })
-
-  it('恢复后第一帧不把相机跳回挂起时的旧位置', () => {
-    director.resume()
-    director.suspend()
-    camera.position.set(50, 50, 50)
-    camera.updateMatrixWorld()
-    director.resume()
-    director.update(0.016)
-    expect(camera.position.length()).toBeGreaterThan(50)
-  })
-
-  it('enterRoom 自动接管 —— 房间不必自己记得 resume', () => {
-    expect(director.isSuspended).toBe(true)
-    director.enterRoom(
-      { position: [0, 0, 6], target: [0, 0, 0], duration: 0 },
+    director.claim(
+      { position: [0, 0.2, -87], target: [0, 0.2, -95], duration: 0 },
       null,
       null,
     )
-    expect(director.isSuspended).toBe(false)
+    const s = director.snapshot()
+    expect(s.px).toBeCloseTo(0, 4)
+    expect(s.pz).toBeCloseTo(-87, 4)
+    expect(s.tz).toBeLessThan(-87)
   })
 
-  it('suspend 会 kill 进行中的 tween', () => {
-    director.resume()
+  it('release 会 kill 进行中的 tween', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
     director.moveToWorld(new THREE.Vector3(0, 0, 20), new THREE.Vector3(), { duration: 3 })
     expect(director.currentMode).toBe('scripted')
-    director.suspend()
+    director.release()
     expect(director.currentMode).toBe('idle')
     // tween 还活着的话 pose 会继续往 z=20 爬
     const before = director.snapshot().pz
@@ -302,10 +301,81 @@ describe('CameraDirector —— 所有权交接', () => {
     expect(director.snapshot().pz).toBe(before)
   })
 
-  it('detach 后回到挂起态', () => {
-    director.resume()
+  it('detach 后回到不持有', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
     director.detach()
-    expect(director.isSuspended).toBe(true)
+    expect(director.owner).toBe('corridor')
+  })
+})
+
+describe('CameraDirector —— 所有权偏差检测', () => {
+  /*
+    这一组测的是 `CameraRig` 那条开发态断言的判据。
+
+    写点棘轮（`cameraOwnership.test.ts`）守的是"谁写了相机"这个**静态**事实，
+    守不住"在错误的时刻写"：进房时导演与 `DoorSection` 的 gsap 重叠约 2 秒，
+    两边都在棘轮里登记过，静态扫描完全看不出来。那次是靠人读源码加算 rAF 注册
+    顺序才发现的——而表现是"动画被静默吞掉、画面看起来正常"。
+  */
+  let camera: THREE.PerspectiveCamera
+  let dom: HTMLElement
+  let director: CameraDirector
+
+  beforeEach(() => {
+    camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 1000)
+    dom = document.createElement('div')
+    director = new CameraDirector()
+    director.attach(camera, dom)
+  })
+
+  afterEach(() => {
+    director.detach()
+  })
+
+  it('不持有相机时不报偏差 —— 那时别人本来就该在写', () => {
+    expect(director.ownershipDrift()).toBeNull()
+  })
+
+  it('持有且只有自己写时偏差可忽略', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
+    director.update(0.016)
+    director.update(0.016)
+    const drift = director.ownershipDrift()
+    expect(drift).not.toBeNull()
+    expect(drift!).toBeLessThan(1e-8)
+  })
+
+  it('持有期间别人写了相机 → 偏差显著', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
+    director.update(0.016)
+
+    // 模拟第二个写者（DoorSection 的 gsap tween 就是这么写的）
+    camera.position.x += 0.5
+
+    const drift = director.ownershipDrift()
+    expect(drift).not.toBeNull()
+    expect(drift!, '双写没被检出').toBeGreaterThan(1e-8)
+    // 真实双写的量级远高于浮点噪声，两者不会混淆
+    expect(drift!).toBeGreaterThan(0.2)
+  })
+
+  it('只改朝向也算 —— 偏差要看四元数，不只看位置', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
+    director.update(0.016)
+
+    camera.rotateY(0.05)
+
+    expect(director.ownershipDrift()!).toBeGreaterThan(1e-8)
+  })
+
+  it('交还之后别人写相机不再报偏差', () => {
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
+    director.update(0.016)
+    director.release()
+
+    camera.position.x += 5
+
+    expect(director.ownershipDrift()).toBeNull()
   })
 })
 
@@ -330,7 +400,7 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
   const pose: RoomEntryPose = { position: [0, 0.35, -3.7], target: [0, 0.05, -7.6], duration: 0 }
 
   /**
-   * 这一组测的是实机抓到的那个 bug：`enterRoom` 只在进房那一刻把房间局部
+   * 这一组测的是实机抓到的那个 bug：`claim` 只在进房那一刻把房间局部
    * 位姿换算成世界坐标，而房间根的世界矩阵之后还会变（门板继续转、走廊段落
    * 被回收重排）。矩阵一变房间内容整体移动，相机留在旧世界坐标上，取景就偏。
    *
@@ -338,7 +408,7 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
    * 时相机直接被甩到门外的走廊里。
    */
   it('房间移动后相机跟着移动，相对取景不变', () => {
-    director.enterRoom(pose, root, null, { duration: 0 })
+    director.claim(pose, root, null, { duration: 0 })
     director.update(0.016) // 建立锚点基准
     const before = director.snapshot()
 
@@ -355,7 +425,7 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
   })
 
   it('房间旋转后相机也跟着转 —— 只跟平移不够', () => {
-    director.enterRoom(pose, root, null, { duration: 0 })
+    director.claim(pose, root, null, { duration: 0 })
     director.update(0.016)
     const before = director.snapshot()
     const beforeDist = Math.hypot(before.tx - before.px, before.tz - before.pz)
@@ -372,7 +442,7 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
   })
 
   it('房间不动时不做任何多余的写入', () => {
-    director.enterRoom(pose, root, null, { duration: 0 })
+    director.claim(pose, root, null, { duration: 0 })
     director.update(0.016)
     const a = director.snapshot()
     director.update(0.016)
@@ -380,15 +450,16 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
     expect(director.snapshot()).toEqual(a)
   })
 
-  it('挂起期间房间移动，恢复后不会补一个巨大的增量', () => {
-    director.enterRoom(pose, root, null, { duration: 0 })
+  it('交还期间房间移动，重新接管后不会补一个巨大的增量', () => {
+    director.claim(pose, root, null, { duration: 0 })
     director.update(0.016)
-    director.suspend()
+    director.release()
 
-    // 挂起期间房间被搬走（退房时门关上、段落重排）
+    // 交还期间房间被搬走（退房时门关上、段落重排）
     root.position.set(100, 0, 100)
 
-    director.resume()
+    // 重新接管：`release()` 把 anchorValid 置了 false，所以基准会重取
+    director.claim(pose, root, null, { duration: 0 })
     const beforeUpdate = director.snapshot()
     director.update(0.016)
     // 恢复时以相机当前实际位姿为基准，不应被 100 单位的增量甩走
@@ -399,13 +470,13 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
   })
 
   it('换房间时重置锚点 —— 不把上一个房间的增量作用到新房间', () => {
-    director.enterRoom(pose, root, null, { duration: 0 })
+    director.claim(pose, root, null, { duration: 0 })
     director.update(0.016)
     root.position.set(5, 0, 5)
 
     const other = new THREE.Group()
     other.position.set(-20, 0, 40)
-    director.enterRoom(pose, other, null, { duration: 0 })
+    director.claim(pose, other, null, { duration: 0 })
     const entered = director.snapshot()
     director.update(0.016)
 
@@ -413,7 +484,7 @@ describe('CameraDirector —— 位姿锚定在房间上', () => {
   })
 
   it('没有房间根时（走廊 / 测试）不炸', () => {
-    director.enterRoom(pose, null, null, { duration: 0 })
+    director.claim(pose, null, null, { duration: 0 })
     expect(() => { director.update(0.016); director.update(0.016) }).not.toThrow()
   })
 })

@@ -34,7 +34,44 @@ export function CameraRig() {
     不能用正数：R3F 在 `renderPriority > 0` 时会关掉自动渲染，要求调用侧
     自己 `gl.render()`。负数与 0 都保持自动渲染。
   */
-  useFrame((_, delta) => cameraDirector.update(delta), -1)
+  useFrame((_, delta) => {
+    /*
+      开发态：先查上一帧写完之后，相机有没有被**别人**动过。
+
+      顺序很关键——必须在本帧 `update()` 之前查，因为 `update()` 会把相机重写成
+      导演想要的位姿，把证据抹掉。
+
+      这条断言是「所有权是显式状态」这件事的兑现方式（ADR 20260903211244）。
+      写点棘轮（`__tests__/cameraOwnership.test.ts`）守的是"谁写了相机"这个**静态**
+      事实，而它守不住"在错误的时刻写"：进房时导演与 `DoorSection` 的 gsap 重叠约
+      2 秒，两边都在棘轮里登记过，静态扫描完全看不出问题。那次靠的是人读源码
+      加算 rAF 注册顺序才发现——而表现是"动画被静默吞掉、画面看起来正常"。
+
+      有了这条，同一类问题在**第一次实机运行**时就抛。
+    */
+    if (process.env.NODE_ENV !== 'production') {
+      const drift = cameraDirector.ownershipDrift()
+      if (drift !== null && drift > OWNERSHIP_DRIFT_EPSILON) {
+        throw new Error(
+          `相机在导演持有期间被别人写过（偏差 ${drift.toExponential(2)}）。`
+          + '同一帧里有第二个写者——查 gsap tween、useFrame 回调，'
+          + '或提前接管的房间。见 ADR 20260903211244',
+        )
+      }
+    }
+
+    cameraDirector.update(delta)
+  }, -1)
 
   return null
 }
+
+/**
+ * 判定"相机被别人动过"的阈值（位置平方距离 + 四元数平方距离之和）。
+ *
+ * 不能用 0：`camera-controls` 的阻尼与 gsap 的插值都会带来最后一位的浮点差，
+ * 而 `recordWritten` 记的是本帧写完的值、下一帧开头再比——中间隔着一次渲染。
+ * 1e-8 对应约 1e-4 个世界单位的位置偏差（相机在房间里的量级是 1–10 单位），
+ * 而真实的双写偏差是 0.1 以上——两者差六个数量级，不会误判。
+ */
+const OWNERSHIP_DRIFT_EPSILON = 1e-8

@@ -288,10 +288,12 @@ test.describe('面板', () => {
     await page.getByTestId('nav-map').click()
     await expect(page.getByTestId('map-panel')).toBeVisible()
 
-    // 现在会超时：按钮被面板盖住
-    await page.getByTestId('nav-achievements').click({ timeout: 3_000 })
-    await expect(page.getByTestId('map-panel')).toHaveCount(0)
-    await expect(page.getByTestId('achievements-panel')).toHaveAttribute('data-open', 'true')
+    /*
+      现在点不到：按钮被面板盖住。用 `trial: true` 只做可点性判定、不真的派发
+      点击——这样失败原因是明确的"元素不可点"，而不是"点了但没反应"，
+      也不必等一次完整的超时（CI 上第一版就是靠重试才勉强报出结果）。
+    */
+    await page.getByTestId('nav-achievements').click({ trial: true, timeout: 3_000 })
   })
 
   test('成就面板能开，用它自己的关闭按钮能关', async ({ page }) => {
@@ -352,16 +354,31 @@ test.describe('面板', () => {
       await expect(page.getByTestId('achievements-panel')).toHaveAttribute('data-open', 'false')
 
       /*
-        必须等退场动画跑完再断言。第一版在面板关闭的瞬间就查
-        `data-lab-in-room`，于是"通过"了——而退房是两段各 1 秒的 gsap 加关门，
-        `contextExitRoom()` 要 2–3 秒后才执行。`test.fail()` 报的
-        "Expected to fail, but passed" 就是这么来的：**是断言查得太早，
-        不是缺陷不存在**。
-      */
-      await page.waitForTimeout(4_000)
+        ── 这条断言的时序踩了两次，记下来 ──────────────────────────────────
 
-      // 房间**不该**退 —— 这一条现在失败
-      await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'true')
+        缺陷的表现是"房间**最终**退掉了"，而退房是两段各 1 秒的 gsap 加关门，
+        `contextExitRoom()` 要好几秒后才执行。所以断言点的选择很关键：
+
+        1. 第一版在面板关闭的瞬间就查 → 那时还没退完，`test.fail()` 报
+           "Expected to fail, but passed"。我先怀疑 review 的结论错了，
+           实际是**断言查得太早**。
+        2. 第二版改成固定等 4 秒 → 本地 chromium 过了，**CI 的 mobile-safari
+           仍然报"预期失败但通过"**：WebKit 上那套动画比 4 秒慢。
+
+        固定等待猜不对，因为它要猜的是动画时长 × 平台 × 机器负载。改成
+        **等退房这件事发生**：等到了说明缺陷复现（下面的断言随即失败，
+        正是 `test.fail()` 期望的）；等不到说明行为正确。
+      */
+      const inRoom = page.getByTestId('lab-ui')
+      let exited = false
+      try {
+        await expect(inRoom).toHaveAttribute('data-lab-in-room', 'false', { timeout: 20_000 })
+        exited = true
+      } catch {
+        // 一直没退 —— 这才是正确行为
+      }
+
+      expect(exited, '关面板的那次 ESC 连带把房间退了').toBe(false)
     },
   )
 })

@@ -193,46 +193,27 @@ const HAS_CJK = /[一-鿿]/
  *
  * 修完一个文件就把它整行删掉；那是完成标记。
  */
+/**
+ * 已知的漏译，按文件记**条数**。
+ *
+ * 与相机门禁同一个形态：棘轮只能往下。修完一个文件就把它整行删掉；那是完成标记。
+ *
+ * 这张表原来有 10 个文件 / 20 条，是 2026-09-03 复核查出的存量（审计把 E7 记成
+ * 「已做」，实际这一批一直在）。现在只剩一条，且它不是"还没做"而是**做不了**
+ * ——理由写在下面。
+ */
 const KNOWN_LEAKS: Readonly<Record<string, { count: number, note: string }>> = {
-  'components/entry/ClassicPanel.tsx': {
-    count: 5,
-    note: 'AI Research / Frontend / Structural 三个标签 + Classic View + ENTER →。' +
-      '`entry.classicTitle` 与 `entry.classicTagline` 两个键已翻译但没接线',
-  },
-  'components/entry/EntryPreviewScene.tsx': {
-    count: 2,
-    note: 'BUG FIXED! 与 Drawing… ——3D 场景里的彩蛋文字',
-  },
-  'components/entry/ExplorerBar.tsx': {
-    count: 2,
-    note: 'EXPLORER 与「a door to enter. Audio is currently」。后者被 `{isTouch ? ...}` ' +
-      '切成两段，正则版连这条最长的都抓不到（跨插值）',
-  },
-  'components/lab/BugEaster.tsx': { count: 1, note: 'BUG FIXED! 彩蛋' },
   'components/lab/HeroText.tsx': {
     count: 1,
-    note: '走廊欢迎区的 3D 标语 `<AI Engineer />`。职称属于简历内容，应走 ' +
-      '`content[locale]` 而不是 labUi',
-  },
-  'components/lab/LabClient.tsx': {
-    count: 3,
-    note: 'WebGL 不可用时的兜底页。这一屏只有不支持 3D 的设备会看到，' +
-      '所以从来没人注意到它没翻译',
-  },
-  'components/lab/LabLoader.tsx': { count: 1, note: '「Slow connection? Open Classic View →」' },
-  'components/lab/LabTutorial.tsx': {
-    count: 3,
-    note: 'How to explore / Skip / Start exploring。`hints.howToExplore` 已翻译但只用在 ' +
-      'aria-label，可见文字仍是英文；`hints.dismissTutorial` 已翻译未接线',
-  },
-  'components/ui/ImagePreview.tsx': {
-    count: 1,
-    note: '`aria-label={`Preview ${alt}`}` ——模板串，正则版抓不到',
-  },
-  'components/ui/NavigationUI.tsx': {
-    count: 1,
-    note: '返回按钮的可见文字是 Back（它的 aria-label 反倒是本地化的）。' +
-      '`panels.mute` / `panels.unmute` 已翻译未接线',
+    note:
+      '走廊欢迎区的 3D 标语 `<AI Engineer />`。这不是忘了翻译，而是**换文案要重做' +
+      '排版**：那一行是三个独立的 `<Text>`（`<` / `AI Engineer` / `/>`），' +
+      '`baseX` 与 `splitDir` 是按 "AI Engineer" 这 11 个拉丁字符的宽度逐个手调的' +
+      '（相机靠近时它们会向两侧裂开）。换成中文（字宽不同、字数不同）需要重新' +
+      '标定这些常量，属于带视觉后果的独立改动，混在 i18n 批里做不合适。' +
+      '职称本身属于简历内容（`content.hero.roles`），而 zh 那份里它也是英文' +
+      '（`AI Research Engineer`）——所以即便接上 content，中文用户看到的仍是英文，' +
+      '真正要决定的是"中文语境下这个标语写什么"。',
   },
 }
 

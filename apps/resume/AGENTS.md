@@ -117,8 +117,16 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | 门禁 | 棘轮 | 当前基线 |
 |------|------|---------|
 | `cameraOwnership.test.ts` | `{ 文件: 期望写点数 }` | 8 文件 / 34 写点 |
-| `labI18n.test.ts` | `KNOWN_LEAKS`（按文件记漏译条数） | 10 文件 / 20 条 |
-| `labContrast.test.ts` | `KNOWN_LOW_CONTRAST`（同上） | 4 文件 / 9 条 |
+| `labI18n.test.ts` | `KNOWN_LEAKS`（按文件记漏译条数） | 1 文件 / 1 条 |
+| `labContrast.test.ts` | `KNOWN_LOW_CONTRAST`（同上） | **空** |
+| `labFonts.test.ts` | 无棘轮（全禁写死路径） | 0 |
+
+漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
+**换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
+过，相机靠近时会向两侧裂开）。理由写在 `KNOWN_LEAKS` 的 note 里。
+
+对比度那张表**刻意留空而不是删掉**：它是机制的一部分。下一处低对比出现时
+「没有新增」那条会直接红，而不是被悄悄加进一张有先例的表里。
 
 数字只能往下：写点变少了要把数字改小（有一条断言专门管这个），否则棘轮留一截
 空档，下一个人可以在不触发红灯的情况下加回去。文件级白名单的漏洞正是这个

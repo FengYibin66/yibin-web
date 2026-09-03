@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { LabLoader } from './LabLoader'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
 
 // No `loading` fallback here on purpose: LabLoader is rendered persistently
 // below so it covers BOTH the JS-chunk download AND the texture loading phase.
@@ -26,6 +28,8 @@ function webglSupported(): boolean {
 }
 
 function WebglFallback() {
+  const labels = useLabLabels()
+
   return (
     <div
       data-testid="lab-webgl-fallback"
@@ -43,11 +47,10 @@ function WebglFallback() {
       }}
     >
       <h1 style={{ fontFamily: "'CabinSketch', serif", fontSize: 28, color: '#2a1f0e', margin: 0 }}>
-        The Lab needs WebGL
+        {labels.fallback.webglTitle}
       </h1>
-      <p style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, color: 'rgba(42,31,14,0.6)', maxWidth: 420, margin: 0 }}>
-        Your browser or device doesn&apos;t support 3D rendering.
-        The classic version has all the same content.
+      <p style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, color: OVERLAY_COLORS.mutedText, maxWidth: 420, margin: 0 }}>
+        {labels.fallback.webglBody}
       </p>
       <a
         href="/classic"
@@ -62,7 +65,7 @@ function WebglFallback() {
           letterSpacing: '0.1em',
         }}
       >
-        Open Classic View →
+        {labels.fallback.webglCta}
       </a>
     </div>
   )

@@ -46,12 +46,19 @@ export function NavigationUI() {
     roomLoadState.phase === 'idle' || roomLoadState.phase === 'entered'
   const isRoomNavigationDisabled = isTeleporting || !canTeleport
 
-  // Show tutorial hints at the right moments
+  /*
+    走廊的两条提示。作用域是 `corridor`：进任何房间时由 `enterScope` 整批出队
+    （ADR 20260903211302）。
+
+    在此之前它们和房间教程混在同一个无作用域的队列里，于是「走廊提示」会在
+    房间里继续排队占位——`Scroll or swipe to explore` 那条尤其明显：它只能被
+    滚轮解锁，键盘用户永远关不掉它。
+  */
   useEffect(() => {
     if (!hasEntered && !isTeleporting) {
-      showTutorial('corridor_enter')
+      showTutorial('corridor_enter', 'corridor')
     } else if (hasEntered && !isTeleporting && !isInRoom) {
-      showTutorial('corridor_explore')
+      showTutorial('corridor_explore', 'corridor')
     }
   }, [hasEntered, isTeleporting, isInRoom, showTutorial])
 
@@ -194,7 +201,7 @@ export function NavigationUI() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Back
+          {labels.hints.back}
         </button>
       )}
 

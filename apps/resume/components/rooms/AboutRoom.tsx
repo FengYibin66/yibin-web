@@ -222,7 +222,7 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { isTeleporting }       = useScene()
   const { unlockAchievement }   = useAchievements()
   const router = useWheelRouter()
-  useRoomTutorial('about_scroll')
+  useRoomTutorial('about_scroll', 'about')
 
   const scrollPos       = useRef(0)
   const scrollVelocity  = useRef(0)

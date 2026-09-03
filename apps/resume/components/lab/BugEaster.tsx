@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { Text, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import { LAB_FONT_LATIN_BOLD } from '@/lib/lab/domain/labFonts'
 
 const CEILING_Y = 1.75  // CORRIDOR_HEIGHT(3.5) / 2
@@ -14,6 +15,7 @@ interface BugEasterProps {
 }
 
 export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
+  const labels = useLabLabels()
   const bugRef = useRef<THREE.Mesh>(null)
   const inkRef = useRef<THREE.Mesh>(null)
   const [clicked, setClicked] = useState(false)
@@ -69,7 +71,7 @@ export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
         <meshBasicMaterial map={inkTex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>
 
-      {/* "BUG FIXED!" revealed left-to-right via clipRect */}
+      {/* 「BUG 已修复」从左到右揭开（clipRect） */}
       {clicked && (
         <Text
           position={[2, CEILING_Y - 0.5, 0.4]}
@@ -80,7 +82,7 @@ export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
           anchorY="middle"
           clipRect={[-1, -0.3, -1 + clipProg * 2.5, 0.3]}
         >
-          BUG FIXED!
+          {labels.fallback.bugFixed}
         </Text>
       )}
     </group>

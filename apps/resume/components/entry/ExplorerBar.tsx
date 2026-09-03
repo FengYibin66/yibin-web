@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useAudio } from '@/context/AudioContext'
+import { useLabLabels } from '@/hooks/useLabLabels'
 
 export function ExplorerBar() {
+  const labels = useLabLabels()
   const { isMuted, toggleMute } = useAudio()
   const [isTouch, setIsTouch] = useState(false)
 
@@ -41,9 +43,9 @@ export function ExplorerBar() {
         color: '#1a1a1a',
         userSelect: 'none',
       }}>
-        EXPLORER
+        {labels.entry.explorerBar}
         <span style={{ margin: '0 8px', opacity: 0.4 }}>—</span>
-        {isTouch ? 'Tap' : 'Click'} a door to enter. Audio is currently{' '}
+        {isTouch ? labels.entry.explorerHintTouch : labels.entry.explorerHint}{' '}
         <span
           style={{
             cursor: 'pointer',

@@ -75,6 +75,10 @@ export const en: SiteContent = {
       loadTimedOut: 'Room loading timed out',
       imagePreview: 'Image preview',
       previewImage: 'Preview image',
+      previewNamed: 'Preview {name}',
+      skipTutorial: 'Skip',
+      startExploring: 'Start exploring',
+      back: 'Back',
     },
     entry: {
       labEyebrow: 'Enter',
@@ -85,6 +89,19 @@ export const en: SiteContent = {
       classicTitle: 'Classic Résumé',
       classicTagline: 'Fast · Readable · Printable',
       classicCta: 'Open the résumé',
+      classicTags: ['AI Research', 'Frontend', 'Structural'],
+      explorerBar: 'EXPLORER',
+      explorerHint: 'Click a door to enter. Audio is currently',
+      explorerHintTouch: 'Tap a door to enter. Audio is currently',
+    },
+    fallback: {
+      webglTitle: 'The Lab needs WebGL',
+      webglBody: 'Your browser or device doesn\u2019t support 3D rendering. '
+        + 'The classic version has all the same content.',
+      webglCta: 'Open Classic View \u2192',
+      slowConnection: 'Slow connection? Open Classic View \u2192',
+      bugFixed: 'BUG FIXED!',
+      drawing: 'Drawing\u2026',
     },
     results: {
       walkCorridor: 'walk the corridor',

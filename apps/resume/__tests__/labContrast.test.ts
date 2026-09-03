@@ -9,7 +9,12 @@ import {
   parseColor,
   relativeLuminance,
 } from '@/lib/a11y/contrast'
-import { CORRIDOR_PAPER, ENTRY_PAPER, OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
+import {
+  CORRIDOR_PAPER,
+  ENTRY_COLORS,
+  ENTRY_PAPER,
+  OVERLAY_COLORS,
+} from '@/lib/lab/domain/overlayColors'
 
 import type { ColorHit } from './helpers/sourceScan'
 import { colorLiterals, scanTree } from './helpers/sourceScan'
@@ -76,9 +81,47 @@ describe('Lab 覆盖层文案在走廊纸白上可读', () => {
     expect(ratio, `对比度只有 ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(WCAG_AA.normalText)
   })
 
+  it('次要说明文字过 AA 正文门槛（9–12px 小字）', () => {
+    const ratio = contrastRatio(OVERLAY_COLORS.mutedText, CORRIDOR_PAPER)
+    expect(ratio, `对比度只有 ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(WCAG_AA.normalText)
+  })
+
   it('原先那两个值确实不达标 —— 记录问题的量级，防止改回去', () => {
     expect(contrastRatio('rgba(42,31,14,0.4)', CORRIDOR_PAPER)).toBeLessThan(3)
     expect(contrastRatio('rgba(200,169,110,0.6)', CORRIDOR_PAPER)).toBeLessThan(3)
+  })
+})
+
+describe('入口页文案在它自己的米底上可读', () => {
+  /*
+    与 Lab 覆盖层分开断言：背景不同（`ENTRY_PAPER` vs `CORRIDOR_PAPER`），
+    同一个颜色在两处的对比度不一样。用错背景算出来的是个看起来很精确的错数字。
+  */
+  it('金色强调文字过 AA 正文门槛', () => {
+    const ratio = contrastRatio(ENTRY_COLORS.gold, ENTRY_PAPER)
+    expect(ratio, `对比度只有 ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(WCAG_AA.normalText)
+  })
+
+  it('方向标签过 AA 正文门槛（9px 小字）', () => {
+    const ratio = contrastRatio(ENTRY_COLORS.tag, ENTRY_PAPER)
+    expect(ratio, `对比度只有 ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(WCAG_AA.normalText)
+  })
+
+  it('金色仍然是金色 —— 只是压深，不是换成棕黑', () => {
+    /*
+      「达标」很容易靠"改成近黑色"实现，那等于放弃这个品牌口子。这条断言把
+      色相钉住：红 > 绿 > 蓝，且红蓝差足够大（暖色）。
+    */
+    const gold = parseColor(ENTRY_COLORS.gold)!
+    expect(gold.rgb.r).toBeGreaterThan(gold.rgb.g)
+    expect(gold.rgb.g).toBeGreaterThan(gold.rgb.b)
+    expect(gold.rgb.r - gold.rgb.b).toBeGreaterThan(60)
+  })
+
+  it('原先那四处确实不达标 —— 记录问题的量级', () => {
+    expect(contrastRatio('rgba(200,169,110,0.7)', ENTRY_PAPER)).toBeLessThan(2)
+    expect(contrastRatio('#c8a96e', ENTRY_PAPER)).toBeLessThan(2.5)
+    expect(contrastRatio('#9c8570', ENTRY_PAPER)).toBeLessThan(WCAG_AA.normalText)
   })
 })
 
@@ -151,35 +194,20 @@ const THRESHOLDS: Readonly<Record<string, number>> = {
 /**
  * 已知的低对比，按文件记条数。棘轮只能往下。
  *
- * 这些是 2026-09-03 复核实算出来的存量——审计 E10 只修了 `OVERLAY_COLORS` 里
- * 那两个常量，而正则版门禁只认 `rgba()`、不认 `#hex`、也不看 `opacity` 的二次
- * 衰减，所以入口页这一批一直是绿的。修法属于 ADR 20260903211302 那一批
- * （统一收进 `overlayColors` 或对应的 token），不在换门禁这一步里。
+ * **现在是空的。** 这张表原来有 4 个文件 / 9 条，是 2026-09-03 复核实算出来的
+ * 存量——审计 E10 只修了 `OVERLAY_COLORS` 里那两个常量，而第一版门禁只认
+ * `rgba()`、不认 `#hex`、也不看 `opacity` 的二次衰减，所以入口页那四处金色
+ * （1.59 / 1.98 / 1.98 / 3.08）与三处墨色小字（3.11 / 3.58 / 4.14）一直是绿的。
+ *
+ * 九处已全部收进 `OVERLAY_COLORS.mutedText` / `ENTRY_COLORS.gold` /
+ * `ENTRY_COLORS.tag`，于是它们落进本文件顶部那组**显式常量断言**的覆盖范围
+ * ——不再依赖扫描能不能看见内联样式，也就绕不过盲区（CSS module、祖先 opacity、
+ * Tailwind 工具类）。
+ *
+ * 表空着而不是删掉，是因为它是机制的一部分：下一处低对比出现时，
+ * 「没有新增的低对比颜色」那条会直接红，而不是被悄悄加进一张有先例的表里。
  */
-const KNOWN_LOW_CONTRAST: Readonly<Record<string, { count: number, note: string }>> = {
-  'components/entry/ClassicPanel.tsx': {
-    count: 4,
-    note: 'eyebrow 是 rgba(200,169,110,0.7) 的 10px 小字 → 1.59；' +
-      'ENTER → 的 #c8a96e 出现两处 → 1.98；标签 #9c8570 → 3.08。' +
-      '金色在米底上本来就浅，再乘 alpha 就没了。四处全是 `#hex` 或带 alpha 的' +
-      '金色——正则版一条都不认',
-  },
-  'components/lab/LabTutorial.tsx': {
-    count: 3,
-    note: '两处 rgba(42,31,14,0.5) 的 11–12px 说明文字 → 3.11，' +
-      '一处 rgba(42,31,14,0.55) 的 11px 等宽小字 → 3.58。' +
-      '三条都过得了大字门槛 3 却过不了正文门槛 4.5——正则版一刀切用 3，所以全绿',
-  },
-  'components/entry/EntryPreviewScene.tsx': {
-    count: 1,
-    note: '鸭子对话框的提示文字 rgba(42,31,14,0.55) → 3.58',
-  },
-  'components/lab/LabClient.tsx': {
-    count: 1,
-    note: 'WebGL 兜底页的说明文字 rgba(42,31,14,0.6) → 4.14，差一点点。' +
-      '这一屏只有不支持 3D 的设备会看到，所以从来没人注意到',
-  },
-}
+const KNOWN_LOW_CONTRAST: Readonly<Record<string, { count: number, note: string }>> = {}
 
 interface Violation {
   readonly line: number

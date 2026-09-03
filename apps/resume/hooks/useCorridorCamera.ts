@@ -4,6 +4,8 @@ import { useRef, useEffect, useCallback } from 'react'
 import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+
+import { hasExploredCorridor } from '@/lib/lab/domain/corridor/exploration'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { nextTargetZ, nextLookX } from '@/lib/lab/touchControls'
 import {
@@ -24,6 +26,14 @@ interface UseCorridorCameraOptions {
   lookIntensity?:   number   // mouse look horizontal range in world units (default 4.0)
   glanceIntensity?: number   // door auto-glance strength (default 0.15)
   scrollEnabled?:   boolean
+  /**
+   * 相机沿走廊移动了一段距离后调一次（只调一次）。
+   *
+   * 判据在 `domain/corridor/exploration.ts`。放在这里而不是让调用方监听
+   * `wheel` / `touchmove`：那样**键盘前进不算**，而键盘用户因此永远拿不到
+   * `corridor_explore`，连带那条教程气泡永远关不掉（它只有被解锁才会消失）。
+   */
+  onExplored?:      () => void
 }
 
 export function useCorridorCamera({
@@ -32,11 +42,23 @@ export function useCorridorCamera({
   lookIntensity  = 4.0,
   glanceIntensity = 0.15,
   scrollEnabled  = true,
+  onExplored,
 }: UseCorridorCameraOptions = {}) {
   const { camera } = useThree()
 
+  /*
+    回调用 ref 持有：调用方通常传内联箭头函数，identity 每次渲染都变。
+    直接放进 `useFrame` 的闭包依赖会让整段每帧重建——而 `useFrame` 的回调
+    本来就只注册一次。
+  */
+  const onExploredRef = useRef(onExplored)
+  onExploredRef.current = onExplored
+
   const targetZ       = useRef(28)
   const currentZ      = useRef(28)
+  /** 进走廊时的起点，用于算「探索位移」 */
+  const startZRef     = useRef(28)
+  const exploredRef   = useRef(false)
   const glance        = useRef(0)
   const targetGlance  = useRef(0)
 
@@ -160,6 +182,15 @@ export function useCorridorCamera({
 
     // Smooth Z (no lower bound — infinite)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
+
+    /*
+      「开始探索」的判定：按**位移**，不按输入事件类型。滚轮 / 触摸 / 键盘
+      走同一条路径（见 domain/corridor/exploration.ts 的说明）。
+    */
+    if (!exploredRef.current && hasExploredCorridor(startZRef.current, currentZ.current)) {
+      exploredRef.current = true
+      onExploredRef.current?.()
+    }
 
     // Smooth look
     look.current.x = THREE.MathUtils.lerp(look.current.x, targetLook.current.x, smoothing * 2)

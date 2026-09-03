@@ -275,7 +275,17 @@ body {
 }
 .achievement-popup {
   position: fixed;
-  bottom: 32px;
+  /*
+    上移，让底部的操作提示露出来。
+
+    气泡与提示原先都是 `bottom: 32px; left: 50%`，而气泡是白底、z-index 110，
+    提示是 z-index 10——**气泡把提示整个盖住**。而气泡（教程类）不自动消失，
+    所以那条提示实际上长期不可见，包括审计 E10 花力气把对比度从 2.4 提到 4.5
+    的那一条：颜色改对了，但它被压在一块白底下面。
+
+    88px = 32（提示的底距） + 提示自身高度（约 20）+ 一段间距。
+  */
+  bottom: 88px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 110;

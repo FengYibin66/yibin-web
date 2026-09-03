@@ -208,8 +208,83 @@ export interface ClassicUiLabels {
   backToClassic: string
 }
 
+/**
+ * Lab 的界面文案（审计 E7）。
+ *
+ * 之前只有房间**内容**接了 `useLocale`，界面壳子全是硬编码英文：中文用户进
+ * Lab 看到的是「英文门牌 + 英文地图 + 英文加载提示 + 英文成就」包着中文内容。
+ *
+ * 门牌用 `RoomDefinition.labelKey` 索引到这里，所以加一个房间不需要改这个
+ * 接口。`__tests__/labI18n.test.ts` 断言 en/zh 的键完全一致，且 Lab 组件里
+ * 没有漏在外面的英文字面量。
+ */
+export interface LabUiLabels {
+  /** 门牌。键是 RoomDefinition.labelKey */
+  doors: Record<'about' | 'projects' | 'publications' | 'contact' | 'gallery', string>
+  /** 教程气泡：{标题, 说明} */
+  tutorials: Record<
+    'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
+    | 'gallery_inspect' | 'contact_found' | 'publications_read',
+    { title: string; label: string }
+  >
+  /** 加载与失败态 */
+  loading: {
+    preparing: string
+    failed: string
+    failedHint: string
+    retry: string
+    backToCorridor: string
+  }
+  /** 覆盖层面板 */
+  panels: {
+    achievements: string
+    closeAchievements: string
+    audio: string
+    closeAudio: string
+    music: string
+    sfx: string
+    ambience: string
+    mute: string
+    unmute: string
+    map: string
+    openMap: string
+    closeMap: string
+    help: string
+    exitLab: string
+    toggleLanguage: string
+    /** 「已探索 N / M」。`{done}` 与 `{total}` 是占位符 */
+    exploredCount: string
+  }
+  /** 操作提示 */
+  hints: {
+    clickDoor: string
+    tapDoor: string
+    scroll: string
+    swipeUpDown: string
+    swipeLeftRight: string
+    moveMouse: string
+    escape: string
+    touchControls: string
+    mouseKeyboard: string
+    howToExplore: string
+    dismissTutorial: string
+    /** 房间加载超时的错误文案 */
+    loadTimedOut: string
+    /** 图片预览 */
+    imagePreview: string
+    previewImage: string
+  }
+  /** 「这个操作能做什么」的结果说明 */
+  results: {
+    walkCorridor: string
+    lookAround: string
+    enterRoom: string
+  }
+}
+
 export interface SiteContent {
   nav: NavContent
+  labUi: LabUiLabels
   hero: HeroContent
   about: AboutContent
   education: EducationContent

@@ -8,14 +8,16 @@ import type { RoomId } from '@/context/SceneContext'
 import { AchievementPopup } from './AchievementPopup'
 import { AchievementsPanel } from './AchievementsPanel'
 import { TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { ROOM_IDS } from '@/lib/lab/domain/ids'
 
-const ROOM_LABELS: Record<RoomId, string> = {
-  about:        'About',
-  projects:     'Projects',
-  publications: 'Publications',
-  gallery:      'Gallery',
-  contact:      'Contact',
-}
+/*
+  地图里的房间名来自 `labUi.doors`，与走廊门牌是同一份（审计 E7）。
+
+  这里原先是第三张硬编码英文表（前两张在 CorridorSegment 与
+  RoomLoadingIndicator）。同一个房间名有三份拷贝的直接后果是：改了一处、
+  另两处不跟着改，而且它们全是英文。
+*/
 
 export function NavigationUI() {
   const {
@@ -29,6 +31,7 @@ export function NavigationUI() {
   } = useScene()
   const { isMuted, toggleMute, sfxVolume, setSfxVolume, bgmVolume, setBgmVolume } = useAudio()
   const { showTutorial, unlockAchievement } = useAchievements()
+  const labels = useLabLabels()
 
   const [mapOpen, setMapOpen]               = useState(false)
   const [audioOpen, setAudioOpen]           = useState(false)
@@ -165,7 +168,7 @@ export function NavigationUI() {
             opacity: isExiting || isTeleporting ? 0.5 : 1,
             transition: 'opacity 0.3s ease',
           }}
-          aria-label="Back to corridor"
+          aria-label={labels.loading.backToCorridor}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -191,7 +194,7 @@ export function NavigationUI() {
         <NavButton
           onClick={() => { setMapOpen(o => !o); setAudioOpen(false); setAchievementsOpen(false) }}
           active={mapOpen}
-          aria-label="Open map"
+          aria-label={labels.panels.openMap}
           aria-expanded={mapOpen}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,7 +208,7 @@ export function NavigationUI() {
         <NavButton
           onClick={() => { setAudioOpen(o => !o); setMapOpen(false); setAchievementsOpen(false) }}
           active={audioOpen}
-          aria-label="Audio settings"
+          aria-label={labels.panels.audio}
           aria-expanded={audioOpen}
         >
           {isMuted ? (
@@ -225,7 +228,7 @@ export function NavigationUI() {
         <NavButton
           onClick={() => { setAchievementsOpen(o => !o); setMapOpen(false); setAudioOpen(false) }}
           active={achievementsOpen}
-          aria-label="Achievements"
+          aria-label={labels.panels.achievements}
           aria-expanded={achievementsOpen}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -237,7 +240,7 @@ export function NavigationUI() {
         {/* Help button — reopens the controls tutorial */}
         <NavButton
           onClick={() => { closeAll(); window.dispatchEvent(new Event(TUTORIAL_OPEN_EVENT)) }}
-          aria-label="How to explore"
+          aria-label={labels.panels.help}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .6-1.6 1.2-1.6 2.5" />
@@ -252,7 +255,7 @@ export function NavigationUI() {
           ref={mapPanelRef}
           onKeyDown={handleMapKeyDown}
           role="dialog"
-          aria-label="Navigation map"
+          aria-label={labels.panels.map}
           style={{
             position: 'absolute',
             top: 0, right: 16,
@@ -288,11 +291,11 @@ export function NavigationUI() {
           }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '2px dashed #bbb', position: 'relative', zIndex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: '1.5px', color: '#1a1a1a' }}>MAP</h3>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: '1.5px', color: '#1a1a1a' }}>{labels.panels.map}</h3>
             <button
               ref={mapCloseRef}
               onClick={() => setMapOpen(false)}
-              aria-label="Close map"
+              aria-label={labels.panels.closeMap}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.6, display: 'flex', alignItems: 'center' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round">
@@ -302,7 +305,7 @@ export function NavigationUI() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'relative', zIndex: 1 }}>
-            {(Object.keys(ROOM_LABELS) as RoomId[]).map(roomId => (
+            {ROOM_IDS.map(roomId => (
               <button
                 key={roomId}
                 onClick={() => handleRoomClick(roomId)}
@@ -330,7 +333,7 @@ export function NavigationUI() {
                     <circle cx="4" cy="4" r="4" fill="#1a1a1a" />
                   </svg>
                 )}
-                {ROOM_LABELS[roomId]}
+                {labels.doors[roomId]}
               </button>
             ))}
           </div>
@@ -361,8 +364,8 @@ export function NavigationUI() {
           <div style={{ position: 'absolute', inset: '-20%', background: "url('/textures/paper-texture.webp') center center / cover", zIndex: -1 }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '2px dashed #bbb' }}>
-            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '1.5px', color: '#1a1a1a' }}>AUDIO</h3>
-            <button onClick={() => setAudioOpen(false)} aria-label="Close audio" style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '1.5px', color: '#1a1a1a' }}>{labels.panels.audio}</h3>
+            <button onClick={() => setAudioOpen(false)} aria-label={labels.panels.closeAudio} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
@@ -370,7 +373,7 @@ export function NavigationUI() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: '#444' }}>
-                <span>Music</span>
+                <span>{labels.panels.music}</span>
                 <span>{Math.round(bgmVolume * 100)}%</span>
               </div>
               <input
@@ -378,12 +381,12 @@ export function NavigationUI() {
                 value={bgmVolume}
                 onChange={e => setBgmVolume(parseFloat(e.target.value))}
                 style={{ width: '100%', accentColor: '#2a1f0e' }}
-                aria-label="Music volume"
+                aria-label={labels.panels.music}
               />
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: '#444' }}>
-                <span>SFX</span>
+                <span>{labels.panels.sfx}</span>
                 <span>{Math.round(sfxVolume * 100)}%</span>
               </div>
               <input
@@ -391,7 +394,7 @@ export function NavigationUI() {
                 value={sfxVolume}
                 onChange={e => setSfxVolume(parseFloat(e.target.value))}
                 style={{ width: '100%', accentColor: '#2a1f0e' }}
-                aria-label="SFX volume"
+                aria-label={labels.panels.sfx}
               />
             </div>
 

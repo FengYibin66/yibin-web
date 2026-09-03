@@ -28,6 +28,7 @@ import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'
 import { AchievementsProvider, useAchievements } from '@/context/AchievementsContext'
 import { WheelRouterProvider } from '@/hooks/useWheelRouter'
+import { useLabLabels } from '@/hooks/useLabLabels'
 
 // Camera controller lives inside Canvas so it has access to R3F context
 function CameraController({
@@ -46,6 +47,7 @@ function CameraController({
 }
 
 function LabCanvas() {
+  const labels = useLabLabels()
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
   const {
@@ -144,7 +146,7 @@ function LabCanvas() {
           zIndex: 10,
         }}>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: 'rgba(42,31,14,0.4)', margin: 0 }}>
-            {isTouch ? 'SWIPE TO EXPLORE' : 'SCROLL TO EXPLORE'}
+            {(isTouch ? labels.hints.swipeUpDown : labels.hints.scroll).toUpperCase()}
           </p>
         </div>
       )}
@@ -158,7 +160,7 @@ function LabCanvas() {
             textDecoration: 'none', letterSpacing: '0.1em',
           }}
         >
-          ← Exit Lab
+          ← {labels.panels.exitLab}
         </a>
       )}
 

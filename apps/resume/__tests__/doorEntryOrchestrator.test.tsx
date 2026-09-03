@@ -1,4 +1,5 @@
 import { act, render } from '@testing-library/react'
+import { ROOM_LOAD_TIMEOUT_CODE } from '@/components/lab/useDoorEntryOrchestrator'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useDoorEntryOrchestrator } from '@/components/lab/useDoorEntryOrchestrator'
@@ -102,7 +103,7 @@ describe('useDoorEntryOrchestrator', () => {
       vi.advanceTimersByTime(8000)
     })
 
-    expect(active.timeoutRoomLoad).toHaveBeenCalledWith('Room loading timed out')
+    expect(active.timeoutRoomLoad).toHaveBeenCalledWith(ROOM_LOAD_TIMEOUT_CODE)
     expect(inactive.timeoutRoomLoad).not.toHaveBeenCalled()
     expect(active.openDoorPanels).not.toHaveBeenCalled()
     expect(inactive.openDoorPanels).not.toHaveBeenCalled()
@@ -112,7 +113,7 @@ describe('useDoorEntryOrchestrator', () => {
     const failed: RoomLoadState = {
       ...LOADING_STATE,
       phase: 'failed',
-      error: 'Room loading timed out',
+      error: ROOM_LOAD_TIMEOUT_CODE,
     }
     const props = createHarnessProps(true, failed)
     const view = render(<OrchestratorHarness {...props} />)
@@ -134,12 +135,12 @@ describe('useDoorEntryOrchestrator', () => {
     const active = createHarnessProps(true, {
       ...LOADING_STATE,
       phase: 'failed',
-      error: 'Room loading timed out',
+      error: ROOM_LOAD_TIMEOUT_CODE,
     })
     const inactive = createHarnessProps(false, {
       ...LOADING_STATE,
       phase: 'failed',
-      error: 'Room loading timed out',
+      error: ROOM_LOAD_TIMEOUT_CODE,
     })
     const view = render(
       <>

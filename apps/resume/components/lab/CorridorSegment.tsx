@@ -10,6 +10,7 @@ import { Avatar } from './Avatar'
 import { HeroText } from './HeroText'
 import { Doodles } from './Doodles'
 import type { RoomId } from '@/lib/lab/domain/ids'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import {
   BUG_RELATIVE_Z,
   CORRIDOR_DOORS,
@@ -28,21 +29,13 @@ import {
  * 壁画压在门上（审计 B3）。
  */
 
-/**
- * 门牌文案的临时兜底。
- *
- * 目前 Lab 全部 DOM 与 3D 文案都是硬编码英文，中文用户看到的是"门牌、地图、
- * 加载提示全英文，房间内容却是中文"（审计 E7）。ADR 20260903140619 的
- * `content[locale].lab.doors` 会取代这里；`RoomDefinition.labelKey` 已经预留
- * 了 key。
- */
-const FALLBACK_DOOR_LABELS: Record<RoomId, string> = {
-  about: 'About',
-  projects: 'Projects',
-  publications: 'Publications',
-  gallery: 'Gallery',
-  contact: 'Contact',
-}
+/*
+  门牌文案来自 `content[locale].labUi.doors`（审计 E7 已修）。
+
+  这里原先是一张硬编码英文表，注释写着"ADR 20260903140619 的
+  content[locale].lab.doors 会取代这里"——现在取代了。索引用的是
+  `RoomDefinition.labelKey`（就是 roomId），所以加一个房间不需要改这里。
+*/
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -52,6 +45,7 @@ interface CorridorSegmentProps {
 }
 
 function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegmentProps) {
+  const labels = useLabLabels()
   const zStart = segmentStartZ(segmentIndex)
 
   return (
@@ -74,7 +68,7 @@ function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegme
           position={[doorWallX(door.side), 0, zStart + door.relativeZ]}
           side={door.side}
           type={door.textureType}
-          label={FALLBACK_DOOR_LABELS[door.roomId]}
+          label={labels.doors[door.roomId]}
           roomId={door.roomId}
           segmentIndex={segmentIndex}
           setCameraOverride={setCameraOverride}

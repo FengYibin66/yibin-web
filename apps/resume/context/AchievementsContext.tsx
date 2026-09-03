@@ -1,29 +1,35 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from 'react'
 
 import { loadAchievements, saveAchievements } from '@/lib/lab/achievementStorage'
 import { audioMixer } from '@/lib/lab/app/audio/AudioMixer'
+import { isAchievementId } from '@/lib/lab/domain/ids'
+import {
+  activePopup as selectActivePopup,
+  initialQueueState,
+  queueReducer,
+  type Popup,
+} from '@/lib/lab/domain/achievements/queue'
 
-// ─── Achievement definitions ──────────────────────────────────────────────────
+/*
+  成就的**文案**不在这里。
 
-export interface AchievementDef {
-  id: string
-  title: string
-  label: string
-}
+  原先这个文件有一张 `ACHIEVEMENTS: Record<string, {id, title, label}>` 的英文
+  表，与 `content[locale].labUi.tutorials` 重复——而后者才是 i18n 的来源。
+  两份文案的后果就是审计 E7：中文用户看到英文成就名包着中文房间内容。
 
-export const ACHIEVEMENTS: Record<string, AchievementDef> = {
-  corridor_enter:    { id: 'corridor_enter',    title: 'Explorer',      label: 'Click or tap a door to enter' },
-  corridor_explore:  { id: 'corridor_explore',  title: 'Wanderer',      label: 'Scroll or swipe to explore' },
-  about_scroll:      { id: 'about_scroll',      title: 'Sky Walker',    label: 'Scroll to fly through my story' },
-  projects_inspect:  { id: 'projects_inspect',  title: 'Director',      label: 'Drag to rotate and browse' },
-  // 文案原为 "Click a project to inspect"——那是 /gallery 还是项目列表时的
-  // 说法。它现在是摄影相册，解锁条件也随之改为"打开一张照片"（审计 D1）。
-  gallery_inspect:   { id: 'gallery_inspect',   title: 'Art Critic',    label: 'Open a photo in the Gallery' },
-  contact_found:     { id: 'contact_found',     title: 'Sociable',      label: 'Find a contact method' },
-  publications_read: { id: 'publications_read', title: 'Scholar',       label: 'Read a publication' },
-}
+  现在 id 的唯一来源是 `domain/ids` 的 `ACHIEVEMENT_IDS`，文案的唯一来源是
+  `labUi.tutorials`（用 `useLabLabels()` 取）。
+*/
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +38,8 @@ export type PopupStatus = 'pending' | 'completed' | 'hiding'
 export interface ActivePopup {
   id: string
   status: PopupStatus
+  /** 气泡本来是哪一种。淡出时 `status` 变成 'hiding'，样式仍要按这个走 */
+  kind: Popup['kind']
 }
 
 export interface AchievementsState {
@@ -43,28 +51,16 @@ export interface AchievementsState {
   isUnlocked: (id: string) => boolean
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// 读写下沉到 lib/lab/achievementStorage，因为 /gallery 独立路由在本 Provider
-// 之外也要能记成就（审计 D1）。本 Provider 现在是那份存储的 React 视图。
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 /**
- * 解锁提示音。
+ * 队列的推进步长。
  *
- * 原实现是裸 `new AudioContext()` 合成的双音，有三个缺陷（审计 C4）：
- *   - **忽略静音**：它绕过 `AudioProvider`，用户关了声音照样响
- *   - **泄漏 AudioContext**：每次解锁新建一个且从不 close，7 个成就就接近
- *     浏览器上限（Chrome 约 6 个并发 AudioContext）
- *   - **基本不响**：`ctx.resume()` 未 await 就检查 `ctx.state`，非用户手势
- *     触发时 state 还是 suspended，于是直接 return
- *
- * 现在走 Mixer 的 sfx 总线：静音、音量、自动播放解锁全部由它统一处理。
+ * 100ms 足够：气泡的时长以秒计，肉眼分不出 100ms 的抖动。用
+ * `setInterval` 而不是 rAF——rAF 在标签页隐藏时停摆，切回来会一次性
+ * 补上一大段 delta，气泡瞬间消失。
  */
-function playUnlockChime(): void {
-  audioMixer.play('achievement_chime', { volume: 0.7 })
-}
-
-// ─── Context ──────────────────────────────────────────────────────────────────
+const TICK_MS = 100
 
 const AchievementsCtx = createContext<AchievementsState | null>(null)
 
@@ -74,63 +70,102 @@ export function useAchievements(): AchievementsState {
   return context
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+/**
+ * 解锁提示音。
+ *
+ * 原实现是裸 `new AudioContext()` 合成的双音，有三个缺陷（审计 C4）：
+ * 忽略静音、每次新建一个从不 close 的 AudioContext、非用户手势触发时基本
+ * 不响。现在走 Mixer 的 sfx 总线（ADR 20260903140618）。
+ */
+function playUnlockChime(): void {
+  audioMixer.play('achievement_chime', { volume: 0.7 })
+}
 
 export function AchievementsProvider({ children }: { children: React.ReactNode }) {
-  const [completed, setCompleted] = useState<string[]>(loadAchievements)
-  const [activePopup, setActivePopup] = useState<ActivePopup | null>(null)
+  /**
+   * 气泡队列（ADR 20260903140616 的 reducer 化）。
+   *
+   * 取代原先的单槽 `activePopup` + 三个裸 setTimeout。那套有三个 bug——
+   * D2（同一 tick 两次 showTutorial 互相覆盖）、D3（hidePopup 的定时器不校验
+   * id，清掉后来的气泡）、D4（气泡 A 待完成时 B 弹出，A 静默消失）——共同
+   * 根因是「同一时刻只能有一个气泡，而覆盖策略没定义」。策略与其测试都在
+   * `domain/achievements/queue.ts`。
+   */
+  const [state, dispatch] = useReducer(queueReducer, initialQueueState)
 
-  // Synchronous ref to prevent double-firing on rapid events (scroll)
-  const completedRef = useRef<string[]>([])
-  useEffect(() => { completedRef.current = completed }, [completed])
-
-  // Ref for activePopup so showTutorial doesn't need it as a dependency
-  const activePopupRef = useRef<ActivePopup | null>(null)
-  useEffect(() => { activePopupRef.current = activePopup }, [activePopup])
-
-  // 持久化（corridor_enter 的过滤在 saveAchievements 里，读写两侧一致）
+  // 首次挂载时从存储恢复
   useEffect(() => {
-    saveAchievements(completed)
-  }, [completed])
+    const stored = loadAchievements().filter(isAchievementId)
+    if (stored.length > 0) dispatch({ type: 'HYDRATE', completed: stored })
+  }, [])
+
+  useEffect(() => {
+    saveAchievements([...state.completed])
+  }, [state.completed])
+
+  /**
+   * 推进队列。
+   *
+   * 只在队列非空时开定时器——空队列还每 100ms 跑一次 reducer 是白烧电，
+   * 而且会让 React DevTools 的更新记录里全是噪声。
+   */
+  const hasPopup = state.queue.length > 0
+  useEffect(() => {
+    if (!hasPopup) return
+    const timer = window.setInterval(
+      () => dispatch({ type: 'TICK', delta: TICK_MS }),
+      TICK_MS,
+    )
+    return () => window.clearInterval(timer)
+  }, [hasPopup])
+
+  /**
+   * 解锁时响一声。
+   *
+   * 用 ref 记上一次的长度而不是在 `unlockAchievement` 里直接播：
+   * reducer 会去重（重复解锁返回同一个 state），所以"真的新解锁了"这件事
+   * 只有比较前后状态才知道。在回调里播会让重复点击响多次。
+   */
+  const lastCompletedCount = useRef(-1)
+  useEffect(() => {
+    const count = state.completed.length
+    // 首次（含从存储恢复）不响：那不是刚刚发生的解锁
+    if (lastCompletedCount.current === -1) {
+      lastCompletedCount.current = count
+      return
+    }
+    if (count > lastCompletedCount.current) playUnlockChime()
+    lastCompletedCount.current = count
+  }, [state.completed])
 
   const showTutorial = useCallback((id: string) => {
-    if (!ACHIEVEMENTS[id]) return
-    if (completedRef.current.includes(id)) return
-    setActivePopup({ id, status: 'pending' })
+    if (!isAchievementId(id)) return
+    dispatch({ type: 'SHOW_TUTORIAL', id })
   }, [])
 
   const unlockAchievement = useCallback((id: string) => {
-    if (completedRef.current.includes(id)) return
-    completedRef.current = [...completedRef.current, id]
-
-    setCompleted(prev => {
-      if (prev.includes(id)) return prev
-      return [...prev, id]
-    })
-
-    playUnlockChime()
-
-    // Only show completed popup if the popup was already showing this ID (as pending).
-    // Otherwise, silently mark as completed — the user discovered it without needing the hint.
-    setActivePopup(prev => {
-      if (prev && prev.id === id) {
-        setTimeout(() => setActivePopup(p => p?.id === id ? { ...p, status: 'hiding' } : p), 2000)
-        setTimeout(() => setActivePopup(p => p?.id === id ? null : p), 2500)
-        return { ...prev, status: 'completed' }
-      }
-      return prev
-    })
+    if (!isAchievementId(id)) return
+    dispatch({ type: 'UNLOCK', id })
   }, [])
 
-  const hidePopup = useCallback(() => {
-    setActivePopup(prev => {
-      if (!prev || prev.status === 'hiding') return prev
-      setTimeout(() => setActivePopup(p => p ? null : p), 500)
-      return { ...prev, status: 'hiding' }
-    })
-  }, [])
+  const hidePopup = useCallback(() => dispatch({ type: 'DISMISS' }), [])
 
-  const isUnlocked = useCallback((id: string) => completed.includes(id), [completed])
+  const completed = useMemo(() => [...state.completed], [state.completed])
+
+  const activePopup = useMemo<ActivePopup | null>(() => {
+    const popup = selectActivePopup(state)
+    if (!popup) return null
+    return {
+      id: popup.id,
+      status: popup.hiding ? 'hiding' : popup.kind === 'completed' ? 'completed' : 'pending',
+      kind: popup.kind,
+    }
+  }, [state])
+
+  const isUnlocked = useCallback(
+    (id: string) => (isAchievementId(id) ? state.completed.includes(id) : false),
+    [state.completed],
+  )
 
   const value = useMemo<AchievementsState>(() => ({
     completed,
@@ -147,3 +182,4 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     </AchievementsCtx.Provider>
   )
 }
+

@@ -37,6 +37,22 @@ export const ACHIEVEMENT_IDS = [
 ] as const
 export type AchievementId = (typeof ACHIEVEMENT_IDS)[number]
 
+/**
+ * 入门提示，**不是可收集的成就**。
+ *
+ * `corridor_enter`（"点一扇门进去"）刻意不持久化——它是每次访问都该出现的
+ * 提示（见 `lib/lab/achievementStorage` 的 `NEVER_PERSISTED`）。
+ *
+ * 提出来放在 domain 是因为这件事原先只有存储层知道：成就面板把它**列在
+ * 清单里**却**不计入总数**，于是显示"0 / 6"而下面有 7 行，完成它数字也不动。
+ * 「不计入」和「不展示」必须同一个来源。
+ */
+export const HINT_ONLY_ACHIEVEMENTS: readonly AchievementId[] = ['corridor_enter']
+
+/** 可收集的成就（面板列出、计入总数的那些） */
+export const COLLECTABLE_ACHIEVEMENT_IDS = ACHIEVEMENT_IDS
+  .filter(id => !HINT_ONLY_ACHIEVEMENTS.includes(id))
+
 export function isRoomId(value: unknown): value is RoomId {
   return typeof value === 'string' && (ROOM_IDS as readonly string[]).includes(value)
 }

@@ -1,9 +1,11 @@
 'use client'
 
 import { useLocale } from '../../hooks/useLocale'
+import { useLabLabels } from '@/hooks/useLabLabels'
 
 export function LocaleToggle() {
   const { locale, toggle } = useLocale()
+  const labels = useLabLabels()
 
   return (
     <button
@@ -16,7 +18,7 @@ export function LocaleToggle() {
         borderColor: 'var(--bg-border)',
         color: 'var(--text-secondary)',
       }}
-      aria-label="Toggle language"
+      aria-label={labels.panels.toggleLanguage}
     >
       {locale === 'en' ? '中文' : 'EN'}
     </button>

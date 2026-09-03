@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +27,7 @@ interface ImageLightboxProps {
 }
 
 export function ImageLightbox({ src, alt = '', caption, onClose }: ImageLightboxProps) {
+  const labels = useLabLabels()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function ImageLightbox({ src, alt = '', caption, onClose }: ImageLightbox
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={alt || caption || 'Image preview'}
+      aria-label={alt || caption || labels.hints.imagePreview}
     >
       <button
         type="button"
@@ -105,6 +107,7 @@ export function ImagePreview({
   imgClassName,
   rounded = 'rounded-lg',
 }: ImagePreviewProps) {
+  const labels = useLabLabels()
   const [open, setOpen] = useState(false)
 
   return (
@@ -121,7 +124,7 @@ export function ImagePreview({
           rounded,
           className,
         )}
-        aria-label={alt ? `Preview ${alt}` : 'Preview image'}
+        aria-label={alt ? `Preview ${alt}` : labels.hints.previewImage}
       >
         <img
           src={src}

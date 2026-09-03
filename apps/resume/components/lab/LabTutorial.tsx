@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { useScene } from '@/context/SceneContext'
 import { hasSeenTutorial, markTutorialSeen, TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import type { LabUiLabels } from '@/lib/content/types'
 
 // Wait for the loader's paper-tear exit (1.8s) to finish before showing
 const SHOW_DELAY_MS = 2400
@@ -14,47 +16,48 @@ interface ControlRow {
   result: string
 }
 
-function touchRows(): ControlRow[] {
+function touchRows(labels: LabUiLabels): ControlRow[] {
   return [
     {
       icon: <SwipeVerticalIcon />,
-      action: 'Swipe up / down',
-      result: 'walk the corridor',
+      action: labels.hints.swipeUpDown,
+      result: labels.results.walkCorridor,
     },
     {
       icon: <SwipeHorizontalIcon />,
-      action: 'Swipe left / right',
-      result: 'look around',
+      action: labels.hints.swipeLeftRight,
+      result: labels.results.lookAround,
     },
     {
       icon: <TapIcon />,
-      action: 'Tap a door',
-      result: 'enter a room',
+      action: labels.hints.tapDoor,
+      result: labels.results.enterRoom,
     },
   ]
 }
 
-function mouseRows(): ControlRow[] {
+function mouseRows(labels: LabUiLabels): ControlRow[] {
   return [
     {
       icon: <ScrollIcon />,
-      action: 'Scroll',
-      result: 'walk the corridor',
+      action: labels.hints.scroll,
+      result: labels.results.walkCorridor,
     },
     {
       icon: <MouseMoveIcon />,
-      action: 'Move the mouse',
-      result: 'look around',
+      action: labels.hints.moveMouse,
+      result: labels.results.lookAround,
     },
     {
       icon: <ClickIcon />,
-      action: 'Click a door',
-      result: 'enter a room',
+      action: labels.hints.clickDoor,
+      result: labels.results.enterRoom,
     },
   ]
 }
 
 export function LabTutorial() {
+  const labels = useLabLabels()
   const { complete } = useStableProgress(600)
   const { isInRoom, isTeleporting } = useScene()
   const [visible, setVisible] = useState(false)
@@ -97,13 +100,13 @@ export function LabTutorial() {
 
   if (!visible) return null
 
-  const rows = isTouch ? touchRows() : mouseRows()
+  const rows = isTouch ? touchRows(labels) : mouseRows(labels)
 
   return (
     <div
       onClick={dismiss}
       role="dialog"
-      aria-label="How to explore the lab"
+      aria-label={labels.hints.howToExplore}
       style={{
         position: 'fixed',
         inset: 0,
@@ -157,7 +160,7 @@ export function LabTutorial() {
             color: 'rgba(42,31,14,0.5)',
             textTransform: 'uppercase',
           }}>
-            {isTouch ? 'Touch controls' : 'Mouse & keyboard'}
+            {isTouch ? labels.hints.touchControls : labels.hints.mouseKeyboard}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>

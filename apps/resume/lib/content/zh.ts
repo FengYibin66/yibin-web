@@ -57,7 +57,7 @@ export const zh: SiteContent = {
       closeMap: '关闭地图',
       help: '怎么玩',
       exitLab: '退出 Lab',
-      toggleLanguage: '切换语言',
+      toggleLanguage: 'Switch to English',
       exploredCount: '已探索 {done} / {total}',
     },
     hints: {

@@ -12,7 +12,14 @@ export function ExplorerBar() {
   }, [])
 
   return (
-    <div style={{
+    <div
+      /*
+        给一个稳定的标识。`scripts/media/entry-firstframe.mjs` 截静态首帧时
+        要把这条藏掉（它不属于那扇门）——靠内联样式或 class 匹配太脆，
+        改一下样式截图脚本就静默失效、把这条字烤进图里。
+      */
+      data-explorer-bar=""
+      style={{
       position: 'fixed',
       bottom: 16,
       left: '50%',

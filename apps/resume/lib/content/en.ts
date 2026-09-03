@@ -57,7 +57,7 @@ export const en: SiteContent = {
       closeMap: 'Close map',
       help: 'How to explore',
       exitLab: 'Exit Lab',
-      toggleLanguage: 'Toggle language',
+      toggleLanguage: '切换到中文',
       exploredCount: '{done} / {total} EXPLORED',
     },
     hints: {

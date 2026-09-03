@@ -101,6 +101,20 @@ Publications 三处、入口预览、Classic 场景），任何**新增**写点�
    （`enabled` 只关输入），所以 director 默认**挂起**，进房 `resume()`、
    退房 `suspend()`。不交接的话它会抹掉 DoorSection 的进出房 tween。
 
+### 入口页的两条路径
+
+手机端（`pointer: coarse` **且**宽度 ≤ 768）不挂 Canvas：`EntryStage` 渲染
+54 KB 的静态首帧，点了播 CSS 开门动画再跳 `/lab`。实测手机端下载量
+3871 → 856 KB。桌面端不变（canvas 在 592ms 就出现，多一张占位图不值）。
+
+两个条件都要：只看宽度会让拖窄的桌面窗口掉进静态路径，只看 pointer 会让
+iPad 横屏掉进去。**Lab 本身仍是完整的 3D，没有砍任何东西**——降级的只是
+"预览那扇门"。
+
+静态首帧是生成物（`scripts/media/entry-firstframe.mjs`，需要已构建的
+`out/`）。它不存在时手机端是一块空白，而那条路径在桌面开发时看不到，
+所以 CI 会 `--check`。
+
 ### ESC 的优先级
 
 ESC 已绑定「退出房间」。房间内的细节视图（Projects 的停靠）用
@@ -166,7 +180,11 @@ node scripts/media/encode-audio.mjs          # 音频重编码
 node scripts/media/gallery-door.mjs          # Gallery 门贴纸
 node scripts/media/optimize-textures.mjs     # 入口页纹理
 python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
+pnpm build && node scripts/media/entry-firstframe.mjs   # 手机端入口的静态首帧
 ```
+
+> `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D
+> 场景，拼贴拼不出同一个画面。
 
 > `pnpm lint` **当前跑不起来**：`eslint.config.mjs` 按 flat config 写，但装的
 > `eslint-config-next@15.5.20` 导出的是旧版 eslintrc 对象 → `nextVitals is not iterable`。

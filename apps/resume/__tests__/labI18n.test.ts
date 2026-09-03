@@ -68,6 +68,12 @@ describe('en / zh 的 labUi 结构一致', () => {
       'hints.escape',
       // 'Lab' 是本站对那个 3D 视图的固有称呼
       'panels.exitLab',
+      /*
+        语言切换按钮的标签**刻意用目标语言**：zh 下它说 "Switch to English"，
+        与它的可见文字（'EN'）一致。用当前语言写的话，切换控件对读不懂当前
+        语言的用户就是不可用的。
+      */
+      'panels.toggleLanguage',
     ])
     for (const [path, value] of Object.entries(flatten(content.zh.labUi))) {
       if (exempt.has(path)) continue
@@ -79,7 +85,10 @@ describe('en / zh 的 labUi 结构一致', () => {
   })
 
   it('英文文案里没有汉字 —— 反向的漏改', () => {
+    // 同一条豁免：语言切换按钮的 en 标签是中文（"切换到中文"），见上
+    const exempt = new Set(['panels.toggleLanguage'])
     for (const [path, value] of Object.entries(flatten(content.en.labUi))) {
+      if (exempt.has(path)) continue
       expect(/[一-鿿]/.test(value), `en.${path} 混进了中文：「${value}」`).toBe(false)
     }
   })

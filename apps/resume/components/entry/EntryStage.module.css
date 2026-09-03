@@ -1,0 +1,126 @@
+/*
+  手机端入口的静态门。见 `EntryStage.tsx` 顶部的取舍说明。
+
+  动画用 `transform` 与 `opacity`（合成器属性），不碰 layout——手机上动
+  width/height 会逐帧重排，一扇 1000px 高的图那就是掉帧。
+*/
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #f5f0e8;
+}
+
+.doorLink {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  /* 触屏上点了不要出灰色高亮块 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 键盘焦点要看得见——这是手机端唯一的进入口 */
+.doorLink:focus-visible {
+  outline: 3px solid #7a5d20;
+  outline-offset: -6px;
+}
+
+.door {
+  width: 100%;
+  height: 100%;
+  /*
+    `cover` 而不是 `contain`：图是 828×1000（0.83），而手机竖屏时门那一半
+    的宽高比在 0.6–1.1 之间浮动。contain 会在两侧留白，露出背景色。
+    门在图的横向中央，所以裁两侧不会裁到门。
+  */
+  object-fit: cover;
+  object-position: center 40%;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+/*
+  开门：视点向门推进 + 淡出。
+
+  不做"两扇门板向外转"——那需要把门板从图里抠出来当独立元素，而这张图是
+  整幅截图。推进 + 淡出在观感上同样是"穿门进去"，且只用两个合成器属性。
+  时长与 `EntryStage.tsx` 的 `OPEN_ANIMATION_MS` 一致。
+*/
+.opening {
+  animation: door-open 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes door-open {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* 尊重系统的"减少动态效果"设置 */
+@media (prefers-reduced-motion: reduce) {
+  .opening {
+    animation: door-fade 300ms linear forwards;
+  }
+  @keyframes door-fade {
+    to { opacity: 0; }
+  }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 图在动的时候文案不要跟着放大 */
+  pointer-events: none;
+}
+
+.eyebrow {
+  font-family: 'CabinSketch', var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  /* 与 overlayColors 的 hint 同一档对比度（审计 E10） */
+  color: rgba(42, 31, 14, 0.72);
+}
+
+.title {
+  font-family: 'CabinSketch', var(--font-display, sans-serif);
+  font-size: clamp(2rem, 12vw, 3.5rem);
+  font-weight: 700;
+  color: #2a1f0e;
+  text-align: center;
+  line-height: 1.05;
+}
+
+.tagline {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: rgba(42, 31, 14, 0.72);
+  text-align: center;
+}
+
+.cta {
+  margin-top: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(42, 31, 14, 0.72);
+}

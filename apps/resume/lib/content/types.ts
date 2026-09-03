@@ -251,6 +251,13 @@ export interface LabUiLabels {
     closeMap: string
     help: string
     exitLab: string
+    /**
+     * 语言切换按钮的可访问名。
+     *
+     * **用目标语言写**，与它的可见文字（en 下显示「中文」、zh 下显示「EN」）
+     * 一致——中文用户读不懂英文标签，反过来也一样。所以 `en` 这一份是中文、
+     * `zh` 那一份是英文，`labI18n` 的"语言纯度"检查对这一项豁免。
+     */
     toggleLanguage: string
     /** 「已探索 N / M」。`{done}` 与 `{total}` 是占位符 */
     exploredCount: string

@@ -70,12 +70,18 @@ __tests__/               # vitest
 
 ### 现状 ≠ 目标
 
-下面五份 ADR 描述的是**目标架构**，实现分六步进行。**读代码时看到的仍可能是迁移前的形态**，改动前先确认所在步骤：
+六步已全部实施，但**不是每一份 ADR 都完全落地**——下表的「取代的现状」列
+记的是实际状态。改动前先看清那一栏。
+
+已知的剩余差距集中在三处：相机所有权是白名单形态（走廊导轨与 DoorSection
+的进出房编排还直接写相机）、`SceneContext` / `PerformanceContext` 还没
+reducer 化、中文门牌的字形与 Publications 不统一。审计报告的
+「未做的项与理由」一节列了完整清单。
 
 | ADR | 目标 | 取代的现状 |
 |-----|------|-----------|
-| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | 手写的 `lib/lab/{roomAssets,texturePreload}.ts`；门坐标散在三处 |
-| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | `context/*.tsx` 四个 Context + 三套手写 reducer |
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已落地**：门坐标单一来源，预载表由生成器派生并有 `--check` |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：三台状态图 + 音频 store + 成就队列 reducer 已用；`SceneContext` 与 `PerformanceContext` 仍是手写 Context |
 | [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **已落地**（房间域）：grep 白名单守住，走廊导轨与 DoorSection 编排待迁移。手势尚未迁移，`@use-gesture` 未安装（装了不用等于空依赖） |
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB |
 | [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做为「深夜实验室」+ 平台隐喻已去；Gallery 门贴纸未换 |

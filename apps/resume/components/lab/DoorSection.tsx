@@ -134,6 +134,22 @@ export function DoorSection({
     return t
   }, [wallTex])
 
+  /**
+   * 两个箭头共用一个材质实例，这样淡入淡出只需 tween 它一次。
+   * 必须自己 dispose——R3F 卸载时不会回收由 useMemo 造出来的材质。
+   */
+  const arrowMaterial = useMemo(
+    () => new THREE.MeshBasicMaterial({
+      map: arrowTex,
+      transparent: true,
+      alphaTest: 0.05,
+      depthWrite: false,
+      opacity: 0,
+    }),
+    [arrowTex],
+  )
+  useEffect(() => () => { arrowMaterial.dispose() }, [arrowMaterial])
+
   const baseboardTexClone = useMemo(() => {
     const t = baseboardTex.clone()
     t.needsUpdate = true
@@ -216,9 +232,19 @@ export function DoorSection({
         const mat = glowRef.current.material as THREE.MeshBasicMaterial
         gsap.to(mat, { opacity: near ? 0.22 : 0, duration: 0.5 })
       }
-      if (arrowGroupRef.current) {
-        gsap.to(arrowGroupRef.current, { opacity: near ? 1 : 0, duration: 0.5 })
-        arrowGroupRef.current.visible = near
+      const arrowGroup = arrowGroupRef.current
+      if (arrowGroup) {
+        // 原先是 gsap.to(arrowGroup, { opacity }) —— THREE.Group **没有 opacity
+        // 属性**，GSAP 每扇门报一次 "Invalid property opacity set to 1"，箭头
+        // 只会硬切不会淡入淡出（审计 B7）。淡的是材质，不是 Group。
+        if (near) arrowGroup.visible = true
+        gsap.to(arrowMaterial, {
+          opacity: near ? 1 : 0,
+          duration: 0.5,
+          overwrite: true,
+          // 淡出结束才隐藏，否则 visible 立刻翻掉、淡出动画看不见
+          onComplete: () => { if (!isNearRef.current) arrowGroup.visible = false },
+        })
       }
     }
   })
@@ -702,11 +728,11 @@ export function DoorSection({
         <group ref={arrowGroupRef} visible={false} position={[wallOffsetX, DOOR_CENTER_Y, 0.06]}>
           <mesh position={[-(DOOR_WIDTH / 2 + 0.35), 0, 0]}>
             <planeGeometry args={[0.3, 0.3]} />
-            <meshBasicMaterial map={arrowTex} transparent alphaTest={0.05} depthWrite={false} />
+            <primitive object={arrowMaterial} attach="material" />
           </mesh>
           <mesh position={[(DOOR_WIDTH / 2 + 0.35), 0, 0]} scale={[-1, 1, 1]}>
             <planeGeometry args={[0.3, 0.3]} />
-            <meshBasicMaterial map={arrowTex} transparent alphaTest={0.05} depthWrite={false} />
+            <primitive object={arrowMaterial} attach="material" />
           </mesh>
         </group>
 

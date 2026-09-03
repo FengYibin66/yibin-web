@@ -1,6 +1,6 @@
 module github.com/auto-wechat-tech/backend
 
-go 1.22.0
+go 1.24
 
 require (
 	github.com/gin-gonic/gin v1.10.0

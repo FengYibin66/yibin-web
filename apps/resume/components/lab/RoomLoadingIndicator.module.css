@@ -8,6 +8,17 @@
   pointer-events: none;
 }
 
+/*
+  失败卡必须盖在传送用的纸（PaperTransition，z-index 9998）之上。
+
+  原先失败卡和加载卡共用 z-index 30，于是**传送中**加载失败时用户看到的是
+  一张合着的纸，Retry / Back to corridor 两个按钮在纸底下点不到（审计 B1）。
+  加载态刻意留在 30：那时纸正在动画中，应该盖住加载提示。
+*/
+.overlayFailed {
+  z-index: 9999;
+}
+
 .card {
   isolation: isolate;
   position: relative;

@@ -51,10 +51,6 @@ export function usePublicationBrowseCamera(options: {
       const proxy = { t: 0 }
       const frame = PUBLICATION_CARD_MOTION.cameraFrame
 
-      console.log('[pub-debug] browse camera settle', {
-        from: fromPos.toArray().map(n => n.toFixed(3)),
-        to: pose.position.toArray().map(n => n.toFixed(3)),
-      })
 
       tweenRef.current = gsap.to(proxy, {
         t: 1,

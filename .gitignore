@@ -43,3 +43,21 @@ coverage/
 
 # Misc
 .turbo/
+
+# Playwright E2E 产物（apps/resume/e2e 的报告、trace、失败截图）
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Python 字节码（scripts/docs 的单测会产生）
+__pycache__/
+*.py[cod]
+
+# TypeScript 增量构建缓存（tsc -b 产生，随机器/时间变化）
+*.tsbuildinfo
+
+# Claude Code 的临时工作区。这些是本机 git worktree，不该入库——
+# 曾以 gitlink（模式 160000）被提交且无 .gitmodules，导致每次 checkout
+# 都报 `fatal: No url found for submodule path ...` + exit code 128。
+.claude/worktrees/

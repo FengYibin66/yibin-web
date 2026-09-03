@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale } from '@/hooks/useLocale'
+import { galleryYearLabel } from '@/lib/gallery/data'
 
 export function GalleryDoorSection() {
   const router = useRouter()
@@ -48,7 +49,9 @@ export function GalleryDoorSection() {
   }
 
   const label = locale === 'zh' ? '画廊' : 'The Gallery'
-  const sublabel = locale === 'zh' ? '摄影 · 2019–2024' : 'Photography · 2019–2024'
+  // 年份从相册数据算出，不写死（审计 F10）
+  const years = galleryYearLabel()
+  const sublabel = locale === 'zh' ? `摄影 · ${years}` : `Photography · ${years}`
 
   return (
     <section

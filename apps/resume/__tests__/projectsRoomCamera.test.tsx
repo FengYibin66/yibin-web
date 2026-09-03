@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import * as THREE from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import { ProjectsRoom } from '@/components/rooms/ProjectsRoom'
 
 const mocks = vi.hoisted(() => ({
@@ -67,6 +68,7 @@ describe('ProjectsRoom camera ownership', () => {
   it('waits for entered, starts once entered, and kills on unmount', () => {
     const { rerender, unmount } = render(
       <ProjectsRoom showRoom isExiting={false} />,
+      { wrapper: LocaleProvider },
     )
 
     expect(mocks.gsapTo).not.toHaveBeenCalled()

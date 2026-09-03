@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react'
 import { useProjects } from '@/lib/api'
 import { useLocaleStore } from '@/store/locale'
 import { translations } from '@/lib/i18n'
+import { parseTechTags } from '@/lib/techTags'
 
 export default function Projects() {
   const { data: projects = [] } = useProjects()
@@ -26,7 +27,11 @@ export default function Projects() {
         {projects.map((project, i) => {
           const name = locale === 'zh' ? project.nameZh : project.nameEn
           const desc = locale === 'zh' ? project.descZh : project.descEn
-          const tags: string[] = JSON.parse(project.techTags ?? '[]')
+          // techTags 在库里是自由文本列（CHECK 约束只覆盖 status / visible），
+          // 一条非法 JSON 会让 JSON.parse 抛出并**连带整个项目区白屏**。
+          // 渲染路径不能因单条脏数据整体崩掉——退化为空标签即可。
+          // （Dashboard 的编辑表单早已这么做，此处原先漏了。）
+          const tags: string[] = parseTechTags(project.techTags)
 
           return (
             <motion.a

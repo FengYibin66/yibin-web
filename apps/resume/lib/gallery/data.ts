@@ -15,6 +15,36 @@ export interface GalleryRoom {
   images: GalleryImage[]
 }
 
+/**
+ * 相册实际覆盖的年份区间，从数据算出。
+ *
+ * 加它的原因（审计 F10）：`GalleryTrack` 与 `GalleryDoorSection` 三处写死
+ * "Photography · 2019–2024"，而相册里已经有 2025 年的照片——写死的年份会
+ * 随着素材更新静默变成谎。`year` 字段两种形态都要吃：`'2023'` 与
+ * `'2021–2022'`（注意是 en dash，不是连字符）。
+ */
+export function galleryYearRange(rooms: readonly GalleryRoom[] = galleryRooms): {
+  from: number
+  to: number
+} {
+  const years = rooms
+    .flatMap((room) => [room.year, ...room.images.map((img) => img.year)])
+    .flatMap((value) => value.match(/\d{4}/g) ?? [])
+    .map(Number)
+    .filter((n) => Number.isFinite(n))
+
+  if (years.length === 0) {
+    throw new Error('galleryYearRange: 相册数据里没有任何四位年份')
+  }
+  return { from: Math.min(...years), to: Math.max(...years) }
+}
+
+/** "2019 – 2025" —— 展示用，en dash 前后带空格（与设计稿一致） */
+export function galleryYearLabel(rooms?: readonly GalleryRoom[]): string {
+  const { from, to } = galleryYearRange(rooms)
+  return from === to ? String(from) : `${from} – ${to}`
+}
+
 export const galleryRooms: GalleryRoom[] = [
   {
     id: 'iceland',

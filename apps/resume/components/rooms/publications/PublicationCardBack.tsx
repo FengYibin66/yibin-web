@@ -47,7 +47,6 @@ export function PublicationCardBack({
   const handlePaperClick = (event: ThreeEvent<MouseEvent>): void => {
     if (!paperAction || !isOpen) return
     event.stopPropagation()
-    console.log('[pub-debug] VIEW PAPER click', paperAction.href)
     openPublicationPaper(paperAction.href)
   }
 

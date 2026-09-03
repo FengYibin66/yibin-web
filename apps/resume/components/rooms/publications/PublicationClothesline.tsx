@@ -133,13 +133,6 @@ export const PublicationClothesline = forwardRef<
           lastFrozenIdRef.current = id ?? null
           const world = new THREE.Vector3()
           group.getWorldPosition(world)
-          console.log('[pub-debug] slot FREEZE', {
-            id,
-            phase: motion.phase,
-            localSlot: `[${group.position.toArray().map(n => n.toFixed(3)).join(', ')}]`,
-            worldSlot: `[${world.toArray().map(n => n.toFixed(3)).join(', ')}]`,
-            scroll: carousel.currentScroll.current.toFixed(3),
-          })
         }
         return
       }

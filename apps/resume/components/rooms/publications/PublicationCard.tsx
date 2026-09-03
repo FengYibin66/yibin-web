@@ -260,35 +260,14 @@ export const PublicationCard = forwardRef<
         && ndc.z <= 1
       )
       // Flat lines so DevTools can't collapse the critical fields.
-      console.log('[pub-debug] VISIBILITY id=', publication.id)
-      console.log('[pub-debug] VISIBILITY localPos=', fmt3(paper.position))
-      console.log('[pub-debug] VISIBILITY worldPos=', fmt3(worldPos))
-      console.log('[pub-debug] VISIBILITY slotWorld=', fmt3(slotWorld))
-      console.log('[pub-debug] VISIBILITY cameraPos=', fmt3(cam))
-      console.log('[pub-debug] VISIBILITY camForward=', fmt3(camForward))
-      console.log('[pub-debug] VISIBILITY distToCam=', toPaper.length().toFixed(3))
-      console.log('[pub-debug] VISIBILITY inFrontOfCam=', inFront.toFixed(3), inFront > 0 ? 'OK' : 'BEHIND')
-      console.log('[pub-debug] VISIBILITY ndc=', fmt3(ndc))
-      console.log('[pub-debug] VISIBILITY inNdcFrustum=', inFrustum)
-      console.log('[pub-debug] VISIBILITY meshVisible=', mesh?.visible)
-      console.log('[pub-debug] VISIBILITY mat=', (mesh?.material as THREE.Material | undefined)?.type, 'opacity=', (mesh?.material as THREE.Material | undefined)?.opacity)
-      console.log('[pub-debug] VISIBILITY bend/uProgress=', material.bend, material.uProgress)
-      console.log('[pub-debug] VISIBILITY front=', JSON.stringify(summarizeFace(frontRef.current, 'front')))
-      console.log('[pub-debug] VISIBILITY back=', JSON.stringify(summarizeFace(backRef.current, 'back')))
     }
   })
 
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>): void => {
     event.stopPropagation()
     if (isLocked || didDragRef.current) {
-      console.warn('[pub-debug] card click blocked', {
-        id: publication.id,
-        isLocked,
-        didDrag: didDragRef.current,
-      })
       return
     }
-    console.log('[pub-debug] card click', publication.id)
     onSelect(publication.id)
   }, [didDragRef, isLocked, onSelect, publication.id])
 

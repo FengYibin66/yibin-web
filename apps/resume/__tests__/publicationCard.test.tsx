@@ -15,6 +15,7 @@ import {
 import type {
   PublicationCardHandle,
 } from '@/components/rooms/publications/PublicationCard'
+import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import type { PaperMaterialHandle } from '@/components/rooms/gallery/PaperMaterial'
 import type { PublicationRoomItem } from '@/components/rooms/publications/publicationTypes'
 
@@ -85,7 +86,9 @@ const BASE_PROPS = {
 }
 
 function renderCard(overrides: Partial<typeof BASE_PROPS> = {}) {
-  return render(<PublicationCard {...BASE_PROPS} {...overrides} />)
+  return render(<PublicationCard {...BASE_PROPS} {...overrides} />, {
+    wrapper: LocaleProvider,
+  })
 }
 
 beforeEach(() => {
@@ -147,7 +150,7 @@ describe('getPaperSurfaceTransform', () => {
 describe('PublicationCard interaction', () => {
   it('exposes the motion API through its imperative handle', () => {
     const ref = createRef<PublicationCardHandle>()
-    render(<PublicationCard ref={ref} {...BASE_PROPS} />)
+    render(<PublicationCard ref={ref} {...BASE_PROPS} />, { wrapper: LocaleProvider })
     ref.current?.open()
     ref.current?.close()
     ref.current?.cancel()
@@ -259,7 +262,9 @@ describe('PublicationCard interaction', () => {
         )}
       </>
     )
-    const { container, rerender } = render(renderCards(true))
+    const { container, rerender } = render(renderCards(true), {
+      wrapper: LocaleProvider,
+    })
     const firstCard = container.querySelector(
       '[name="publication-card-0"]',
     )

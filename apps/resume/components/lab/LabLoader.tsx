@@ -2,6 +2,7 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import gsap from 'gsap'
 import { useStableProgress } from '@/hooks/useStableProgress'
+import { buildTearPoints, tearEdgeCoords } from '@/lib/lab/tearEdge'
 
 const SLOW_LOAD_HINT_MS = 8000
 
@@ -25,21 +26,14 @@ export function LabLoader() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Generate stable tear points — same algorithm as PaperTransition
-  const tearPoints = useMemo<[number, number][]>(() => {
-    const pts: [number, number][] = [[50, 0]]
-    for (let i = 1; i <= 11; i++) {
-      const y = (i / 12) * 100
-      // Layered sin waves to mimic hand-torn paper
-      const x = 50 + Math.sin(i * 2.3 + 1.1) * 3.2 + Math.sin(i * 5.7 + 0.7) * 1.5
-      pts.push([x, y])
-    }
-    pts.push([50, 100])
-    return pts
-  }, [])
+  // 撕痕顶点来自 lib/lab/tearEdge —— 与 PaperTransition 共用同一条撕痕，且坐标
+  // 已量化到 3 位小数。本组件会被 SSR，全精度的 Math.sin 结果在 Node 与浏览器
+  // 之间可能末位不同，那会导致 React hydration 不匹配（审计 G4）。
+  const tearPoints = useMemo(() => buildTearPoints(), [])
+  const edge = useMemo(() => tearEdgeCoords(tearPoints), [tearPoints])
 
-  const leftClip = `polygon(0% 0%, ${tearPoints.map(([x, y]) => `${x}% ${y}%`).join(', ')}, 0% 100%)`
-  const rightClip = `polygon(100% 0%, ${tearPoints.map(([x, y]) => `${x}% ${y}%`).join(', ')}, 100% 100%)`
+  const leftClip = `polygon(0% 0%, ${edge}, 0% 100%)`
+  const rightClip = `polygon(100% 0%, ${edge}, 100% 100%)`
 
   // Direct DOM update for progress text — bypass React re-renders
   useEffect(() => {
@@ -57,7 +51,6 @@ export function LabLoader() {
       const right = rightRef.current
       if (!container || !left || !right) return
 
-      console.info('[LabLoader] all textures loaded — playing tear exit')
       setShowSlowHint(false)
       const tl = gsap.timeline({
         onComplete: () => gsap.set(container, { display: 'none' }),
@@ -197,7 +190,7 @@ export function LabLoader() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              fontFamily: "'CabinSketch-Bold', serif",
+              fontFamily: 'var(--font-sketch-bold)',
               fontSize: 18,
               fontWeight: 'bold',
               color: '#2a1f0e',

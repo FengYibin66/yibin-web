@@ -2,11 +2,31 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthCheck, useProfile, useAllProjects, useUpdateProfile, useCreateProject, useUpdateProject, useDeleteProject, useLogout, uploadFile } from '@/lib/api'
 import type { Project } from '@/lib/api'
+import { parseTechTags } from '@/lib/techTags'
+import { describeSaveError } from '@/lib/saveError'
+
+/**
+ * 档案表单的空初始值。
+ *
+ * 用于库里还没有 id=1 那行时（首次部署 / seed 未跑）——此时
+ * GET /api/profile 返回 null。字段名与 server 的 profileSchema 一致，
+ * 保存时会 upsert 出那一行。
+ */
+const EMPTY_PROFILE = {
+  nameEn: '',
+  nameZh: '',
+  bioEn: '',
+  bioZh: '',
+  avatarPath: '',
+  github: '',
+  linkedin: '',
+  email: '',
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { data: auth, isLoading: authLoading } = useAuthCheck()
-  const { data: profile } = useProfile()
+  const { data: profile, isLoading: profileLoading } = useProfile()
   const { data: projects = [] } = useAllProjects()
   const { mutateAsync: updateProfile } = useUpdateProfile()
   const { mutateAsync: createProject } = useCreateProject()
@@ -47,8 +67,19 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {tab === 'profile' && profile && (
-          <ProfileForm profile={profile} onSave={updateProfile} />
+        {/*
+          profile 为 null 是**正常初始状态**：GET /api/profile 在库里还没有
+          id=1 那行时返回 null（首次部署、或 seed 没跑）。
+          原先写作 `tab === 'profile' && profile &&`，于是这种情况下整个标签页
+          一片空白、没有任何提示——用户以为后台坏了，其实只是还没建档案。
+          这里用 schema 的默认值兜底，让表单可填、保存即 upsert 出那一行。
+        */}
+        {tab === 'profile' && (
+          profileLoading ? (
+            <p className="text-sm" style={{ color: '#8b9bbc' }}>加载中…</p>
+          ) : (
+            <ProfileForm profile={profile ?? EMPTY_PROFILE} onSave={updateProfile} />
+          )
         )}
         {tab === 'projects' && (
           <ProjectsManager
@@ -66,15 +97,24 @@ export default function AdminDashboard() {
 function ProfileForm({ profile, onSave }: { profile: any; onSave: (d: any) => Promise<any> }) {
   const [form, setForm] = useState({ ...profile })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    setError(null)
     try {
       let avatarPath = form.avatarPath
       if (avatarFile) avatarPath = await uploadFile(avatarFile)
       await onSave({ ...form, avatarPath })
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      // 与 ProjectForm 同一问题：原先只有 finally，保存失败时无任何提示，
+      // 用户会以为改动已生效。
+      setError(describeSaveError(err))
     } finally {
       setSaving(false)
     }
@@ -111,6 +151,18 @@ function ProfileForm({ profile, onSave }: { profile: any; onSave: (d: any) => Pr
       {field('github', 'GitHub URL')}
       {field('linkedin', 'LinkedIn URL')}
       {field('email', 'Email', 'email')}
+      {error && (
+        <p role="alert" className="text-sm px-3 py-2 rounded-lg border border-red-400/40 text-red-300"
+          style={{ backgroundColor: '#2a1216' }}>
+          {error}
+        </p>
+      )}
+      {saved && !error && (
+        <p role="status" className="text-sm px-3 py-2 rounded-lg border border-[#00d4ff44] text-[#7fe3ff]"
+          style={{ backgroundColor: '#0b1c24' }}>
+          已保存
+        </p>
+      )}
       <button type="submit" disabled={saving}
         className="px-6 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
         style={{ backgroundColor: '#00d4ff', color: '#070b12' }}>
@@ -174,10 +226,14 @@ function ProjectsManager({ projects, onCreate, onUpdate, onDelete }: {
 function ProjectForm({ initial, onSave, onCancel }: { initial: Project; onSave: (d: any) => Promise<any>; onCancel: () => void }) {
   const [form, setForm] = useState({
     ...initial,
-    techTags: (() => { try { return JSON.parse(initial.techTags ?? '[]') } catch { return [] } })(),
+    // 用共享的 parseTechTags：原先这里的内联 try/catch 只挡了「parse 抛异常」，
+    // 挡不住 parse 成功但形状不对的值（如 `{"a":1}` / `[1,2]`）——
+    // 那会让下面 form.techTags.join(', ') 出意外结果或直接报错。
+    techTags: parseTechTags(initial.techTags),
     visible: Boolean(initial.visible),
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [screenshot, setScreenshot] = useState<File | null>(null)
 
   const f = (key: string, label: string) => (
@@ -190,10 +246,16 @@ function ProjectForm({ initial, onSave, onCancel }: { initial: Project; onSave: 
 
   async function handleSave() {
     setSaving(true)
+    setError(null)
     try {
       let screenshotPath = form.screenshotPath
       if (screenshot) screenshotPath = await uploadFile(screenshot)
       await onSave({ ...form, techTags: form.techTags, screenshotPath, visible: form.visible })
+    } catch (err) {
+      // 原先只有 finally 没有 catch：保存失败（400 校验 / 401 掉线 / 500）时
+      // 按钮从「Saving…」恢复原样、界面无任何提示，**看起来像成功了但数据没存**。
+      // 静默失败比报错更糟——用户会以为改动生效了。
+      setError(describeSaveError(err))
     } finally {
       setSaving(false)
     }
@@ -224,6 +286,12 @@ function ProjectForm({ initial, onSave, onCancel }: { initial: Project; onSave: 
         <label className="block text-xs mb-1" style={{ color: '#8b9bbc' }}>Screenshot</label>
         <input type="file" accept="image/*" onChange={(e) => setScreenshot(e.target.files?.[0] ?? null)} className="text-sm" style={{ color: '#8b9bbc' }} />
       </div>
+      {error && (
+        <p role="alert" className="text-sm px-3 py-2 rounded-lg border border-red-400/40 text-red-300"
+          style={{ backgroundColor: '#2a1216' }}>
+          {error}
+        </p>
+      )}
       <div className="flex gap-2 pt-1">
         <button onClick={handleSave} disabled={saving}
           className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50" style={{ backgroundColor: '#00d4ff', color: '#070b12' }}>

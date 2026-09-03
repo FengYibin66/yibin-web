@@ -12,6 +12,22 @@
   font-weight: 400;
   font-display: swap;
 }
+/*
+  别名族：把 Bold 字重那份 TTF 再注册成一个独立族名，任意 font-weight 都命中它。
+
+  加它的原因（审计 E1）：8 个文件 16 处原本引用的族名 'CabinSketch-Bold' 与
+  'Patrick Hand' **根本不存在**——上面两块声明的族名是 'CabinSketch'，粗细靠
+  font-weight 区分。于是 Lab 的全部 DOM 覆盖层（导航面板、成就面板、教程、
+  loader、Gallery 返回按钮、ExplorerBar）字体一律落到兜底，macOS 上是 cursive
+  花体。这些引用点绝大多数是内联样式对象，逐个补 fontWeight 的改动面远大于
+  注册一个别名；浏览器按 URL 去重，不会多下载一次。
+*/
+@font-face {
+  font-family: 'CabinSketch Bold';
+  src: url('/fonts/CabinSketch-Bold.ttf') format('truetype');
+  font-weight: 400 900;
+  font-display: swap;
+}
 
 /* ============================================================
    Design Tokens — Tailwind v4 @theme block
@@ -63,6 +79,12 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  /* Lab 的手绘族。**引用处只写这两个变量，不要写字面量族名**——写错族名
+     不会报错、只会静默落到兜底（审计 E1）。`__tests__/styleTokens.test.ts`
+     断言所有具名族都有 @font-face 声明。 */
+  --font-sketch: 'CabinSketch', cursive;
+  --font-sketch-bold: 'CabinSketch Bold', cursive;
 }
 
 /* ============================================================
@@ -289,7 +311,7 @@ body {
   flex-direction: column;
 }
 .achievement-popup .popup-title {
-  font-family: 'Patrick Hand', 'CabinSketch-Bold', cursive, sans-serif;
+  font-family: var(--font-sketch-bold);
   font-size: 14px;
   font-weight: 700;
   color: #1a1a1a;
@@ -368,7 +390,7 @@ body {
   font-weight: 700;
   letter-spacing: 1.5px;
   color: #1a1a1a;
-  font-family: 'Patrick Hand', 'CabinSketch-Bold', cursive, sans-serif;
+  font-family: var(--font-sketch-bold);
 }
 .achievements-header .close-btn {
   display: flex; align-items: center; justify-content: center;
@@ -407,7 +429,7 @@ body {
 .achievement-icon svg { width: 100%; height: 100%; }
 .achievement-text { display: flex; flex-direction: column; }
 .achievement-title {
-  font-family: 'Patrick Hand', 'CabinSketch-Bold', cursive, sans-serif;
+  font-family: var(--font-sketch-bold);
   font-size: 14px; font-weight: 700;
   color: #1a1a1a; letter-spacing: 0.5px; margin-bottom: 1px;
 }
@@ -416,7 +438,7 @@ body {
   margin-top: 12px; padding-top: 10px;
   border-top: 2px dashed #bbb;
   text-align: center;
-  font-family: 'Patrick Hand', 'CabinSketch-Bold', cursive, sans-serif;
+  font-family: var(--font-sketch-bold);
   font-weight: bold; font-size: 12px; letter-spacing: 1px;
   color: #1a1a1a; position: relative; z-index: 1;
 }

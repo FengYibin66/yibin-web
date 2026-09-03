@@ -30,7 +30,6 @@ export function useStableProgress(quietMs = 600): { progress: number; complete: 
   const prevActiveRef = useRef(active)
   useEffect(() => {
     if (prevActiveRef.current !== active) {
-      console.info(`[progress] wave ${active ? 'started' : 'ended'} (raw=${raw.toFixed(0)}%)`)
       prevActiveRef.current = active
     }
   }, [active, raw])
@@ -40,7 +39,6 @@ export function useStableProgress(quietMs = 600): { progress: number; complete: 
     // Raw hit 100 and nothing is loading — wait for a quiet period before
     // declaring completion, in case another wave starts right after.
     const timer = setTimeout(() => {
-      console.info(`[progress] complete (quiet for ${quietMs}ms)`)
       setComplete(true)
     }, quietMs)
     return () => clearTimeout(timer)

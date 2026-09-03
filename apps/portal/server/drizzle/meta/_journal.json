@@ -8,6 +8,13 @@
       "when": 1783250610605,
       "tag": "0000_fancy_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787376628380,
+      "tag": "0001_add_project_checks",
+      "breakpoints": true
     }
   ]
 }

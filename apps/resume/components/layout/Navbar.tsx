@@ -44,7 +44,9 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
         scrolled
           ? {
               backdropFilter: 'blur(12px)',
-              background: 'rgba(7,11,18,0.80)',
+              // 原先写死 rgba(7,11,18,0.80)（= 深色主题的 --bg-base），于是浅色
+              // 主题下滚动后导航栏变成深色条、品牌文字几乎不可见（审计 E2）。
+              background: 'color-mix(in srgb, var(--bg-base) 80%, transparent)',
               borderBottom: '1px solid var(--bg-border)',
             }
           : { background: 'transparent' }

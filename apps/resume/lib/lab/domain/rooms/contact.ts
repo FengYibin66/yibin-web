@@ -57,6 +57,4 @@ export const contactRoom: RoomDefinition = {
   ],
 
   tutorial: 'contact_found',
-  view: () =>
-    import('@/components/rooms/ContactRoomView').then(m => ({ default: m.ContactRoomView })),
 }

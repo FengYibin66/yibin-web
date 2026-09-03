@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildCloudField } from '@/components/rooms/gallery/GalleryClouds'
 import { CLOUD_TEXTURES, cloudAspect, CLOUD_FALLBACK_ASPECT } from '@/lib/lab/cloudTextures'
-import { ROOM_ASSETS } from '@/lib/lab/roomAssets'
+import { ROOM_ASSETS } from '@/lib/lab/app/assets/manifest.gen'
 
 /**
  * 云场生成的回归测试（审计 A2）。
@@ -93,7 +93,7 @@ describe('云纹理清单是单一来源', () => {
     const copies = [
       'components/rooms/about/SkyChunk.tsx',
       'components/rooms/gallery/GalleryClouds.tsx',
-      'lib/lab/roomAssets.ts',
+      'lib/lab/domain/rooms/about.ts',
     ].filter((rel) => readFileSync(join(APP_ROOT, rel), 'utf8').includes(probe))
 
     expect(copies, `以下文件里仍有硬编码的云纹理路径：${copies.join(', ')}`).toEqual([])

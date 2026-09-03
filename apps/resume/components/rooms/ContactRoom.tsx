@@ -5,7 +5,6 @@ import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAchievements } from '@/context/AchievementsContext'
-import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useLocale } from '@/hooks/useLocale'
 import { getContactRoomLinks } from '@/lib/content/labAdapters'
 import { SocialBarrel } from './contact/SocialBarrel'
@@ -34,7 +33,11 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   const { unlockAchievement } = useAchievements()
   const { locale } = useLocale()
   const links = getContactRoomLinks(locale)
-  useRoomTutorial('contact_found', 'contact')
+  /*
+    教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调
+    （ADR 20260903211338）。原先四个房间各自硬编码教程 id 与作用域字面量，
+    而 `tutorial` 字段零消费者；写错成别的房间的 id 不会有任何症状。
+  */
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)

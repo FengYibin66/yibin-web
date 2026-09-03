@@ -6,7 +6,6 @@ import * as THREE from 'three'
 
 import { useAchievements } from '@/context/AchievementsContext'
 import { useLocale } from '@/hooks/useLocale'
-import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { audioMixer } from '@/lib/lab/app/audio/AudioMixer'
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
@@ -60,7 +59,11 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const { locale } = useLocale()
   const { unlockAchievement } = useAchievements()
   const rootRef = useRef<THREE.Group>(null)
-  useRoomTutorial('projects_inspect', 'projects')
+  /*
+    教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调
+    （ADR 20260903211338）。原先四个房间各自硬编码教程 id 与作用域字面量，
+    而 `tutorial` 字段零消费者；写错成别的房间的 id 不会有任何症状。
+  */
 
   const projects = useMemo(() => [...getProjectRoomItems(locale)], [locale])
   const [state, send] = useMachine(dockMachine)

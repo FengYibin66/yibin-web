@@ -627,6 +627,38 @@ export function scanTree<T extends Hit>(
   return found
 }
 
+/**
+ * 取出一个文件里所有 import 的模块名（含动态 `import()`）。
+ *
+ * 给「按前缀判断依赖方向」用（`domain` 不许指向 `@/components/**`）。
+ * 这件事必须在这里做而不是在测试里再写一遍：那就是第二份实现，迟早与
+ * `importsModule` 的判断不一致——而两者本该是同一套解析。
+ */
+export function importSpecifiers(source: string, fileName = 'input.ts'): string[] {
+  const sf = parse(source, fileName)
+  const out: string[] = []
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      out.push(node.moduleSpecifier.text)
+    }
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier
+      && ts.isStringLiteral(node.moduleSpecifier)) {
+      out.push(node.moduleSpecifier.text)
+    }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length > 0
+    ) {
+      const arg = node.arguments[0]!
+      if (ts.isStringLiteral(arg)) out.push(arg.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}
+
 /** 一个文件是否 import 了某个模块 */
 export function importsModule(source: string, moduleName: string, fileName = 'input.ts'): boolean {
   const sf = parse(source, fileName)

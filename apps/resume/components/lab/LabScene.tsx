@@ -23,8 +23,10 @@ import { RoomLoadingIndicator } from './RoomLoadingIndicator'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
-import { reloadRoomAssets } from '@/lib/lab/roomAssets'
-import { preloadCorridorTextures } from '@/lib/lab/texturePreload'
+import {
+  preloadCorridorTextures,
+  reloadRoomAssets,
+} from '@/lib/lab/app/assets/preload'
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'

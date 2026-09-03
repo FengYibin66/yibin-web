@@ -32,6 +32,4 @@ export const galleryRoom: RoomDefinition = {
   assets: [],
   tutorial: null,
 
-  view: () =>
-    import('@/components/rooms/GalleryDoorView').then(m => ({ default: m.GalleryDoorView })),
 }

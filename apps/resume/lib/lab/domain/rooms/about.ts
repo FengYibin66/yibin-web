@@ -54,5 +54,4 @@ export const aboutRoom: RoomDefinition = {
   ],
 
   tutorial: 'about_scroll',
-  view: () => import('@/components/rooms/AboutRoomView').then(m => ({ default: m.AboutRoomView })),
 }

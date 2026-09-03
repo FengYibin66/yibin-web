@@ -88,8 +88,4 @@ export const projectsRoom: RoomDefinition = {
   ],
 
   tutorial: 'projects_inspect',
-  view: () =>
-    import('@/components/rooms/projects/ProjectsRoomView').then(m => ({
-      default: m.ProjectsRoomView,
-    })),
 }

@@ -1,70 +1,21 @@
-'use client'
-
 import { useTexture } from '@react-three/drei'
-import { getCorridorMuralTexturePaths } from '@/lib/lab/corridorMurals'
 
 /**
- * Texture preload lists.
+ * 入口页（`/`）的纹理预载。
  *
- * Calling useTexture.preload() for every known texture at module-load time
- * registers all requests with three's LoadingManager in a single wave,
- * instead of the suspense waterfall (one texture per component re-render)
- * that produces multiple 0→100% progress cycles. This keeps the progress
- * indicators accurate and lets loaders exit exactly once, when everything
- * is actually in memory.
+ * ## 走廊那部分搬走了
+ *
+ * 这个文件原先还有一份**手写的** `CORRIDOR_TEXTURES` 与
+ * `preloadCorridorTextures()`。它们已被 `lib/lab/app/assets/preload.ts` 取代
+ * ——后者读的是**派生的**清单 `manifest.gen.ts`（ADR 20260903140615）。
+ *
+ * 手写那份与生成物漂移过，而漂移不报错：它的首屏壁画是 **3 段（16 张）**，
+ * 生成物写的是 1 段，于是 loader 要等 7.6MB 下完才退场——**审计 G1 的修法一直
+ * 没生效，因为运行时从来没读过生成物**（生成物唯一的引用者是生成它的脚本）。
+ *
+ * 入口页的纹理留在这里：它属于 `/` 那一页而不是 Lab，生成器也不扫它
+ * （它扫的来源是 `lib/lab/domain/rooms/*.ts` 与 `components/lab/**`）。
  */
-
-const DOOR_TYPES = ['about', 'projekty', 'kontakt', 'social'] as const
-
-export const CORRIDOR_TEXTURES: string[] = [
-  // Corridor geometry
-  '/textures/corridor/wall_texture.webp',
-  '/textures/corridor/ceiling_texture.webp',
-  '/textures/corridor/kawalekpodlogi.webp',
-  '/textures/corridor/texturadoprogow.webp',
-  '/textures/corridor/kratanalampy.webp',
-  '/textures/corridor/kratkawentylacyjna.webp',
-  '/textures/corridor/bokilampy.webp',
-
-  // Doors (all type variants + shared frame/handles)
-  ...DOOR_TYPES.flatMap(type => [
-    `/textures/corridor/doors/drzwi${type}.webp`,
-    `/textures/corridor/doors/drzwi${type}_painted.webp`,
-  ]),
-  '/textures/corridor/doors/ramkasingledoors.webp',
-  '/textures/corridor/doors/backsingledoors.webp',
-  '/textures/corridor/doors/doorrleft.webp',
-  '/textures/corridor/doors/dorright.webp',
-  '/textures/corridor/doors/klamkadodrzwi.webp',
-  '/textures/corridor/doors/klamkadodrzwi_painted.webp',
-  '/textures/corridor/pustatabliczka.webp',
-  '/textures/corridor/strzalka.webp',
-
-  // Decorations
-  '/textures/corridor/decorations/coffee_debug.webp',
-  '/textures/corridor/decorations/idea_process.webp',
-  '/textures/corridor/decorations/while_true_loop.webp',
-  '/textures/corridor/ramkanazdjeciemala.webp',
-  '/textures/corridor/drzewkowdoniczce.webp',
-  '/textures/corridor/kwiatekwdoniczce.webp',
-  '/textures/corridor/gorastolika.webp',
-  '/textures/corridor/szafkaprzod.webp',
-  '/textures/corridor/szafkaprzodgora.webp',
-  '/textures/corridor/texturadrewnadonozekbiurka.webp',
-
-  // Welcome area (avatar animation frames, doodles, cat, easter eggs)
-  ...Array.from({ length: 9 }, (_, i) => `/textures/corridor/avatar_anim/${i + 1}.webp`),
-  '/textures/corridor/doodles/coffee_cup.webp',
-  '/textures/corridor/doodles/paper_airplane.webp',
-  '/textures/corridor/doodles/paper_ball.webp',
-  '/textures/corridor/doodles/pencil.webp',
-  '/textures/corridor/cat_body.webp',
-  '/textures/corridor/bug_sketch.webp',
-  '/textures/corridor/ink_splash.webp',
-
-  // Gallery photos used as corridor murals (first 3 segments)
-  ...getCorridorMuralTexturePaths(3),
-]
 
 export const ENTRANCE_TEXTURES: string[] = [
   '/textures/entrance/wall_bricks_2.webp',
@@ -87,10 +38,6 @@ export const ENTRANCE_TEXTURES: string[] = [
   '/textures/corridor/doors/klamkadodrzwi.webp',
   '/textures/corridor/doors/klamkadodrzwi_painted.webp',
 ]
-
-export function preloadCorridorTextures(): void {
-  CORRIDOR_TEXTURES.forEach(url => useTexture.preload(url))
-}
 
 export function preloadEntranceTextures(): void {
   ENTRANCE_TEXTURES.forEach(url => useTexture.preload(url))

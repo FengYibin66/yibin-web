@@ -7,7 +7,7 @@
 | `adr/` | 架构决策记录。有备选方案的选择都在这里。制度见 ADR 20260822120805，索引与规则见 `adr/AGENTS.md` |
 | `architecture/` | 架构现状与设计。**描述性**文档——"系统长什么样"，决策理由不在这里而在 `adr/` |
 | `specs/` | 功能规格：平台约定、portal 首页/媒体、resume 站、partner API、lab 走廊 |
-| `reviews/` | 验收报告。`2026-07-12-resume-lab-room-audit.md` 的 4 条 P1 至今未修，见 `apps/resume/AGENTS.md` |
+| `reviews/` | 验收报告。当前有效的是 `2026-09-02-resume-lab-full-audit.md`（resume 站 63 条问题 + 六个根因模式 + 五份 ADR 索引）；`2026-07-12-resume-lab-room-audit.md` 已被它取代，头部有前向指针 |
 | `research/` | 技术调研（交互效果升级、作品集技术选型） |
 | `deployment/` | 运维手册：MAINTENANCE / TROUBLESHOOT / AGENT_PROMPT |
 | `superpowers/` | **工具产物，非架构文档**。superpowers skill 生成的 plans / specs，带日期。不要当作当前设计的依据——它们是某次任务的过程记录，可能早已被实现偏离 |

@@ -1,5 +1,10 @@
 # Resume Lab / Publications 综合验收与全房间走查
 
+> **本报告已被 [`2026-09-02-resume-lab-full-audit.md`](./2026-09-02-resume-lab-full-audit.md) 取代（2026-09-02）。**
+> 下列 4 条 P1 的当前状态：P1-1（相机竞争）、P1-3（Gallery 白屏）、P1-4（MESSAGE 桶空 onClick）**已修**；
+> P1-2（每个 `MonitorBlock` 26 个纹理 loader）并入 ADR 20260903140619 的 Projects 房间重做一并解决。
+> 新报告覆盖全部 147 个源文件、63 条问题，且以实机截图验证。**不要再以本报告下结论。**
+
 ## 1. 审查范围与结论
 
 - 审查日期：2026-07-12

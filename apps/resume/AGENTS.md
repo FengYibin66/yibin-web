@@ -42,18 +42,25 @@ __tests__/               # vitest（31 个）
 
 `lab` 的真实实现在 `components/lab/`（视图）与 `lib/lab/`（逻辑）两处。**不要往 `features/` 加代码，也不要重建它**——若确需第三个落点，先说明为什么现有两处不够。
 
-## 验收报告 P1 的当前状态
+## 当前有效的验收报告与目标架构
 
-`docs/reviews/2026-07-12-resume-lab-room-audit.md` 列了四条 P1。**那份报告已陈旧**，动手前按下表核对，别照报告下结论：
+**当前有效**：`docs/reviews/2026-09-02-resume-lab-full-audit.md` —— 全部 147 个源文件逐个通读 + 实机截图，63 条问题（16 P1 / 31 P2 / 15 P3 / 1 ARCH）、六个根因模式、六项已定稿的产品决定。
 
-| 位置 | 问题 | 状态 |
-|------|------|------|
-| `components/rooms/ProjectsRoom.tsx` camera tween | 与 `DoorSection` 争抢 `camera.position` | **已修**：tween 现在等 `roomLoadState.phase === 'entered'` 才起，且 cleanup 里 `kill()`。回归用例 `__tests__/projectsRoomCamera.test.tsx` |
-| `app/gallery/` 白屏 | `dynamic(..., {ssr:false})` 无 loading fallback，首屏可见文本只有 `<title>` | **已修**：补了两处加载态——dynamic 的 `loading` 与 `app/gallery/loading.tsx`（两个不同时机，缺一仍会白屏）。E2E 直接断言导出 HTML 含 `Loading gallery` |
-| `components/rooms/ContactRoom.tsx` MESSAGE 桶 | `onClick={() => {}}` 空交互 | **已修**：改为聚焦同场景的留言纸（`MessagePaper` 新增 `focusMessage()` imperative handle） |
-| `components/rooms/ProjectsRoom.tsx:259-301` | 每个 `MonitorBlock` 无条件声明 monitor/TV/phone 三类共 26 个纹理 loader，即使只用其中一种 | **未修**。这是性能项，需要按 platform 选纹理或做房间级 manifest 预载，改动面较大 |
+`docs/reviews/2026-07-12-resume-lab-room-audit.md` **已被它取代**（头部有前向指针），不要再以旧报告下结论。旧报告 4 条 P1 中 3 条已修，第 4 条（26 个纹理 loader）并入下表的 ADR 20260903140619。
 
-**相机所有权**：房间转场的 `camera.position` 动画由 `DoorSection` 统一编排。房间组件只应提供目标 pose，不要自行起 tween——上表第一条就是违反这条的后果，修法可作参考。
+### 现状 ≠ 目标
+
+下面五份 ADR 描述的是**目标架构**，实现分六步进行。**读代码时看到的仍可能是迁移前的形态**，改动前先确认所在步骤：
+
+| ADR | 目标 | 取代的现状 |
+|-----|------|-----------|
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | 手写的 `lib/lab/{roomAssets,texturePreload}.ts`；门坐标散在三处 |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | `context/*.tsx` 四个 Context + 三套手写 reducer |
+| [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | 五处各自写 `camera.position`；四套手写手势 + `useWheelRouter` |
+| [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | `context/AudioContext.tsx` + drei `PositionalAudio` + 裸 AudioContext 三套 |
+| [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | Projects 房间无环境；平台隐喻；Gallery 门贴技术贴纸 |
+
+**相机所有权（现状约定，迁移完成后由 ADR 20260903140617 的机制接管）**：房间转场的 `camera.position` 动画由 `DoorSection` 统一编排，房间组件只提供目标 pose，不自行起 tween。这条约定**已被违反四次**（ProjectsRoom / TeleportRoom / CorridorDecorations / 各房间 tween），这正是要换成机制的原因——迁移后有一条 grep 测试禁止 `CameraDirector` 之外的文件写相机。
 
 **加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
 

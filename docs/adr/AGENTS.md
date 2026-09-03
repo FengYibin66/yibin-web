@@ -16,7 +16,7 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 
 <!-- BEGIN:adr-index (生成物，勿手改；见 scripts/docs/gen_docs_index.py) -->
 
-共 10 份。按 ID（创建时间）升序。
+共 15 份。按 ID（创建时间）升序。
 
 | ID | 结论 | 状态 | 索引 |
 |----|------|------|------|
@@ -30,5 +30,10 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 | [`20260822120808`](./20260822120808-portal-types-derived-from-schema.md) | Portal 接口类型从 Drizzle schema 派生，不手写 | 已接受 | portal 的 `Profile` / `Project` 类型由 `schema.ts` 经 Drizzle `$inferSelect` 派生并置于共享位置，前后端同源；不引入 OpenAPI codegen（规模不匹配）。注记：本文初稿称「enum 约束落在数据库侧」，**该说法已被本文「勘误」一节推翻**——SQLite 的 `text({enum})` 只是类型层约束，真正的库侧约束由后补的 CHECK 提供 |
 | [`20260822120809`](./20260822120809-preooluse-hooks-as-mechanical-gates.md) | 用 PreToolUse hooks 做机制门禁，且必须 fail-closed | 已接受 | AI 红线用 `.claude/hooks/` 的 PreToolUse 脚本机制拦截而非文档请求；拦截须 `exit 2`，守卫自身异常必须映射为拦截；每条 hook 明确声明覆盖边界，不制造虚假安全感 |
 | [`20260822132001`](./20260822132001-signed-session-cookie.md) | 会话改用 HMAC 签名 cookie，修复认证绕过 | 已接受 | portal 的 `portal_session` cookie 原为固定明文 `authenticated`，任何人手设该 cookie 即获完整管理员权限；改为 Hono 签名 cookie（值为签发时间戳）+ 服务端独立判过期 + secret 缺失时 fail-closed |
+| [`20260903140615`](./20260903140615-lab-room-registry-and-derived-assets.md) | Lab 房间改为数据驱动注册表，预载表由注册表派生而非手写 | 提议 | resume 的 Lab 五个房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 注册表声明（门位、entryPose、雾、环境音、资产、教程、视图），编排代码只消费声明；纹理预载表改为从注册表 + 走廊布局**派生**的生成物，禁止手写，与 ADR 20260822120808 的类型派生同一纪律 |
+| [`20260903140616`](./20260903140616-lab-xstate-and-zustand-replace-context.md) | Lab 生命周期改用 XState 状态图，共享状态改用 zustand，替换手写 reducer 与 Context | 提议 | resume 的 Lab 用 XState v5 表达走廊/房间/停靠三条生命周期（失败边与超时是状态图的一等公民，`@xstate/graph` 生成全路径测试），共享状态从 35 字段的 `SceneContext` 迁到 zustand（selector 订阅 + persist 中间件）；替换 `doorEntryFlow` / `roomLoadMachine` / `publicationMotionMachine` 三套手写 reducer |
+| [`20260903140617`](./20260903140617-lab-single-camera-owner.md) | Lab 相机收归单一导演，底层换成 camera-controls；手势统一用 @use-gesture | 提议 | resume 的 Lab 只允许 `lib/lab/app/camera/CameraDirector` 写 `camera.position/rotation/lookAt`，底层委托 `camera-controls`（drei `<CameraControls>`）；房间内相机自由度由 `RoomDefinition.cameraFreedom` 声明；四套手写 wheel/pointer/touch 处理统一换成 `@use-gesture/react` |
+| [`20260903140618`](./20260903140618-lab-audio-howler-mixer.md) | Lab 音频统一为 Howler 混音器；保留 3D 定位，但替换 drei 的 PositionalAudio 包装 | 提议 | resume 的 Lab 音频收归 `lib/lab/app/audio/AudioMixer`（底层 howler.js + spatial 插件，三条总线 music/sfx/ambience），格式数组解决 Safari 不支持 OGG，自动解锁重试解决自动播放拦截；房间环境音保留距离衰减但不再阻塞房间 READY，全局静音对其生效；替换 `context/AudioContext.tsx`、drei `<PositionalAudio>` 与成就的裸 `AudioContext` |
+| [`20260903140619`](./20260903140619-lab-external-assets-and-runtime-sketch.md) | Lab 引入外部创意素材，风格统一为手绘线稿；程序化草图用 Rough.js 运行时生成 | 提议 | resume 的 Lab 首次引入外部创意素材，限定为手绘线稿类并记录许可（Rough.js MIT、Excalidraw MIT、Khushmeen Doodle Icons 免费商用、Open Doodles CC0、Google Fonts OFL、freesound CC0）；重复性草图元素（白板高亮、便签、机柜、刻度盘）用 Rough.js 运行时生成 `CanvasTexture` 而非预制位图；Projects 房间据此重做为「深夜实验室」 |
 
 <!-- END:adr-index -->

@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { preloadRoomAssets } from '@/lib/lab/roomAssets'
+import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
 
 import { DoorSection } from '@/components/lab/DoorSection'
 
@@ -83,7 +83,7 @@ vi.mock('@/context/SceneContext', () => ({
 
 vi.mock('@/components/lab/shaders/RevealMaterial', () => ({}))
 vi.mock('@/components/lab/RoomInterior', () => ({ RoomInterior: () => null }))
-vi.mock('@/lib/lab/roomAssets', () => ({ preloadRoomAssets: vi.fn() }))
+vi.mock('@/lib/lab/app/assets/preload', () => ({ preloadRoomAssets: vi.fn() }))
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 

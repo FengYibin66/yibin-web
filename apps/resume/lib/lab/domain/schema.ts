@@ -107,7 +107,11 @@ export const roomDefinitionSchema = z.object({
   ambience: ambienceSchema.nullable(),
   assets: z.array(assetPath),
   tutorial: achievementId.nullable(),
-  view: z.function(),
+  /*
+    这里原先有 `view: z.function()`。`view` 已搬到 `components/rooms/registry.ts`
+    ——它是"房间长什么样"，属于 interface 层；domain 只声明"房间是什么"
+    （ADR 20260903211338，`__tests__/domainPurity.test.ts` 守这条边界）。
+  */
 })
 
 // ─── 成就 ────────────────────────────────────────────────────────────────────

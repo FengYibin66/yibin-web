@@ -29,14 +29,16 @@ const ROOM_TUTORIAL_DELAY_MS = 2000
  * 两条都在是刻意的——第 1 条依赖组件正常卸载（传送时房间可能被整棵子树替换），
  * 第 2 条不依赖任何组件的生命周期。任一条生效就够。
  *
- * @param tutorialId 成就 id，同时是教程文案的 key
+ * @param tutorialId 成就 id，同时是教程文案的 key。`null` = 这个房间没有教程
  * @param roomId 这间房的 id，用于构造作用域
  */
-export function useRoomTutorial(tutorialId: string, roomId: string): void {
+export function useRoomTutorial(tutorialId: string | null, roomId: string): void {
   const { roomLoadState: { phase } } = useScene()
   const { showTutorial, dismissTutorial } = useAchievements()
 
   useEffect(() => {
+    // `null` = 这个房间没有教程（gallery 走独立路由，没有"房间内"这回事）
+    if (tutorialId === null) return
     if (phase !== 'entered') return
 
     const tutorialTimer = window.setTimeout(

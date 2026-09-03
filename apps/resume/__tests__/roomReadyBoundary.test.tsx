@@ -22,17 +22,29 @@ vi.mock('@/context/SceneContext', () => ({
   }),
 }))
 
-vi.mock('@/components/rooms/AboutRoom', () => ({
-  AboutRoom: (props: unknown) => roomRenderMock(props),
-}))
-vi.mock('@/components/rooms/projects/ProjectsRoom', () => ({
-  ProjectsRoom: () => null,
-}))
-vi.mock('@/components/rooms/publications/PublicationsRoom', () => ({
-  PublicationsRoom: () => null,
-}))
-vi.mock('@/components/rooms/ContactRoom', () => ({
-  ContactRoom: () => null,
+/*
+  `RoomInterior` 现在从注册表分发并统一调 `useRoomTutorial`
+  （ADR 20260903211338）。教程 hook 间接需要 `AchievementsProvider`，
+  而本文件验的是 Suspense 边界的回调，与成就无关——mock 掉。
+*/
+vi.mock('@/hooks/useRoomTutorial', () => ({ useRoomTutorial: vi.fn() }))
+
+/*
+  mock 注册表而不是各房间组件：`RoomInterior` 不再直接 import 房间，
+  它按 roomId 从 `ROOM_VIEWS` 取（而那些是 `React.lazy`，在 jsdom 里会拖起
+  three / drei 的完整依赖树）。
+
+  替身是同步组件，所以本文件不需要 `waitFor` —— 要验的 Suspense 行为来自
+  被测的那个 `throw promise`，不是来自 lazy 的 chunk 加载。
+*/
+vi.mock('@/components/rooms/registry', () => ({
+  ROOM_VIEWS: {
+    about: (props: unknown) => roomRenderMock(props),
+    projects: () => null,
+    publications: () => null,
+    contact: () => null,
+    gallery: () => null,
+  },
 }))
 
 import { RoomInterior } from '@/components/lab/RoomInterior'
@@ -271,10 +283,13 @@ describe('RoomInterior boundary callbacks', () => {
       />,
     )
 
-    expect(roomRenderMock).toHaveBeenCalledWith({
-      showRoom: true,
-      isExiting: false,
-    })
+    /*
+      契约是 `RoomViewProps`（一个 `phase`），不再是 `{ showRoom, isExiting }`
+      两个布尔——`RoomInterior` 改成按注册表分发之后
+      （ADR 20260903211338）。要守的东西没变：`onReady` / `onError` 属于边界，
+      房间不该看见它们，否则房间就能自己声明"我准备好了"，加载超时的判据也就失效了。
+    */
+    expect(roomRenderMock).toHaveBeenCalledWith({ phase: 'ready' })
   })
 
   it('forwards render errors without failing SceneContext directly', () => {

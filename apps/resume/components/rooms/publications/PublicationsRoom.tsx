@@ -10,7 +10,6 @@ import {
 import { useAchievements } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
 import { useLocale } from '@/hooks/useLocale'
-import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { getPublicationRoomItems } from '@/lib/content/publications'
 import type { PublicationCardHandle } from './PublicationCard'
 import {
@@ -83,7 +82,11 @@ export function PublicationsRoom({
     itemCount: publications.length,
     itemGap: PUBLICATION_CAROUSEL_ITEM_GAP,
   })
-  useRoomTutorial(PUBLICATION_TUTORIAL_ID, 'publications')
+  /*
+    教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调
+    （ADR 20260903211338）。原先四个房间各自硬编码教程 id 与作用域字面量，
+    而 `tutorial` 字段零消费者；写错成别的房间的 id 不会有任何症状。
+  */
   usePublicationBrowseCamera({
     entered: (
       showRoom

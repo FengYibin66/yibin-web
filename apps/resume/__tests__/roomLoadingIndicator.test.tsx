@@ -91,12 +91,17 @@ vi.mock('@/components/ui/NavigationUI', () => ({
   NavigationUI: () => <div data-testid="navigation-ui" />,
 }))
 
-vi.mock('@/lib/lab/texturePreload', () => ({
-  preloadCorridorTextures: vi.fn(),
-}))
+/*
+  预载现在读**派生的**清单，模块也从 `lib/lab/{roomAssets,texturePreload}`
+  换到 `lib/lab/app/assets/preload`（ADR 20260903211338）。
 
-vi.mock('@/lib/lab/roomAssets', () => ({
+  手写的那两份表已删：生成物早就存在、CI 也在跑它的 `--check`，但运行时从来
+  没读过它——两份表漂移到"首屏壁画 3 段 vs 1 段"，审计 G1 的修法因此一直没生效。
+*/
+vi.mock('@/lib/lab/app/assets/preload', () => ({
+  preloadCorridorTextures: vi.fn(),
   reloadRoomAssets: roomAssetMocks.reloadRoomAssets,
+  preloadRoomAssets: vi.fn(),
 }))
 
 import { LabScene } from '@/components/lab/LabScene'

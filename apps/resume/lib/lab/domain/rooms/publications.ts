@@ -66,8 +66,4 @@ export const publicationsRoom: RoomDefinition = {
   ],
 
   tutorial: 'publications_read',
-  view: () =>
-    import('@/components/rooms/publications/PublicationsRoomView').then(m => ({
-      default: m.PublicationsRoomView,
-    })),
 }

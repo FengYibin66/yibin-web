@@ -17,7 +17,7 @@ import {
 import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
-import { preloadRoomAssets } from '@/lib/lab/roomAssets'
+import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'

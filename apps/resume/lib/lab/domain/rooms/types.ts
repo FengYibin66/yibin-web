@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react'
 
 import type { AchievementId, DoorSlot, RoomId } from '../ids'
 
@@ -113,12 +112,16 @@ export interface RoomDefinition {
   assets: readonly string[]
   /** 进房若干秒后弹出的教程气泡 */
   tutorial: AchievementId | null
-  /**
-   * 视图组件（interface 层），懒加载。
-   *
-   * Gallery 是一个执行 `router.push('/gallery')` 的空组件——这样编排代码里
-   * 所有 `if (roomId === 'gallery')` 特例分支就都消失了，它的 `entryPose`
-   * 仍然生效（相机照常对齐门）。
-   */
-  view: () => Promise<{ default: ComponentType<RoomViewProps> }>
+  /*
+    这里原先还有一个 `view: () => Promise<{ default: ComponentType<RoomViewProps> }>`。
+
+    它已搬到 `components/rooms/registry.ts`（ADR 20260903211338）：为了这一个字段，
+    本文件要 `import type { ComponentType } from 'react'`，而五个房间定义各自
+    `import('@/components/rooms/...')`——**domain 指向 interface 层**，与
+    「依赖方向单向朝内」正好反着，也与 `apps/resume/AGENTS.md` 声称的
+    「domain 不感知 React / three / DOM」矛盾。
+
+    房间**是什么**（门位、取景、雾、环境音、资产、教程）留在这里；
+    房间**长什么样**归 `components/`。`__tests__/domainPurity.test.ts` 守这条边界。
+  */
 }

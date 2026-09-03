@@ -8,7 +8,6 @@ import { LAB_FONT_DISPLAY, LAB_FONT_LATIN_BOLD, LAB_FONT_LATIN_REGULAR, fontForT
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
-import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { useLocale } from '@/hooks/useLocale'
 import { getAboutRoomCopy } from '@/lib/content/labAdapters'
@@ -222,7 +221,11 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { isTeleporting }       = useScene()
   const { unlockAchievement }   = useAchievements()
   const router = useWheelRouter()
-  useRoomTutorial('about_scroll', 'about')
+  /*
+    教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调
+    （ADR 20260903211338）。原先四个房间各自硬编码教程 id 与作用域字面量，
+    而 `tutorial` 字段零消费者；写错成别的房间的 id 不会有任何症状。
+  */
 
   const scrollPos       = useRef(0)
   const scrollVelocity  = useRef(0)

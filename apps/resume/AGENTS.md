@@ -29,7 +29,8 @@ app/                     # Next.js App Router（路由与页面）
 components/              # 组件
 ├── canvas/ entry/ layout/ providers/ ui/
 ├── classic/ lab/ rooms/ sections/
-│   └── rooms/projects/  # 「深夜实验室」（ADR 20260903140619）
+│   ├── rooms/registry.ts  # roomId → 视图组件（lazy）；RoomInterior 唯一的分发处
+│   └── rooms/projects/    # 「深夜实验室」（ADR 20260903140619）
 └── gallery/
 lib/
 ├── content/             # 简历内容数据
@@ -42,7 +43,7 @@ lib/
 │   ├── app/             # 编排：相机所有者、音频混音器、store、ESC 消费栈
 │   │   ├── camera/      # CameraDirector —— 唯一能写相机的地方
 │   │   ├── audio/       # AudioMixer（howler）
-│   │   └── assets/      # manifest.gen.ts（派生生成物，勿手改）
+│   │   └── assets/      # manifest.gen.ts（派生生成物，勿手改）+ preload.ts（运行时入口）
 │   └── infra/           # 外部依赖实现（roughjs 栅格化、纹理缓存）
 ├── scene/ animations/ gallery/
 media-src/               # 原始素材，**不部署**（见该目录的 AGENTS.md）
@@ -91,7 +92,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 
 | ADR | 目标 | 实际状态 |
 |-----|------|-----------|
-| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **部分落地**：注册表已定义且门坐标已是单一来源；但 `view` / `tutorial` **零消费者**（`RoomInterior` 仍是硬编码 `switch`，四个房间各自硬编码教程 id），`entryPose` / `cameraFreedom` **只有 Projects 消费**（所以 ADR 说的「A1/A3 由 entryPose 修复」运行时不成立），`manifest.gen.ts` **唯一引用者是生成它的脚本自己**（运行时仍 import 手写的 `roomAssets.ts` / `texturePreload.ts`，两份已漂移，首屏壁画仍是 3 段 = 审计 G1 未修），`roomId === 'gallery'` 特例仍在 7 处，生成物**未**加入 hook 保护名单 |
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已接线**（`20260903211338`）：`RoomInterior` 按 `components/rooms/registry.ts` 分发（`React.lazy`，没有 `switch`）、教程从 `RoomDefinition.tutorial` 读、预载走 `lib/lab/app/assets/preload.ts`（读生成物），手写的 `roomAssets.ts` 与 `texturePreload.ts` 的走廊部分已删。首屏壁画 3 段 → 1 段，**省 1466 KB**。`view` 已移出 domain（它曾让 domain import react）。<br>**仍未落地**：`entryPose` / `cameraFreedom` **只有 Projects 消费**——About / Contact 的房间级相机（审计 A1 / A3）需要一次带截图的取景标定，见下方相机一节第 5 条。<br>**已核实为误判**：PR #12 说「生成物未加入 hook 保护名单」是错的——`.claude/hooks/pre-generated-edit.sh` 按 `\.gen\.(ts|tsx|go|py)$` 匹配，`manifest.gen.ts` 天然受保护（实测被拦）。|
 | [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：音频 store（zustand）与成就队列 reducer 已接线；三台状态图**只有 `dockMachine` 接线了**（且只有 Projects 用，Publications 仍用 `publicationMotionMachine`），`room.machine` / `corridor.machine` 运行时零引用——`labMachines.test.ts` 守的是死代码，其中为审计 A8 加的 `entered → failed` 边**运行时不存在**，A8 未修。`@xstate/graph` 装了没用 |
 | [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **部分落地，且所有权形态已被 [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md) 修订**：`suspended` 布尔让三处出错——进房时导演与 DoorSection 的 gsap **同帧双写约 2 秒**（靠 rAF 顺序侥幸不出事）、传送的 `moveToWorld({duration:0})` 在挂起态是**空操作**、About 的 `setLean` 是**死代码**。手势未迁移，`@use-gesture` 未安装 |
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |

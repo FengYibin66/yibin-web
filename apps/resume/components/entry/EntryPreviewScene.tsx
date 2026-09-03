@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
+import { LAB_FONT_LATIN_BOLD, LAB_FONT_LATIN_REGULAR } from '@/lib/lab/domain/labFonts'
 import { Cat } from '@/components/lab/Cat'
 import '@/components/lab/shaders/RevealMaterial'
 import * as THREE from 'three'
@@ -298,7 +299,7 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
           </mesh>
           {/* font 必填：缺它时 troika 会去 fonts.gstatic.com 拉默认字体，
               大陆访客加载失败（审计 E8——全仓唯一一处漏 font 的 <Text>）。 */}
-          <Text position={[0, 0.08, 0.01]} fontSize={0.07} color="#1a1a1a" font="/fonts/CabinSketch-Regular.ttf" anchorX="center" anchorY="middle" maxWidth={1.4} textAlign="center">
+          <Text position={[0, 0.08, 0.01]} fontSize={0.07} color="#1a1a1a" font={LAB_FONT_LATIN_REGULAR} anchorX="center" anchorY="middle" maxWidth={1.4} textAlign="center">
             {duckQuote || ' '}
           </Text>
         </group>
@@ -373,7 +374,7 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
           position={[bugClickPos.current.x, bugClickPos.current.y, 0.35]}
           fontSize={0.25}
           color="#1a1a1a"
-          font="/fonts/CabinSketch-Bold.ttf"
+          font={LAB_FONT_LATIN_BOLD}
           anchorX="center"
           anchorY="middle"
           clipRect={[-1, -0.5, -1 + bugClipProg * 2.5, 0.5]}

@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
 import { useAudio } from '@/context/AudioContext'
 
 const DOOR_HEIGHT     = 2.4
@@ -144,7 +145,7 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
         position={[0, DOOR_CENTER_Y + DOOR_HEIGHT / 2 + 0.35, 0.05]}
         fontSize={0.13}
         color="#8b7355"
-        font="/fonts/CabinSketch-Regular.ttf"
+        font={fontForText(label, LAB_FONT_LATIN_REGULAR)}
         anchorX="center"
         anchorY="middle"
         maxWidth={2.5}

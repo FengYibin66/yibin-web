@@ -6,6 +6,7 @@ import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import '@/components/lab/shaders/RevealMaterial'
+import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 
 const _tempScale = new THREE.Vector3()
 
@@ -104,7 +105,7 @@ export function SocialBarrel({
           position={[0, scale[1] * 0.26, 0.05]}
           rotation={[0, 0, 0.03]}
           fontSize={scale[0] * 0.14}
-          font="/fonts/CabinSketch-Bold.ttf"
+          font={fontForText(label, LAB_FONT_LATIN_BOLD)}
           color="#111111"
           anchorX="center"
           anchorY="middle"

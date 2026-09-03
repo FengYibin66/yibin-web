@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { Text, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { LAB_FONT_LATIN_BOLD } from '@/lib/lab/domain/labFonts'
 
 const CEILING_Y = 1.75  // CORRIDOR_HEIGHT(3.5) / 2
 
@@ -74,7 +75,7 @@ export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
           position={[2, CEILING_Y - 0.5, 0.4]}
           fontSize={0.2}
           color="#f5e6a3"
-          font="/fonts/CabinSketch-Bold.ttf"
+          font={LAB_FONT_LATIN_BOLD}
           anchorX="center"
           anchorY="middle"
           clipRect={[-1, -0.3, -1 + clipProg * 2.5, 0.3]}

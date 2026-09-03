@@ -160,8 +160,8 @@
 | 批 | 内容 | ADR | 状态 |
 |----|------|-----|------|
 | 1 · 止血 | 字体族名、paper_tear 映射、Contact 云、Navbar token、cancelTeleport 接线、Art Critic 走 store、删死代码、hydration、console 清理、GALLERY ICELAND、年份、鸭子字体 | 无 | **已完成** |
-| 2 · 架构 | 上表五份 ADR 的实现，分六步 | 全部 | **已完成**（相机所有权是白名单形态，走廊导轨与 DoorSection 编排待迁移；`@use-gesture` 未安装——那一步用不上，装了不用等于空依赖） |
-| 3 · 打磨 | 成就队列、i18n、Gallery 修整、可达性、位置持久、门坐标去重、帧率降级 | 无 | **部分完成**：成就队列（D2–D5）、Lab 中文（E7）、Gallery 门贴纸（F1）、可达性（E3/E4/E10）、门坐标去重（B3，随 domain 层）已做；**位置持久与帧率降级未做** |
+| 2 · 架构 | 上表五份 ADR 的实现，分六步 | 全部 | ~~**已完成**~~ → **部分完成**，见文末「2026-09-03 复核勘误」。五份 ADR 里只有 20260903140618（音频）完整落地；注册表与状态图**代码写了但运行时未接线** |
+| 3 · 打磨 | 成就队列、i18n、Gallery 修整、可达性、位置持久、门坐标去重、帧率降级 | 无 | **部分完成**：成就队列（D2–D5）、Lab 中文（E7）、Gallery 门贴纸（F1）、可达性（E3/E4/E10）、门坐标去重（B3，随 domain 层）已做；**位置持久与帧率降级未做**。D2–D5 与 E7 的完成度亦有勘误，见文末 |
 
 ### 未做的项与理由
 
@@ -209,6 +209,40 @@
 **决定 6：桌面没做静态图打底。** 三层渐进只做了手机那一层（不挂 Canvas）。
 桌面实测 canvas 在 592ms 出现，多一张占位图是多一次下载换 0.5 秒，
 收益不抵成本。手机端下载量 3871 → 856 KB。
+
+## 2026-09-03 复核勘误
+
+实施完成后请四个专家视角（架构 / three.js 图形 / 测试有效性 / 产品与 a11y）对合入
+`main` 的代码做独立 review，逐条核实后**本报告有九处结论需要更正**。列在此处而不是
+改写正文，理由与 ADR 的不可变性一致：读者要能分辨哪一条被推翻、哪一条仍然有效。
+
+更正的共同形态：**我把「代码写了、测试绿了」当成了「已修」，而没有 grep 过运行时有没有
+消费者。** 这与根 CLAUDE.md 举的 libSQL/MySQL 事故是同一类错误。
+
+| 本报告原先的结论 | 复核后的事实 | 依据 |
+|---|---|---|
+| 批 2「已完成」 | 五份 ADR 只有音频那份完整落地。`room.machine` / `corridor.machine` 运行时零引用；`RoomDefinition` 的 `view` / `tutorial` 零消费者；`manifest.gen.ts` 唯一引用者是生成它的脚本 | `grep -rl` 在 `app components context hooks lib` 下无非测试命中 |
+| A8「entered 后运行时错误无出口」由 ADR 616 修复 | **未修**。修法在未接线的 `room.machine` 里；运行时 `handleRoomError` 仍只在 `loading` 阶段派发 | 同上 |
+| G1「首屏 7.6MB」由派生预载表修复 | **未修**。`texturePreload.ts` 首屏仍加载 3 段走廊壁画（16 张），生成物写的是 1 段，两份已漂移 | `texturePreload.ts:66` vs `manifest.gen.ts:55` |
+| A1 / A3「About、Contact 无房间级相机」由 `entryPose` 修复 | **未修**。`entryPose` 只有 Projects 消费，运行时没有任何代码把 about/contact 的 `entryPose` 送给相机 | `grep entryPose` |
+| A7「退房后教程气泡残留」已修 | **只修了 Publications 一间**。`hidePopup()` 全仓唯一调用方是 `PublicationsRoom`；另外三间房的教程退房后仍挂着，并**堵死队列**让后续教程永不显示 | `grep "hidePopup()"` |
+| 「决定 3」的偏离说明：门牌用 CabinSketch，troika 会回退，「观感上仍是手写体」 | **这句话是错的，且掩盖了一个真实缺陷**。troika 缺字时默认去 `cdn.jsdelivr.net/gh/lojjic/unicode-font-resolver` 拉 Noto——① 回退字体是 Noto Sans，不是手写体；② **依赖境外 CDN**，大陆访客看到的是五扇空白门牌。这是审计 E8（鸭子对话框拉 fonts.gstatic.com）同类问题在同一次重构里的复发 | troika 源码默认 `unicodeFontsURL`；仓库无任何覆盖配置 |
+| E7「Lab 中文」已做 | **部分**。11 处用户可见英文残留（How to explore / Skip / Back / Mute / Classic View / ENTER → 等），7 个已翻译的 key 未接线；`LocaleToggle` 只在 Classic 视图渲染，Lab 与入口页没有语言切换入口 | 见下 |
+| 「漏译门禁」是机制 | 门禁看不见模板字符串、跨行 JSX 文本（prettier 折行后的最常见形态），以及字符串里含 `//` 的 URL 之后的同行内容 | 变异测试 20 个绕过形态活了 10 个 |
+| 相机所有权「已是机制」 | 正则不认 `camera.rotation.set` / `position.setZ` / `rotateX` / `gsap.to(camera.rotation` / 别名；白名单是文件级（已在名单的文件再加 20 个写点也绿）。另有三条已核实的运行缺陷：进房双写相机约 2 秒、传送不瞬移、About 探身失效 | 同上；`CameraDirector.update()` 的挂起检查 |
+
+复核还查出六条本报告未记录的新缺陷：ESC 在房间内关面板/关教程会连带退房（只有
+`ProjectsRoom` 接了 `escapeStack`）；键盘用户拿不到 `corridor_explore` 且被自己的教程
+气泡永久遮挡（气泡与底部提示位置完全重叠）；回访用户每次进 Lab 响一声解锁音
+（`AchievementsContext` 这一层零测试）；`UNLOCK` 插队会让淡出中的队首变成「幽灵气泡」；
+Projects 房间因挂在 x 缩放 1.05 的 group 下被整体拉伸 5%；房间雾 `Fog↔null` 切换触发
+全场景 shader 重编译。
+
+处置：四份新 ADR（[20260903211244](../adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md)
+相机持有者、[20260903211302](../adr/20260903211302-lab-tutorial-popups-carry-scope.md) 教程作用域、
+[20260903211320](../adr/20260903211320-source-gates-use-ts-ast-not-regex.md) 门禁改 AST、
+[20260903211338](../adr/20260903211338-finish-wiring-lab-registry-and-machines.md) 补完接线）
++ 七个按序合入的 PR。ADR 615–619 的头部已追加前向指针。
 
 ## 附：审计环境
 

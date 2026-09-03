@@ -101,8 +101,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 | 位置 | 数量 | 内容 |
 |------|------|------|
-| `apps/resume/__tests__/` | 443 | 组件与逻辑单测（vitest） |
-| `apps/resume/e2e/` | 78 | Playwright E2E ×2 形态（chromium + mobile-safari） |
+| `apps/resume/__tests__/` | 1012（58 文件） | 组件与逻辑单测（vitest） |
+| `apps/resume/e2e/` | 78（39 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）。**完全不进 Lab**——`/lab` 只断言 200，见 `apps/resume/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 14 文件 | Go 单测 |

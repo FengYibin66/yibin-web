@@ -1,6 +1,6 @@
 # 20260903140618. Lab 音频统一为 Howler 混音器；保留 3D 定位，但替换 drei 的 PositionalAudio 包装
 
-- 状态：提议
+- 状态：已接受
 - 索引：resume 的 Lab 音频收归 `lib/lab/app/audio/AudioMixer`（底层 howler.js + spatial 插件，三条总线 music/sfx/ambience），格式数组解决 Safari 不支持 OGG，自动解锁重试解决自动播放拦截；房间环境音保留距离衰减但不再阻塞房间 READY，全局静音对其生效；替换 `context/AudioContext.tsx`、drei `<PositionalAudio>` 与成就的裸 `AudioContext`
 - 日期：2026-09-03
 

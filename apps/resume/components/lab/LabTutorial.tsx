@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { isCorridorIdle } from '@/lib/lab/roomLoadMachine'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { useScene } from '@/context/SceneContext'
 import { hasSeenTutorial, markTutorialSeen, TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
@@ -59,7 +60,7 @@ function mouseRows(labels: LabUiLabels): ControlRow[] {
 export function LabTutorial() {
   const labels = useLabLabels()
   const { complete } = useStableProgress(600)
-  const { isInRoom, isTeleporting } = useScene()
+  const { isInRoom, isTeleporting, roomLoadState } = useScene()
   const [visible, setVisible] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
@@ -68,14 +69,21 @@ export function LabTutorial() {
     setIsTouch(window.matchMedia('(pointer: coarse)').matches)
   }, [])
 
-  // Auto-show once, after the loading tear animation has cleared
+  /**
+   * 首访自动弹一次，在 loader 的撕纸动画退场之后。
+   *
+   * 三个条件都要：不在房间里、没在传送、**而且走廊是空闲的**。第三条是
+   * 审计 D5——点了门之后相位是 `aligning`/`loading`/`opening`，还没进房，
+   * 所以前两条都为假，2.4 秒的延迟一到教程就盖在开门动画上。
+   */
+  const corridorIdle = isCorridorIdle(roomLoadState.phase)
   useEffect(() => {
     if (!complete || hasSeenTutorial()) return
     const timer = setTimeout(() => {
-      if (!isInRoom && !isTeleporting) setVisible(true)
+      if (!isInRoom && !isTeleporting && corridorIdle) setVisible(true)
     }, SHOW_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [complete, isInRoom, isTeleporting])
+  }, [complete, isInRoom, isTeleporting, corridorIdle])
 
   // "?" button in NavigationUI re-opens it anytime
   useEffect(() => {

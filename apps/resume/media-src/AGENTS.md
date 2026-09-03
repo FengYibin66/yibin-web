@@ -15,7 +15,14 @@
 
 ```
 sounds/    环境音原始 mp3（szum*.mp3）——scripts/media/encode-audio.mjs 的输入
+doors/     Gallery 门的原图（带旧的技术 / 社媒贴纸）
+           ——scripts/media/gallery-door.mjs 的输入
 ```
+
+`doors/` 里是**原始**门板：Classic 页那两扇贴着 HTML5 / JS / React /
+node.js / CSS3，走廊侧那两扇贴着 Instagram / TikTok / YouTube。它们与
+`/gallery` 是摄影相册这件事无关（审计 F1），生成脚本用摄影主题的贴纸盖住
+它们。原图留着是因为贴纸位置以后可能要调，那时要从干净的门板重新生成。
 
 ## 改动方式
 

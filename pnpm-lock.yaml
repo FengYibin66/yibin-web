@@ -178,9 +178,6 @@ importers:
       '@react-three/fiber':
         specifier: ^9.6.1
         version: 9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.168.0)
-      '@use-gesture/react':
-        specifier: ^10.3.1
-        version: 10.3.1(react@19.2.7)
       '@xstate/react':
         specifier: ^6.1.0
         version: 6.1.0(@types/react@19.2.17)(react@19.2.7)(xstate@5.32.6)

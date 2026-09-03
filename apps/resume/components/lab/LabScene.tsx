@@ -6,7 +6,9 @@ import { Canvas } from '@react-three/fiber'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
+import { CameraRig } from './CameraRig'
 import { InfiniteCorridorManager } from './InfiniteCorridorManager'
+import { SceneFog } from './SceneFog'
 
 // Kick off all texture requests in ONE LoadingManager wave as soon as this
 // chunk loads — before components mount and start their suspense waterfalls.
@@ -111,7 +113,13 @@ function LabCanvas() {
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
-          <fog attach="fog" args={['#f0ece4', 15, 60]} />
+          {/*
+            雾按所在空间切换（原先写死在这里，对房间内容也生效——审计 A1/A4
+            的第三个原因）。走廊要距离雾，封闭房间不要。见 SceneFog。
+          */}
+          <SceneFog />
+          {/* 相机所有者接进渲染循环，全站唯一一处（ADR 20260903140617） */}
+          <CameraRig />
           <CameraController onSetOverride={handleSetOverride} />
           <InfiniteCorridorManager setCameraOverride={setCameraOverride} />
 

@@ -32,6 +32,17 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/about/freelancewyspa.webp',
     ...CLOUD_TEXTURES,
   ],
+  /*
+    只剩显示器六面（sketch + painted，12 张）+ 房间外壳。
+
+    原先还有 tv_* 与 phone_* 共 16 张：平台隐喻（blog / youtube / tiktok
+    决定载体是显示器 / 电视 / 手机）已随 ADR 20260903140619 去掉，那 16 张
+    再也不会被用到，但预载照旧——和 `PUBLICATION_AUDIO_ASSETS` 里那个
+    2.55MB 的 mp3 是同一类：每个进房的访客都在下载不会显示的东西。
+
+    房间外壳（走廊墙 / 地 / 顶）也要进来：`LabShell` 用它们，不预载的话
+    进房后才开始下载，房间会先出现一瞬间的无贴图状态。
+  */
   projects: [
     '/textures/studio/monitor_front.webp',
     '/textures/studio/monitor_front_painted.webp',
@@ -45,22 +56,9 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/studio/monitor_left_painted.webp',
     '/textures/studio/monitor_right.webp',
     '/textures/studio/monitor_right_painted.webp',
-    '/textures/studio/tv_front.webp',
-    '/textures/studio/tv_front_painted.webp',
-    '/textures/studio/tv_back.webp',
-    '/textures/studio/tv_back_painted.webp',
-    '/textures/studio/tv_top.webp',
-    '/textures/studio/tv_top_painted.webp',
-    '/textures/studio/tv_bottom.webp',
-    '/textures/studio/tv_bottom_painted.webp',
-    '/textures/studio/tv_side.webp',
-    '/textures/studio/tv_side_painted.webp',
-    '/textures/studio/phone_front.webp',
-    '/textures/studio/phone_front_painted.webp',
-    '/textures/studio/phone_back.webp',
-    '/textures/studio/phone_back_painted.webp',
-    '/textures/studio/phone_side.webp',
-    '/textures/studio/phone_side_painted.webp',
+    '/textures/corridor/wall_texture.webp',
+    '/textures/corridor/ceiling_texture.webp',
+    '/textures/corridor/kawalekpodlogi.webp',
   ],
   publications: [
     '/textures/gallery/floor.webp',

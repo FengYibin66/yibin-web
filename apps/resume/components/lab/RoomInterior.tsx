@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import type { RoomId } from '@/context/SceneContext'
 import { useScene } from '@/context/SceneContext'
 import { AboutRoom } from '@/components/rooms/AboutRoom'
-import { ProjectsRoom } from '@/components/rooms/ProjectsRoom'
+import { ProjectsRoom } from '@/components/rooms/projects/ProjectsRoom'
 import {
   PublicationsRoom,
 } from '@/components/rooms/publications/PublicationsRoom'

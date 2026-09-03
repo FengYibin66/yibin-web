@@ -52,6 +52,8 @@ const APP_ROOT = join(__dirname, '..')
 const PUBLIC_ROOT = join(APP_ROOT, 'public')
 
 function walk(dir: string): string[] {
+  // 允许直接传文件（About 的实现是单文件，不是目录）
+  if (existsSync(dir) && !statSync(dir).isDirectory()) return [dir]
   if (!existsSync(dir)) return []
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry)
@@ -211,6 +213,55 @@ describe('预载表与渲染树一致（不再是两份人手清单）', () => {
     const declared = new Set(ROOMS.contact.assets)
     const missing = used.filter(p => !declared.has(p))
     expect(missing, `contact 声明缺：${missing.join(', ')}`).toEqual([])
+  })
+
+  it('Projects 组件用到的纹理都在它的声明里', () => {
+    // 这条原先不存在——Projects 房间重做后新增了 components/rooms/projects/，
+    // 而这一组断言只覆盖 publications 与 contact，对新目录是空的
+    const used = texturesUsedBy(['components/rooms/projects'])
+    const declared = new Set(ROOMS.projects.assets)
+    const missing = used.filter(p => !declared.has(p))
+    expect(missing, `projects 声明缺：${missing.join(', ')}`).toEqual([])
+  })
+
+  it('About 组件用到的纹理都在它的声明里', () => {
+    const used = texturesUsedBy(['components/rooms/AboutRoom.tsx'])
+    const declared = new Set(ROOMS.about.assets)
+    const missing = used.filter(p => !declared.has(p))
+    expect(missing, `about 声明缺：${missing.join(', ')}`).toEqual([])
+  })
+
+  it('声明里没有组件不用的纹理 —— 白下载的等于没声明的反面', () => {
+    /*
+      反向断言。`ROOM_ASSETS.projects` 曾经列着 tv_* 与 phone_* 共 16 张：
+      平台隐喻去掉后它们再也不会被渲染，但预载照旧，每个进房的访客都在
+      下载不会显示的东西（和 PUBLICATION_AUDIO_ASSETS 里那个 2.55MB 的
+      mp3 同一类）。只有"⊇"方向的断言抓不到这一类。
+    */
+    /*
+      反向扫描**不能**带 `useTexture|useLoader` 的前置过滤。
+
+      正向那个过滤是为了"只看真的在加载纹理的文件"，但云纹理的路径列在
+      `lib/lab/cloudTextures.ts` 里（一份纯常量表，不含 useTexture），
+      带过滤会把它整份跳过，于是 8 张在用的云被误报成"没人用"。
+    */
+    const used = new Set<string>()
+    for (const dir of [
+      'components',
+      'lib/lab',
+      'lib/content',
+    ]) {
+      for (const file of walk(join(APP_ROOT, dir))) {
+        if (!/\.tsx?$/.test(file)) continue
+        for (const m of readFileSync(file, 'utf8').matchAll(/'(\/textures\/[^']+\.\w{2,5})'/g)) {
+          used.add(m[1]!)
+        }
+      }
+    }
+    for (const room of Object.values(ROOMS)) {
+      const unused = room.assets.filter(a => a.startsWith('/textures/') && !used.has(a))
+      expect(unused, `${room.id} 声明了没人用的纹理：${unused.join(', ')}`).toEqual([])
+    }
   })
 
   it('生成物的 ROOM_ASSETS 与注册表声明一致', () => {

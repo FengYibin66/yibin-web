@@ -25,7 +25,7 @@ vi.mock('@/context/SceneContext', () => ({
 vi.mock('@/components/rooms/AboutRoom', () => ({
   AboutRoom: (props: unknown) => roomRenderMock(props),
 }))
-vi.mock('@/components/rooms/ProjectsRoom', () => ({
+vi.mock('@/components/rooms/projects/ProjectsRoom', () => ({
   ProjectsRoom: () => null,
 }))
 vi.mock('@/components/rooms/publications/PublicationsRoom', () => ({

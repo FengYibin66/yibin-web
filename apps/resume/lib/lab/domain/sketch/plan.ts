@@ -17,6 +17,8 @@ import {
   type CabinetSpec,
   type CableSpec,
   type DialSpec,
+  type DiagramNode,
+  type DiagramSpec,
   type OpStyle,
   type SketchOp,
   type SketchSpec,
@@ -77,7 +79,20 @@ function planSticky(spec: StickySpec): SketchOp[] {
     style: pencil(seed + 2, { strokeWidth: 1.6 }),
   })
 
-  const titleSize = Math.round(h * 0.17)
+  /*
+    标题字号要看长度，不能固定。
+
+    Patrick Hand 的平均字宽约 0.52em，所以 `len × size × 0.52` 就是估算宽度。
+    固定 `h * 0.17` 时长标题会画到纸面外去（实机截图里 "WeChat AI Automat…"
+    被截断）——canvas 的 fillText 不会报错也不会自动折行，只是画出界。
+    这里按可用宽度反解一个上限，取两者较小。
+  */
+  const CHAR_WIDTH_RATIO = 0.52
+  const available = w - pad * 2 - fold * 0.4
+  const titleFit = spec.title.length > 0
+    ? available / (spec.title.length * CHAR_WIDTH_RATIO)
+    : Infinity
+  const titleSize = Math.max(8, Math.round(Math.min(h * 0.17, titleFit)))
   let y = pad + titleSize
 
   ops.push({
@@ -102,7 +117,11 @@ function planSticky(spec: StickySpec): SketchOp[] {
     style: pencil(seed + 3, { strokeWidth: 1.8 }),
   })
 
-  const bodySize = Math.round(h * 0.115)
+  const longestLine = spec.lines.reduce((m, l) => Math.max(m, l.length), 0)
+  const bodyFit = longestLine > 0
+    ? available / (longestLine * CHAR_WIDTH_RATIO)
+    : Infinity
+  const bodySize = Math.max(6, Math.round(Math.min(h * 0.115, bodyFit)))
   const lineGap = Math.round(bodySize * 1.5)
   y += Math.round(lineGap * 0.9)
   for (const [i, line] of spec.lines.entries()) {
@@ -399,11 +418,167 @@ function planCable(spec: CableSpec): SketchOp[] {
   return ops
 }
 
+// ─── 架构图 ───────────────────────────────────────────────────────────────────
+
+/** 箭头两翼的长度，占画布短边的比例 */
+const ARROW_HEAD = 0.018
+
+function planDiagram(spec: DiagramSpec): SketchOp[] {
+  const { width: w, height: h } = spec.size
+  const seed = seedFrom(specKey(spec))
+  const ops: SketchOp[] = []
+  const byId = new Map(spec.nodes.map(n => [n.id, n]))
+
+  if (spec.title) {
+    const size = Math.round(h * 0.085)
+    ops.push({
+      kind: 'text',
+      x: Math.round(w * 0.5),
+      y: Math.round(h * 0.09),
+      text: spec.title,
+      size,
+      color: INK,
+      align: 'center',
+      rotate: -0.005,
+    })
+  }
+
+  // 先画连线，方框压在上面 —— 否则线头会盖住框线，看起来是穿过去的
+  for (const [i, edge] of spec.edges.entries()) {
+    const a = byId.get(edge.from)
+    const b = byId.get(edge.to)
+    // 指向不存在的节点：跳过而不是画到 NaN 去（roughjs 遇 NaN 静默什么都不画）
+    if (!a || !b) continue
+
+    const [x1, y1, x2, y2] = edgeEndpoints(a, b, w, h)
+    ops.push({
+      kind: 'line',
+      x1, y1, x2, y2,
+      style: pencil(seed + i * 7 + 200, { strokeWidth: 1.6, roughness: 0.9 }),
+    })
+
+    const head = Math.min(w, h) * ARROW_HEAD
+    ops.push(...arrowHead(x2, y2, x1, y1, head, seed + i * 7 + 210))
+    if (edge.both) ops.push(...arrowHead(x1, y1, x2, y2, head, seed + i * 7 + 220))
+
+    if (edge.label) {
+      ops.push({
+        kind: 'text',
+        x: (x1 + x2) / 2,
+        y: (y1 + y2) / 2 - Math.round(h * 0.012),
+        text: edge.label,
+        size: Math.round(h * 0.042),
+        color: '#5b4d33',
+        align: 'center',
+      })
+    }
+  }
+
+  for (const [i, node] of spec.nodes.entries()) {
+    const nx = node.x * w
+    const ny = node.y * h
+    const nw = node.w * w
+    const nh = node.h * h
+    ops.push({
+      kind: 'rect',
+      x: nx - nw / 2,
+      y: ny - nh / 2,
+      w: nw,
+      h: nh,
+      style: pencil(seed + i * 11 + 1, {
+        strokeWidth: node.dashed ? 1.4 : 2.2,
+        // 虚线用潦草笔法近似——roughjs 没有 dash，但高 roughness 的
+        // 手绘线本身就断续，视觉上足够区分"外部的东西"
+        roughness: node.dashed ? 2.4 : 1.0,
+        fill: '#f6f4ec',
+        fillStyle: 'solid',
+      }),
+    })
+    const labelSize = Math.round(nh * (node.sub ? 0.3 : 0.36))
+    ops.push({
+      kind: 'text',
+      x: nx,
+      y: ny + (node.sub ? -nh * 0.04 : labelSize * 0.35),
+      text: node.label,
+      size: labelSize,
+      color: INK,
+      align: 'center',
+      rotate: i % 2 === 0 ? -0.006 : 0.005,
+    })
+    if (node.sub) {
+      ops.push({
+        kind: 'text',
+        x: nx,
+        y: ny + nh * 0.28,
+        text: node.sub,
+        size: Math.round(nh * 0.21),
+        color: '#5b4d33',
+        align: 'center',
+      })
+    }
+  }
+
+  return ops
+}
+
+/**
+ * 连线的端点：从各自方框的边界出发，而不是中心。
+ *
+ * 从中心画会让线头埋在方框里（方框是实心填充的），看起来像断线。
+ */
+function edgeEndpoints(
+  a: DiagramNode,
+  b: DiagramNode,
+  w: number,
+  h: number,
+): [number, number, number, number] {
+  const ax = a.x * w
+  const ay = a.y * h
+  const bx = b.x * w
+  const by = b.y * h
+  return [
+    ...boxExit(ax, ay, a.w * w, a.h * h, bx, by),
+    ...boxExit(bx, by, b.w * w, b.h * h, ax, ay),
+  ] as [number, number, number, number]
+}
+
+/** 从 (cx,cy) 尺寸 (w,h) 的框朝 (tx,ty) 方向的出口点 */
+function boxExit(
+  cx: number, cy: number, w: number, h: number, tx: number, ty: number,
+): [number, number] {
+  const dx = tx - cx
+  const dy = ty - cy
+  if (dx === 0 && dy === 0) return [cx, cy]
+  // 以框的半宽/半高为尺度，取先撞到的那条边
+  const scale = Math.min(
+    dx === 0 ? Infinity : (w / 2) / Math.abs(dx),
+    dy === 0 ? Infinity : (h / 2) / Math.abs(dy),
+  )
+  return [cx + dx * scale, cy + dy * scale]
+}
+
+/** 箭头两翼。指向 (x,y)，来自 (fromX, fromY) */
+function arrowHead(
+  x: number, y: number, fromX: number, fromY: number, size: number, seed: number,
+): SketchOp[] {
+  const angle = Math.atan2(y - fromY, x - fromX)
+  const spread = 0.42
+  return [-1, 1].map((sign, i) => ({
+    kind: 'line' as const,
+    x1: x,
+    y1: y,
+    x2: x - Math.cos(angle + sign * spread) * size,
+    y2: y - Math.sin(angle + sign * spread) * size,
+    style: pencil(seed + i, { strokeWidth: 1.6, roughness: 0.7 }),
+  }))
+}
+
 // ─── 派发 ─────────────────────────────────────────────────────────────────────
 
 export function planSketch(spec: SketchSpec): SketchOp[] {
   switch (spec.kind) {
     case 'sticky': return planSticky(spec)
+    case 'diagram': return planDiagram(spec)
     case 'board': return planBoard(spec)
     case 'cabinet': return planCabinet(spec)
     case 'dial': return planDial(spec)

@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
+import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
@@ -284,8 +285,17 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
       const lerpSpeed      = 1 - Math.pow(0.02, delta)
       currentBank.current  = THREE.MathUtils.lerp(currentBank.current,  bankAngle,  lerpSpeed)
       currentPitch.current = THREE.MathUtils.lerp(currentPitch.current, pitchAngle, lerpSpeed)
-      camera.rotation.x = currentPitch.current
-      camera.rotation.z = currentBank.current
+      /*
+        探身交给相机所有者（ADR 20260903140617）。
+
+        原先是 `camera.rotation.x = pitch; camera.rotation.z = bank`——绝对
+        赋值，会把朝向整个替换掉。在只有一个写者的世界里恰好能用（相机总是
+        朝正前方），但那正是"四处各写一份"的形态。`setLean` 每帧在
+        `controls.update()` **之后**叠相对旋转，不与朝向抢。
+      */
+      cameraDirector.setLean(currentPitch.current, currentBank.current)
+    } else {
+      cameraDirector.setLean(0, 0)
     }
   })
 

@@ -32,6 +32,15 @@ export const BOARD_PAPER = '#e8e6df'
 /** 手写字体族。`app/globals.css` 里有对应 `@font-face` */
 export const HAND_FONT = "'Patrick Hand', 'CabinSketch', cursive"
 
+/**
+ * 同一款字体的**文件**路径，给 drei 的 `<Text>`（troika-three-text）用。
+ *
+ * troika 不吃 CSS 族名，要文件 URL；而且**不支持 woff2**——只认 ttf / otf /
+ * woff。这里必须与 `globals.css` 里 `@font-face` 指的是同一个文件，否则
+ * 3D 文字与 DOM 文字会是两款字体。`__tests__/handFont.test.ts` 守这一条。
+ */
+export const HAND_FONT_FILE = '/fonts/PatrickHand-Regular.ttf'
+
 // ─── 图元 ─────────────────────────────────────────────────────────────────────
 
 export interface OpStyle {
@@ -149,8 +158,46 @@ export interface CableSpec {
   strands?: number
 }
 
+/**
+ * 架构图：白板上的方框与连线。
+ *
+ * 坐标是**归一化的**（0..1，原点左上），这样同一份声明可以贴到任何尺寸的
+ * 白板上。写像素会让"换个白板尺寸就得重排"。
+ */
+export interface DiagramSpec {
+  kind: 'diagram'
+  id: string
+  size: SketchSize
+  title?: string
+  nodes: readonly DiagramNode[]
+  edges: readonly DiagramEdge[]
+}
+
+export interface DiagramNode {
+  id: string
+  label: string
+  /** 归一化中心与尺寸 */
+  x: number
+  y: number
+  w: number
+  h: number
+  /** 副标签，画在下方小一号 */
+  sub?: string
+  /** 虚线框：表示"外部的东西" */
+  dashed?: boolean
+}
+
+export interface DiagramEdge {
+  from: string
+  to: string
+  label?: string
+  /** 双向 */
+  both?: boolean
+}
+
 export type SketchSpec =
   | StickySpec
+  | DiagramSpec
   | BoardSpec
   | CabinetSpec
   | DialSpec

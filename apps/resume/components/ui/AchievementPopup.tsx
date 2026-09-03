@@ -21,7 +21,12 @@ export function AchievementPopup() {
   const isHiding    = activePopup.status === 'hiding'
 
   return (
-    <div className={`achievement-popup${isHiding ? ' hiding' : ''}`}>
+    <div
+      className={`achievement-popup${isHiding ? ' hiding' : ''}`}
+      data-testid="achievement-popup"
+      data-popup-kind={activePopup.kind}
+      data-popup-id={activePopup.id}
+    >
         {/* SVG torn-edge border overlay */}
         <svg className="popup-border" viewBox="0 0 100 100" preserveAspectRatio="none">
           <path

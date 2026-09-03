@@ -273,7 +273,7 @@ test.describe('语言切换', () => {
     await page.goto('/classic/')
     await expectLocale(page, 'en')
 
-    const toggle = page.getByRole('button', { name: 'Toggle language' })
+    const toggle = page.getByTestId('locale-toggle')
     await expect(toggle).toBeVisible()
     await toggle.click()
 
@@ -282,7 +282,7 @@ test.describe('语言切换', () => {
 
   test('选择在刷新后保持（hydration 真的恢复了渲染，不只是写了 storage）', async ({ page }) => {
     await page.goto('/classic/')
-    await page.getByRole('button', { name: 'Toggle language' }).click()
+    await page.getByTestId('locale-toggle').click()
     await expectLocale(page, 'zh')
     expect(await page.evaluate(() => localStorage.getItem('resume-locale'))).toBe('zh')
 
@@ -295,11 +295,20 @@ test.describe('语言切换', () => {
 
   test('切回英文同样生效并持久化', async ({ page }) => {
     await page.goto('/classic/')
-    const toggle = page.getByRole('button', { name: 'Toggle language' })
+    /*
+      用 `data-testid` 定位，不用 aria-label 也不用可见文字。
 
+      语言切换按钮的 aria-label 刻意用**目标语言**写（en 下是"切换到中文"、
+      zh 下是 "Switch to English"）——切换控件对读不懂当前语言的用户才可用。
+      代价是按 aria-label 定位的 locator 切换之后必然失配。
+
+      而 `getByRole(name)` 匹配的是**可访问名**（= aria-label），不是可见
+      文字，所以退回按 '中文' / 'EN' 定位同样不成立（实测在 mobile-safari
+      上超时）。既然两个自然把手都随语言变，就给一个不变的。
+    */
+    const toggle = page.getByTestId('locale-toggle')
     await toggle.click()
     await expectLocale(page, 'zh')
-
     await toggle.click()
     await expectLocale(page, 'en')
     expect(await page.evaluate(() => localStorage.getItem('resume-locale'))).toBe('en')
@@ -308,7 +317,7 @@ test.describe('语言切换', () => {
   test('切换语言同时更新 <html lang>（无障碍与 SEO 都依赖它）', async ({ page }) => {
     await page.goto('/classic/')
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-    await page.getByRole('button', { name: 'Toggle language' }).click()
+    await page.getByTestId('locale-toggle').click()
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
   })
 })
@@ -372,7 +381,7 @@ test.describe('主题切换', () => {
     // 两者都用 localStorage，键名不同（resume-theme / resume-locale）。
     // 切一个不该重置另一个。
     await page.goto('/classic/')
-    await page.getByRole('button', { name: 'Toggle language' }).click()
+    await page.getByTestId('locale-toggle').click()
     await expect(page.getByText('冯一镔').first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Toggle theme' }).click()

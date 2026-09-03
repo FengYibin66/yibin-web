@@ -1,16 +1,22 @@
 import { describe, it, expect } from 'vitest'
 
-// ─── Pure functions extracted from CorridorSegment.tsx ───────────────────────
+import {
+  SEGMENT_LENGTH,
+  segmentIndexAtZ as cameraZToSegmentIndex,
+  segmentStartZ as segmentZStart,
+} from '@/lib/lab/domain/corridor/layout'
 
-const SEGMENT_LENGTH = 100
-
-function segmentZStart(index: number): number {
-  return 10 - index * SEGMENT_LENGTH
-}
-
-function cameraZToSegmentIndex(cameraZ: number): number {
-  return Math.floor((10 - cameraZ) / SEGMENT_LENGTH)
-}
+/**
+ * 走廊几何测试。
+ *
+ * **本文件原先自己复制了一份实现**（`const SEGMENT_LENGTH = 100`、
+ * `segmentZStart`、`cameraZToSegmentIndex(cameraZ)`）——那是同一
+ * 组常量的**第五份**拷贝，前四份在 `CorridorSegment` / `useCorridorCamera` /
+ * `TeleportRoom` / `corridorMurals`（审计 B3）。
+ *
+ * 后果比重复本身更糟：测试验证的是它**自己那份**副本，实现改坏了它照样绿。
+ * 现在改为从 domain 导入，测试与实现共用同一个定义。
+ */
 
 describe('segmentZStart', () => {
   it('segment 0 starts at Z=10', () => {
@@ -69,7 +75,7 @@ describe('cameraZToSegmentIndex', () => {
 
 describe('teleport door segment selection', () => {
   function shouldDoorRespond(doorSegmentIndex: number, cameraZ: number): boolean {
-    const currentSeg = Math.floor((10 - cameraZ) / SEGMENT_LENGTH)
+    const currentSeg = cameraZToSegmentIndex(cameraZ)
     return doorSegmentIndex === currentSeg
   }
 
@@ -112,7 +118,7 @@ describe('teleport door segment selection', () => {
 
 describe('InfiniteCorridorManager active segments', () => {
   function getActiveSegments(cameraZ: number): [number, number, number] {
-    const current = Math.floor((10 - cameraZ) / SEGMENT_LENGTH)
+    const current = cameraZToSegmentIndex(cameraZ)
     return [current - 1, current, current + 1]
   }
 

@@ -9,6 +9,12 @@ const sceneActionMocks = vi.hoisted(() => ({
   failRoomLoad: vi.fn(),
 }))
 
+// RoomAmbience 在 RoomInterior 里被渲染（ADR 20260903140618 把环境音移到了
+// Suspense 边界之外）。它用 useThree/useFrame，与本文件要验的契约无关，mock 掉。
+vi.mock('@/components/lab/RoomAmbience', () => ({
+  RoomAmbience: () => null,
+}))
+
 vi.mock('@/context/SceneContext', () => ({
   useScene: () => ({
     roomLoadState: { phase: 'aligning', attempt: 7 },
@@ -19,7 +25,7 @@ vi.mock('@/context/SceneContext', () => ({
 vi.mock('@/components/rooms/AboutRoom', () => ({
   AboutRoom: (props: unknown) => roomRenderMock(props),
 }))
-vi.mock('@/components/rooms/ProjectsRoom', () => ({
+vi.mock('@/components/rooms/projects/ProjectsRoom', () => ({
   ProjectsRoom: () => null,
 }))
 vi.mock('@/components/rooms/publications/PublicationsRoom', () => ({

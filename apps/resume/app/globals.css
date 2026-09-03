@@ -1,14 +1,23 @@
 @import "tailwindcss";
 
+/*
+  CSS 侧一律用 woff2（子集化后的）。3D 文字仍用同名的 `.ttf`——troika 不支持
+  woff2（见 lib/lab/domain/sketch/types.ts 的 HAND_FONT_FILE 注释）。
+
+  两份文件都由 `python3 scripts/media/subset-fonts.py` 从 media-src/fonts 的
+  原始 TTF 生成，按仓库里实际出现过的字符做子集：2992 KB → 1300 KB，
+  其中中文那份 1479 KB → 135 KB（woff2）。原始全字符集里 99% 的汉字字形
+  永远不会被渲染。
+*/
 @font-face {
   font-family: 'CabinSketch';
-  src: url('/fonts/CabinSketch-Bold.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Bold.woff2') format('woff2');
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: 'CabinSketch';
-  src: url('/fonts/CabinSketch-Regular.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Regular.woff2') format('woff2');
   font-weight: 400;
   font-display: swap;
 }
@@ -24,8 +33,33 @@
 */
 @font-face {
   font-family: 'CabinSketch Bold';
-  src: url('/fonts/CabinSketch-Bold.ttf') format('truetype');
+  src: url('/fonts/CabinSketch-Bold.woff2') format('woff2');
   font-weight: 400 900;
+  font-display: swap;
+}
+
+/*
+  手写体。ADR 20260903140619 的手写层（便签、白板标题、胶带标签）用它。
+
+  'Patrick Hand' 这个族名在仓库里被引用了很久却从未加载过——原作者本意就是
+  这一款（见上方 CabinSketch 别名那段注释里记的审计 E1）。现在把字体真的装上：
+  Google Fonts 的 latin 子集，OFL，57KB TTF，自托管（不打 fonts.gstatic 的
+  外链，静态站不该有第三方阻塞请求）。许可文本在 /fonts/PatrickHand-OFL.txt。
+
+  **为什么是 TTF 而不是更小的 woff2**：同一个文件还要喂给 drei 的 `<Text>`
+  （底层 troika-three-text），而 **troika 不支持 woff2**——只吃 ttf / otf /
+  woff。原先发的是 14KB 的 woff2，浏览器 CSS 侧正常，3D 文字则报
+  `woff2 fonts not supported` 并静默落到兜底字体。两份都发是 71KB 且两份都会
+  被拉，所以统一成一份 TTF。
+
+  注意它同时被 canvas 用来画手写层的文字——`font-display: swap` 意味着字体
+  到位前 `fillText` 会用兜底字体栅格化，而画完就是像素了。
+  `infra/sketch/rasterize.ts` 的 `ensureHandFont()` 处理这个时序。
+*/
+@font-face {
+  font-family: 'Patrick Hand';
+  src: url('/fonts/PatrickHand-Regular.woff2') format('woff2');
+  font-weight: 400;
   font-display: swap;
 }
 

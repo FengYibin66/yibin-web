@@ -144,6 +144,35 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 纹理预载表是生成物（ADR 20260903140615）：从房间注册表 + 走廊布局派生。
+      # 手写它的后果不报错——只会"漏一张贴图"或"为死代码预载"，与 ADR 索引
+      # 同一套纪律（见 scripts/docs/gen_docs_index.py --check）。
+      - name: 校验纹理预载表与声明同步
+        working-directory: apps/resume
+        run: node scripts/lab/gen-asset-manifest.mjs --check
+      # media-src/ 下的原始素材 → public/ 的产物，同样是"改了源忘了重跑"会
+      # 静默上线旧文件的一类。三个都只读不写（--check）。
+      - name: 校验音频重编码产物
+        working-directory: apps/resume
+        run: node scripts/media/encode-audio.mjs --check
+      - name: 校验 Gallery 门贴图
+        working-directory: apps/resume
+        run: node scripts/media/gallery-door.mjs --check
+      - name: 校验入口页纹理
+        working-directory: apps/resume
+        run: node scripts/media/optimize-textures.mjs --check
+      # 手机端入口的静态首帧。它不存在的话手机端是一块空白——而那条路径
+      # 桌面开发时看不到（判据是 coarse pointer + 窄屏）。
+      - name: 校验入口页静态首帧存在
+        working-directory: apps/resume
+        run: node scripts/media/entry-firstframe.mjs --check
+      # 字体子集按仓库里实际出现过的字符裁剪：改了中文文案忘了重跑，
+      # 新字会静默落到兜底字体（一句话里蹦出一个不同字形的字）。
+      - name: 校验字体子集
+        working-directory: apps/resume
+        run: |
+          python3 -m pip install --quiet fonttools brotli
+          python3 scripts/media/subset-fonts.py --check
       - run: pnpm --filter @yibin/resume type-check
       - run: pnpm --filter @yibin/resume test
       # 刻意不跑 `pnpm --filter @yibin/resume lint`：eslint.config.mjs 按 flat config 写，

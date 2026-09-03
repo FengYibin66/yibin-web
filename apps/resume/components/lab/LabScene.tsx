@@ -1,12 +1,15 @@
 'use client'
 
 import { useRef, useCallback, Suspense, useEffect, useState } from 'react'
+import { OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
 import { Canvas } from '@react-three/fiber'
 
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
+import { CameraRig } from './CameraRig'
 import { InfiniteCorridorManager } from './InfiniteCorridorManager'
+import { SceneFog } from './SceneFog'
 
 // Kick off all texture requests in ONE LoadingManager wave as soon as this
 // chunk loads — before components mount and start their suspense waterfalls.
@@ -26,6 +29,7 @@ import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'
 import { AchievementsProvider, useAchievements } from '@/context/AchievementsContext'
 import { WheelRouterProvider } from '@/hooks/useWheelRouter'
+import { useLabLabels } from '@/hooks/useLabLabels'
 
 // Camera controller lives inside Canvas so it has access to R3F context
 function CameraController({
@@ -44,6 +48,7 @@ function CameraController({
 }
 
 function LabCanvas() {
+  const labels = useLabLabels()
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
   const {
@@ -111,7 +116,13 @@ function LabCanvas() {
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>
-          <fog attach="fog" args={['#f0ece4', 15, 60]} />
+          {/*
+            雾按所在空间切换（原先写死在这里，对房间内容也生效——审计 A1/A4
+            的第三个原因）。走廊要距离雾，封闭房间不要。见 SceneFog。
+          */}
+          <SceneFog />
+          {/* 相机所有者接进渲染循环，全站唯一一处（ADR 20260903140617） */}
+          <CameraRig />
           <CameraController onSetOverride={handleSetOverride} />
           <InfiniteCorridorManager setCameraOverride={setCameraOverride} />
 
@@ -135,8 +146,8 @@ function LabCanvas() {
           pointerEvents: 'none',
           zIndex: 10,
         }}>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: 'rgba(42,31,14,0.4)', margin: 0 }}>
-            {isTouch ? 'SWIPE TO EXPLORE' : 'SCROLL TO EXPLORE'}
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: OVERLAY_COLORS.hint, margin: 0 }}>
+            {(isTouch ? labels.hints.swipeUpDown : labels.hints.scroll).toUpperCase()}
           </p>
         </div>
       )}
@@ -146,11 +157,11 @@ function LabCanvas() {
           href="/"
           style={{
             position: 'fixed', top: '20px', left: '20px', zIndex: 50,
-            fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'rgba(200,169,110,0.6)',
+            fontFamily: 'var(--font-mono)', fontSize: '12px', color: OVERLAY_COLORS.exitLab,
             textDecoration: 'none', letterSpacing: '0.1em',
           }}
         >
-          ← Exit Lab
+          ← {labels.panels.exitLab}
         </a>
       )}
 

@@ -208,8 +208,106 @@ export interface ClassicUiLabels {
   backToClassic: string
 }
 
+/**
+ * Lab 的界面文案（审计 E7）。
+ *
+ * 之前只有房间**内容**接了 `useLocale`，界面壳子全是硬编码英文：中文用户进
+ * Lab 看到的是「英文门牌 + 英文地图 + 英文加载提示 + 英文成就」包着中文内容。
+ *
+ * 门牌用 `RoomDefinition.labelKey` 索引到这里，所以加一个房间不需要改这个
+ * 接口。`__tests__/labI18n.test.ts` 断言 en/zh 的键完全一致，且 Lab 组件里
+ * 没有漏在外面的英文字面量。
+ */
+export interface LabUiLabels {
+  /** 门牌。键是 RoomDefinition.labelKey */
+  doors: Record<'about' | 'projects' | 'publications' | 'contact' | 'gallery', string>
+  /** 教程气泡：{标题, 说明} */
+  tutorials: Record<
+    'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
+    | 'gallery_inspect' | 'contact_found' | 'publications_read',
+    { title: string; label: string }
+  >
+  /** 加载与失败态 */
+  loading: {
+    preparing: string
+    failed: string
+    failedHint: string
+    retry: string
+    backToCorridor: string
+  }
+  /** 覆盖层面板 */
+  panels: {
+    achievements: string
+    closeAchievements: string
+    audio: string
+    closeAudio: string
+    music: string
+    sfx: string
+    ambience: string
+    mute: string
+    unmute: string
+    map: string
+    openMap: string
+    closeMap: string
+    help: string
+    exitLab: string
+    /**
+     * 语言切换按钮的可访问名。
+     *
+     * **用目标语言写**，与它的可见文字（en 下显示「中文」、zh 下显示「EN」）
+     * 一致——中文用户读不懂英文标签，反过来也一样。所以 `en` 这一份是中文、
+     * `zh` 那一份是英文，`labI18n` 的"语言纯度"检查对这一项豁免。
+     */
+    toggleLanguage: string
+    /** 「已探索 N / M」。`{done}` 与 `{total}` 是占位符 */
+    exploredCount: string
+  }
+  /** 操作提示 */
+  hints: {
+    clickDoor: string
+    tapDoor: string
+    scroll: string
+    swipeUpDown: string
+    swipeLeftRight: string
+    moveMouse: string
+    escape: string
+    touchControls: string
+    mouseKeyboard: string
+    howToExplore: string
+    dismissTutorial: string
+    /** 房间加载超时的错误文案 */
+    loadTimedOut: string
+    /** 图片预览 */
+    imagePreview: string
+    previewImage: string
+  }
+  /**
+   * 入口页。
+   *
+   * 放在 labUi 里而不是另开一组：入口页就是 Lab 的门，两处文案要一起改
+   * （比如 Lab 改了名字）。审计 E7 也把它算在同一条里（"入口页也无语言切换"）。
+   */
+  entry: {
+    labEyebrow: string
+    labTitle: string
+    labTagline: string
+    labCta: string
+    labCtaTouch: string
+    classicTitle: string
+    classicTagline: string
+    classicCta: string
+  }
+  /** 「这个操作能做什么」的结果说明 */
+  results: {
+    walkCorridor: string
+    lookAround: string
+    enterRoom: string
+  }
+}
+
 export interface SiteContent {
   nav: NavContent
+  labUi: LabUiLabels
   hero: HeroContent
   about: AboutContent
   education: EducationContent

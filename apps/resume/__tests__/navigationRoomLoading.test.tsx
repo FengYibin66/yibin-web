@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { RoomLoadPhase, RoomLoadState } from '@/lib/lab/roomLoadMachine'
@@ -77,6 +78,15 @@ function setRoomLoadPhase(phase: RoomLoadPhase): void {
   sceneMocks.currentRoom = phase === 'entered' ? 'publications' : null
 }
 
+
+/*
+  Lab 的界面组件接了 i18n（审计 E7）后必须包 `LocaleProvider`。
+
+  `LocaleContext` 的默认值是访问即抛异常的对象——设计意图是让"忘了包
+  Provider"立刻失败而不是静默拿到错误语言（见 apps/resume/AGENTS.md
+  「测试环境的两个坑」）。
+*/
+
 describe('NavigationUI room loading guard', () => {
   beforeEach(() => {
     sceneMocks.isTeleporting = false
@@ -88,7 +98,7 @@ describe('NavigationUI room loading guard', () => {
     'disables map room buttons during the %s phase',
     (phase) => {
       setRoomLoadPhase(phase)
-      render(<NavigationUI />)
+      render(<NavigationUI />, { wrapper: LocaleProvider })
 
       fireEvent.click(screen.getByRole('button', { name: 'Open map' }))
       const projectsButton = screen.getByRole('button', { name: 'Projects' })
@@ -104,7 +114,7 @@ describe('NavigationUI room loading guard', () => {
     'keeps map room buttons enabled during the %s phase',
     (phase) => {
       setRoomLoadPhase(phase)
-      render(<NavigationUI />)
+      render(<NavigationUI />, { wrapper: LocaleProvider })
 
       fireEvent.click(screen.getByRole('button', { name: 'Open map' }))
       expect(screen.getByRole('button', { name: 'Projects' })).toBeEnabled()
@@ -114,7 +124,7 @@ describe('NavigationUI room loading guard', () => {
   it('disables Back accessibly while teleporting from an entered room', () => {
     setRoomLoadPhase('entered')
     sceneMocks.isTeleporting = true
-    render(<NavigationUI />)
+    render(<NavigationUI />, { wrapper: LocaleProvider })
 
     const backButton = screen.getByRole('button', { name: 'Back to corridor' })
     expect(backButton).toBeDisabled()
@@ -126,7 +136,7 @@ describe('NavigationUI room loading guard', () => {
 
   it('requests exit from Back while entered and not teleporting', () => {
     setRoomLoadPhase('entered')
-    render(<NavigationUI />)
+    render(<NavigationUI />, { wrapper: LocaleProvider })
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to corridor' }))
 

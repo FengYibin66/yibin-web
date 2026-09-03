@@ -26,17 +26,37 @@ app/                     # Next.js App Router（路由与页面）
 ├── classic/             # Classic 简历视图
 ├── lab/                 # Lab 3D 视图
 └── gallery/             # 画廊（独立路由，绕过 R3F 房间挂载流程）
-components/              # 组件（99 文件）
+components/              # 组件
 ├── canvas/ entry/ layout/ providers/ ui/
 ├── classic/ lab/ rooms/ sections/
+│   └── rooms/projects/  # 「深夜实验室」（ADR 20260903140619）
 └── gallery/
-lib/                     # 纯逻辑与数据
+lib/
 ├── content/             # 简历内容数据
-├── scene/ lab/ animations/ gallery/
-context/                 # React Context（Scene / Audio / Performance / Achievements）
+├── lab/
+│   ├── domain/          # 纯声明：房间、走廊、音频、状态图、手写层
+│   │   ├── rooms/       # RoomDefinition（含 projects/scene.ts 空间声明）
+│   │   ├── machines/    # XState 状态图
+│   │   ├── sketch/      # 手写层的类型与 plan（纯函数）
+│   │   └── audio/       # 音频清单
+│   ├── app/             # 编排：相机所有者、音频混音器、store、ESC 消费栈
+│   │   ├── camera/      # CameraDirector —— 唯一能写相机的地方
+│   │   ├── audio/       # AudioMixer（howler）
+│   │   └── assets/      # manifest.gen.ts（派生生成物，勿手改）
+│   └── infra/           # 外部依赖实现（roughjs 栅格化、纹理缓存）
+├── scene/ animations/ gallery/
+media-src/               # 原始素材，**不部署**（见该目录的 AGENTS.md）
+context/                 # React Context（Scene / Performance / Achievements）
 hooks/                   # 通用 hooks
-__tests__/               # vitest（31 个）
+scripts/
+├── lab/                 # 预载表生成器
+└── media/               # 四条素材流水线：音频 / 门贴纸 / 纹理 / 字体子集
+                         # 都支持 --check，CI 会跑（见 media-src/AGENTS.md）
+__tests__/               # vitest
 ```
+
+分层方向单向朝内：`domain` 不感知 React / three / DOM，`app` 编排，`infra`
+实现外部依赖。与 `auto-wechat/backend` 同一套（见根 CLAUDE.md「分层」）。
 
 **`features/` 不是本应用的分层，git 里不存在它。** `git ls-files` 无任何 `apps/resume/features/` 条目——本地若看到 `features/lab/` 下 8 个空子目录（experience / context / loading / corridor / hooks / shaders / dom），那是从未落地的骨架残留（空目录不入 git，所以只在工作副本里）。清理：`rm -r apps/resume/features`。
 
@@ -50,17 +70,62 @@ __tests__/               # vitest（31 个）
 
 ### 现状 ≠ 目标
 
-下面五份 ADR 描述的是**目标架构**，实现分六步进行。**读代码时看到的仍可能是迁移前的形态**，改动前先确认所在步骤：
+六步已全部实施，但**不是每一份 ADR 都完全落地**——下表的「取代的现状」列
+记的是实际状态。改动前先看清那一栏。
+
+已知的剩余差距集中在三处：相机所有权是白名单形态（走廊导轨与 DoorSection
+的进出房编排还直接写相机）、`SceneContext` / `PerformanceContext` 还没
+reducer 化、中文门牌的字形与 Publications 不统一。审计报告的
+「未做的项与理由」一节列了完整清单。
 
 | ADR | 目标 | 取代的现状 |
 |-----|------|-----------|
-| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | 手写的 `lib/lab/{roomAssets,texturePreload}.ts`；门坐标散在三处 |
-| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | `context/*.tsx` 四个 Context + 三套手写 reducer |
-| [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | 五处各自写 `camera.position`；四套手写手势 + `useWheelRouter` |
-| [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | `context/AudioContext.tsx` + drei `PositionalAudio` + 裸 AudioContext 三套 |
-| [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | Projects 房间无环境；平台隐喻；Gallery 门贴技术贴纸 |
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已落地**：门坐标单一来源，预载表由生成器派生并有 `--check` |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：三台状态图 + 音频 store + 成就队列 reducer 已用；`SceneContext` 与 `PerformanceContext` 仍是手写 Context |
+| [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **已落地**（房间域）：grep 白名单守住，走廊导轨与 DoorSection 编排待迁移。手势尚未迁移，`@use-gesture` 未安装（装了不用等于空依赖） |
+| [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB |
+| [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做为「深夜实验室」+ 平台隐喻已去；Gallery 门贴纸未换 |
 
-**相机所有权（现状约定，迁移完成后由 ADR 20260903140617 的机制接管）**：房间转场的 `camera.position` 动画由 `DoorSection` 统一编排，房间组件只提供目标 pose，不自行起 tween。这条约定**已被违反四次**（ProjectsRoom / TeleportRoom / CorridorDecorations / 各房间 tween），这正是要换成机制的原因——迁移后有一条 grep 测试禁止 `CameraDirector` 之外的文件写相机。
+### 相机所有权（已是机制，不再是约定）
+
+**只有 `lib/lab/app/camera/CameraDirector` 能写相机。** 房间组件只声明目标
+pose（`RoomDefinition.entryPose`，房间局部坐标），换算与插值由所有者做。
+`__tests__/cameraOwnership.test.ts` 用 grep 守住，并且是**白名单**形态：
+现存的写点逐一登记并写明理由（走廊导轨、DoorSection 的门对齐编排、
+Publications 三处、入口预览、Classic 场景），任何**新增**写点立刻红灯。
+白名单只能缩——删掉一行就是完成一次迁移。
+
+三个踩过的坑，改这块前先读：
+
+1. **`entryPose` 是门坐标系**：原点在门平面、**+Z 指向门外**，所以房间内的
+   一切都是负 z。房间自己的内容用「桌心坐标系」，两者差一个 `ROOM_ORIGIN_Z`
+   （见 `domain/rooms/projects/scene.ts` 顶部）。混用这两个系就是审计 A4。
+2. **位姿锚定在房间根上**：`enterRoom` 换算一次不够——门板与走廊段落在进房
+   之后还会动，房间内容整体移动而相机留在旧世界坐标上。`followAnchor()`
+   每帧按房间根矩阵的增量同步。
+3. **所有权是显式交接的**：`controls.update()` 每帧都把内部位姿写回相机
+   （`enabled` 只关输入），所以 director 默认**挂起**，进房 `resume()`、
+   退房 `suspend()`。不交接的话它会抹掉 DoorSection 的进出房 tween。
+
+### 入口页的两条路径
+
+手机端（`pointer: coarse` **且**宽度 ≤ 768）不挂 Canvas：`EntryStage` 渲染
+54 KB 的静态首帧，点了播 CSS 开门动画再跳 `/lab`。实测手机端下载量
+3871 → 856 KB。桌面端不变（canvas 在 592ms 就出现，多一张占位图不值）。
+
+两个条件都要：只看宽度会让拖窄的桌面窗口掉进静态路径，只看 pointer 会让
+iPad 横屏掉进去。**Lab 本身仍是完整的 3D，没有砍任何东西**——降级的只是
+"预览那扇门"。
+
+静态首帧是生成物（`scripts/media/entry-firstframe.mjs`，需要已构建的
+`out/`）。它不存在时手机端是一块空白，而那条路径在桌面开发时看不到，
+所以 CI 会 `--check`。
+
+### ESC 的优先级
+
+ESC 已绑定「退出房间」。房间内的细节视图（Projects 的停靠）用
+`lib/lab/app/escapeStack` 认领它——栈顶（最内层）先消费。自己挂 window
+监听会让两者同时触发，房间退场把收回打断。
 
 **加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
 
@@ -111,10 +176,21 @@ pnpm exec playwright install chromium webkit   # 首次需装浏览器
 ```bash
 pnpm dev:resume          # 从仓库根起（:3000）
 cd apps/resume
-pnpm test                # vitest run —— 当前 443 个全绿
+pnpm test                # vitest run
 pnpm type-check          # tsc --noEmit
 pnpm build               # 静态导出到 out/
+
+# 素材流水线（改了 media-src/ 下的源才需要跑；--check 只报告）
+node scripts/lab/gen-asset-manifest.mjs      # 纹理预载表（派生生成物）
+node scripts/media/encode-audio.mjs          # 音频重编码
+node scripts/media/gallery-door.mjs          # Gallery 门贴纸
+node scripts/media/optimize-textures.mjs     # 入口页纹理
+python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
+pnpm build && node scripts/media/entry-firstframe.mjs   # 手机端入口的静态首帧
 ```
+
+> `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D
+> 场景，拼贴拼不出同一个画面。
 
 > `pnpm lint` **当前跑不起来**：`eslint.config.mjs` 按 flat config 写，但装的
 > `eslint-config-next@15.5.20` 导出的是旧版 eslintrc 对象 → `nextVitals is not iterable`。

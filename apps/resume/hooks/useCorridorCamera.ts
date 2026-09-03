@@ -1,20 +1,18 @@
 'use client'
 
 import { useRef, useEffect, useCallback } from 'react'
+import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { SEGMENT_LENGTH, segmentZStart } from '@/components/lab/CorridorSegment'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { nextTargetZ, nextLookX } from '@/lib/lab/touchControls'
+import {
+  CORRIDOR_DOORS,
+  segmentIndexAtZ,
+  segmentStartZ,
+} from '@/lib/lab/domain/corridor/layout'
 
-// Door Z positions within a segment (relative to segment start)
-const DOOR_RELATIVE_POSITIONS: Array<{ relativeZ: number; side: 'left' | 'right' }> = [
-  { relativeZ:  -8, side: 'left'  },
-  { relativeZ: -20, side: 'right' },
-  { relativeZ: -32, side: 'left'  },
-  { relativeZ: -44, side: 'right' },
-  { relativeZ: -56, side: 'left'  },
-]
+// 门的相对 Z 与侧墙来自 domain —— 原先这里自带一份拷贝（审计 B3）
 
 const GLANCE_START_DIST = 15
 const GLANCE_PEAK_DIST  = 8
@@ -77,18 +75,21 @@ export function useCorridorCamera({
     return () => { unsub(); router.deactivate('corridor') }
   }, [router, handleWheel])
 
+  /**
+   * 键盘前进。
+   *
+   * 判断在 `domain/corridor/keyboard` 里（纯函数、可测）：焦点在可交互元素
+   * 上时这次按键归控件，走廊不动也不 `preventDefault`。
+   *
+   * 原实现只排除 `INPUT` / `TEXTAREA`，于是 Lab 里所有按钮都没法用空格激活
+   * ——键盘用户 Tab 到"打开地图"按空格，走廊往前走一步，地图没开（审计 E4）。
+   */
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!scrollEnabledRef.current) return
-    const tag = (e.target as HTMLElement).tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return
-    const delta: Record<string, number> = {
-      ArrowDown: 80, ArrowUp: -80, PageDown: 300, PageUp: -300, ' ': 150,
-    }
-    const d = delta[e.key]
-    if (d !== undefined) {
-      e.preventDefault()
-      targetZ.current = targetZ.current - d * scrollSpeed
-    }
+    const d = corridorKeyDelta(e.key, e.target as HTMLElement | null)
+    if (d === null) return
+    e.preventDefault()
+    targetZ.current = targetZ.current - d * scrollSpeed
   }, [scrollSpeed])
 
   // After any touch, browsers fire a synthetic mousemove at the tap position.
@@ -167,7 +168,7 @@ export function useCorridorCamera({
     // Auto-glance: compute the current segment, then check all doors in that segment
     // and the adjacent segments so glance transitions smoothly across segment boundaries.
     const cameraZ    = currentZ.current
-    const currentSeg = Math.floor((10 - cameraZ) / SEGMENT_LENGTH)
+    const currentSeg = segmentIndexAtZ(cameraZ)
 
     let bestStrength = 0
     let bestDir      = 0
@@ -175,9 +176,9 @@ export function useCorridorCamera({
     for (const segOffset of [-1, 0, 1]) {
       const seg   = currentSeg + segOffset
       if (seg < 0) continue
-      const zBase = segmentZStart(seg)
+      const zBase = segmentStartZ(seg)
 
-      for (const door of DOOR_RELATIVE_POSITIONS) {
+      for (const door of CORRIDOR_DOORS) {
         const doorZ = zBase + door.relativeZ
         const dist  = cameraZ - doorZ
 

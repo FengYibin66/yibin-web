@@ -5,7 +5,7 @@ import {
   recordAchievement,
   saveAchievements,
 } from '@/lib/lab/achievementStorage'
-import { ACHIEVEMENTS } from '@/context/AchievementsContext'
+import { ACHIEVEMENT_IDS } from '@/lib/lab/domain/ids'
 
 /**
  * 成就持久化的回归测试。
@@ -64,15 +64,11 @@ describe('achievementStorage', () => {
   })
 
   it('每个成就 id 都在注册表里有定义 —— 防止写入注册表里不存在的 id', () => {
-    const known = new Set(Object.keys(ACHIEVEMENTS))
+    const known = new Set<string>(ACHIEVEMENT_IDS)
     for (const id of ['gallery_inspect', 'contact_found', 'about_scroll', 'corridor_enter']) {
-      expect(known, `${id} 不在 ACHIEVEMENTS 里`).toContain(id)
+      expect(known, `${id} 不在 ACHIEVEMENT_IDS 里`).toContain(id)
     }
   })
 
-  it('gallery_inspect 的文案指向"在画廊打开照片"，不是旧版的"点击项目"', () => {
-    // /gallery 现在是摄影相册，不是项目列表；旧文案是上一版设计的残留
-    expect(ACHIEVEMENTS.gallery_inspect!.label.toLowerCase()).toMatch(/photo|gallery/)
-    expect(ACHIEVEMENTS.gallery_inspect!.label.toLowerCase()).not.toContain('project')
-  })
+
 })

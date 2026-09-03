@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { content } from '@/lib/content'
+import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -113,6 +115,15 @@ const FAILED_STATE: RoomLoadState = {
   error: 'Room assets timed out',
 }
 
+
+/*
+  Lab 的界面组件接了 i18n（审计 E7）后必须包 `LocaleProvider`。
+
+  `LocaleContext` 的默认值是访问即抛异常的对象——设计意图是让"忘了包
+  Provider"立刻失败而不是静默拿到错误语言（见 apps/resume/AGENTS.md
+  「测试环境的两个坑」）。
+*/
+
 describe('RoomLoadingIndicator', () => {
   it('announces the active room while loading', () => {
     render(
@@ -121,9 +132,19 @@ describe('RoomLoadingIndicator', () => {
         onRetry={vi.fn()}
         onBack={vi.fn()}
       />,
-    )
+    { wrapper: LocaleProvider })
 
-    expect(screen.getByText('Preparing Publications…')).toBeVisible()
+    /*
+      断言的是**文案表里的值**，不是写死的英文串。
+
+      文案已经本地化（审计 E7），把 'Preparing Publications…' 写死在测试里
+      有两个问题：改文案就要改测试（而文案本来就会改），以及它只覆盖英文。
+      从 content 取值则两种语言都受这条保护。
+    */
+    const labels = content.en.labUi
+    expect(
+      screen.getByText(`${labels.loading.preparing} · ${labels.doors.publications}`),
+    ).toBeVisible()
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
   })
 
@@ -137,11 +158,13 @@ describe('RoomLoadingIndicator', () => {
         onRetry={onRetry}
         onBack={onBack}
       />,
-    )
+    { wrapper: LocaleProvider })
 
+    // 标题是本地化文案，原始技术串降为次要细节行（两者都要在）
+    expect(screen.getByText(content.en.labUi.loading.failedHint)).toBeVisible()
     expect(screen.getByText('Room assets timed out')).toBeVisible()
-    const retryButton = screen.getByRole('button', { name: 'Retry' })
-    const backButton = screen.getByRole('button', { name: 'Back to corridor' })
+    const retryButton = screen.getByRole('button', { name: content.en.labUi.loading.retry })
+    const backButton = screen.getByRole('button', { name: content.en.labUi.loading.backToCorridor })
     expect(retryButton).toBeEnabled()
     expect(backButton).toBeEnabled()
 
@@ -158,7 +181,7 @@ describe('RoomLoadingIndicator', () => {
         onRetry={vi.fn()}
         onBack={vi.fn()}
       />,
-    )
+    { wrapper: LocaleProvider })
 
     expect(container).toBeEmptyDOMElement()
   })
@@ -178,7 +201,7 @@ describe('LabScene room loading indicator', () => {
   })
 
   it('mounts between the canvas and navigation and forwards scene actions', () => {
-    render(<LabScene />)
+    render(<LabScene />, { wrapper: LocaleProvider })
 
     const canvas = screen.getByTestId('lab-canvas')
     const indicator = screen.getByRole('alert')
@@ -190,8 +213,8 @@ describe('LabScene room loading indicator', () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Back to corridor' }))
+    fireEvent.click(screen.getByRole('button', { name: content.en.labUi.loading.retry }))
+    fireEvent.click(screen.getByRole('button', { name: content.en.labUi.loading.backToCorridor }))
     expect(roomAssetMocks.reloadRoomAssets).toHaveBeenCalledWith('publications')
     expect(sceneMocks.retryRoomLoad).toHaveBeenCalledTimes(1)
     expect(
@@ -205,9 +228,9 @@ describe('LabScene room loading indicator', () => {
       ...FAILED_STATE,
       roomId: 'gallery',
     }
-    render(<LabScene />)
+    render(<LabScene />, { wrapper: LocaleProvider })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    fireEvent.click(screen.getByRole('button', { name: content.en.labUi.loading.retry }))
 
     expect(roomAssetMocks.reloadRoomAssets).not.toHaveBeenCalled()
     expect(sceneMocks.retryRoomLoad).toHaveBeenCalledTimes(1)

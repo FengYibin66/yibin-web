@@ -1,6 +1,8 @@
 'use client'
 
-import { useAchievements, ACHIEVEMENTS } from '@/context/AchievementsContext'
+import { useAchievements } from '@/context/AchievementsContext'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { COLLECTABLE_ACHIEVEMENT_IDS, HINT_ONLY_ACHIEVEMENTS } from '@/lib/lab/domain/ids'
 
 interface AchievementsPanelProps {
   isOpen: boolean
@@ -9,14 +11,16 @@ interface AchievementsPanelProps {
 
 export function AchievementsPanel({ isOpen, onClose }: AchievementsPanelProps) {
   const { completed } = useAchievements()
-  const total = Object.keys(ACHIEVEMENTS).length
+  const labels = useLabLabels()
+  // 只算可收集的：corridor_enter 是入门提示，不是成就（见 domain/ids）
+  const total = COLLECTABLE_ACHIEVEMENT_IDS.length
 
   return (
     <div className={`achievements-panel${isOpen ? ' open' : ''}`} aria-hidden={!isOpen}>
         <div className="achievements-card">
           <div className="achievements-header">
-            <h3>ACHIEVEMENTS</h3>
-            <button className="close-btn" onClick={onClose} aria-label="Close achievements">
+            <h3>{labels.panels.achievements}</h3>
+            <button className="close-btn" onClick={onClose} aria-label={labels.panels.closeAchievements}>
               <svg viewBox="0 0 24 24">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
@@ -24,8 +28,9 @@ export function AchievementsPanel({ isOpen, onClose }: AchievementsPanelProps) {
           </div>
 
           <div className="achievements-list">
-            {Object.values(ACHIEVEMENTS).map((achievement) => {
-              const isUnlocked = completed.includes(achievement.id)
+            {COLLECTABLE_ACHIEVEMENT_IDS.map((id) => {
+              const achievement = { id, ...labels.tutorials[id] }
+              const isUnlocked = completed.includes(id)
               return (
                 <div key={achievement.id} className={`achievement-item${isUnlocked ? '' : ' locked'}`}>
                   <div className="achievement-icon">
@@ -51,7 +56,9 @@ export function AchievementsPanel({ isOpen, onClose }: AchievementsPanelProps) {
           </div>
 
           <div className="achievements-footer">
-            {completed.filter(id => id !== 'corridor_enter').length} / {total - 1} EXPLORED
+            {labels.panels.exploredCount
+              .replace('{done}', String(completed.filter(id => !HINT_ONLY_ACHIEVEMENTS.includes(id as never)).length))
+              .replace('{total}', String(total))}
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { EntryStage } from '@/components/entry/EntryStage'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
@@ -47,9 +49,17 @@ const EntryPreviewScene = dynamic<EntryPreviewSceneProps>(
 )
 
 export default function EntryPage() {
+  /*
+    `HTMLElement` 而不是 `HTMLDivElement`：Classic 面板已经是 `<a>`（审计 E3
+    要求可聚焦、可爬），两个面板的元素类型不同。这里只用到 style 与
+    addEventListener，`HTMLElement` 就够——强转成 Anchor 是把类型问题
+    藏起来而不是解决它。
+  */
   const leftRef  = useRef<HTMLDivElement>(null)
-  const rightRef = useRef<HTMLDivElement>(null)
+  // Classic 面板是 `<a>`（审计 E3 要求可聚焦、可爬），类型跟着元素走
+  const rightRef = useRef<HTMLAnchorElement>(null)
   const router   = useRouter()
+  const labels   = useLabLabels()
 
   // Stacked layout on small screens — the side-by-side split is unusable there.
   const [isStacked, setIsStacked] = useState(false)
@@ -132,64 +142,92 @@ export default function EntryPage() {
           background: '#f5f0e8',
         }}
       >
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <EntryPreviewScene onEnter={() => router.push('/lab')} />
-        </div>
+        {/*
+          手机端不挂 Canvas：`EntryStage` 判定 coarse pointer + 窄屏时渲染
+          静态首帧（54 KB）而不是 3D 场景，省下 1553 KB 的 three.js + R3F。
+          桌面路径就是下面这段原样（见 EntryStage.tsx 顶部的取舍说明）。
+        */}
+        <EntryStage>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <EntryPreviewScene onEnter={() => router.push('/lab')} />
+          </div>
 
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10,
-          pointerEvents: 'none',
-          gap: '8px',
-        }}>
-          <p style={{
-            fontFamily: '"CabinSketch", var(--font-mono, monospace)',
-            fontSize: '10px',
-            letterSpacing: '0.4em',
-            color: 'rgba(42,31,14,0.5)',
-            textTransform: 'uppercase',
-            margin: 0,
-          }}>
-            Enter
-          </p>
-          <h1 style={{
-            fontFamily: '"CabinSketch", var(--font-display, sans-serif)',
-            fontSize: 'clamp(2rem, 5vw, 4rem)',
-            fontWeight: 700,
-            color: '#2a1f0e',
-            margin: 0,
-            textAlign: 'center',
-          }}>
-            The Lab
-          </h1>
-          <p style={{
-            fontFamily: 'var(--font-mono, monospace)',
-            fontSize: '11px',
-            color: 'rgba(42,31,14,0.45)',
-            letterSpacing: '0.15em',
-            textAlign: 'center',
-            margin: 0,
-          }}>
-            Immersive · 3D · Interactive
-          </p>
-          {isStacked && (
+          {/*
+            文案块本身是一个真链接（审计 E3）。
+
+            原先整个面板只有 Canvas 的点击：**没有任何键盘可达的出口**，
+            Tab 走不到、回车进不去；爬虫也找不到 /lab 与 /classic 的链接。
+            做成 `<a href>` 之后三件事一起解决——键盘可达、可爬、右键"在新标签
+            打开"也能用。
+
+            `pointerEvents` 只给这一块开（Canvas 的门仍然可点），
+            `width: 'fit-content'` 让链接的命中区域不覆盖整个面板，
+            否则会挡住门的点击。
+          */}
+          <a
+            href="/lab"
+            aria-label={labels.entry.labCta}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              pointerEvents: 'none',
+              gap: '8px',
+              textDecoration: 'none',
+            }}
+          >
+            <p style={{
+              fontFamily: '"CabinSketch", var(--font-mono, monospace)',
+              fontSize: '10px',
+              letterSpacing: '0.4em',
+              color: 'rgba(42,31,14,0.5)',
+              textTransform: 'uppercase',
+              margin: 0,
+              // 文字本身可点、可聚焦；容器 pointerEvents 是 none，
+              // 所以只有文字这一小块拦截点击，门的命中区域不受影响
+              pointerEvents: 'auto',
+            }}>
+              {labels.entry.labEyebrow}
+            </p>
+            <h1 style={{
+              fontFamily: '"CabinSketch", var(--font-display, sans-serif)',
+              fontSize: 'clamp(2rem, 5vw, 4rem)',
+              fontWeight: 700,
+              color: '#2a1f0e',
+              margin: 0,
+              textAlign: 'center',
+              pointerEvents: 'auto',
+            }}>
+              {labels.entry.labTitle}
+            </h1>
             <p style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '10px',
-              color: 'rgba(42,31,14,0.35)',
-              letterSpacing: '0.2em',
-              margin: '4px 0 0',
-              textTransform: 'uppercase',
+              fontSize: '11px',
+              color: 'rgba(42,31,14,0.45)',
+              letterSpacing: '0.15em',
+              textAlign: 'center',
+              margin: 0,
             }}>
-              Tap the door
+              {labels.entry.labTagline}
             </p>
-          )}
-        </div>
+            {isStacked && (
+              <p style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: '10px',
+                color: 'rgba(42,31,14,0.35)',
+                letterSpacing: '0.2em',
+                margin: '4px 0 0',
+                textTransform: 'uppercase',
+              }}>
+                {labels.entry.labCtaTouch}
+              </p>
+            )}
+          </a>
+        </EntryStage>
 
         <div style={{
           position: 'absolute',
@@ -213,19 +251,27 @@ export default function EntryPage() {
       }} />
 
       {/* BOTTOM/RIGHT — Classic (light, elegant) */}
-      <div
+      {/*
+        Classic 面板也是真链接（审计 E3）——原先是 `div onClick`，
+        键盘走不到、爬虫看不见。
+      */}
+      <a
         ref={rightRef}
-        onClick={() => router.push('/classic')}
+        href="/classic"
+        aria-label={labels.entry.classicCta}
         style={{
           flexBasis: '50%',
           flexShrink: 0,
           position: 'relative',
           overflow: 'hidden',
           cursor: 'pointer',
+          display: 'block',
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
         <ClassicPanel />
-      </div>
+      </a>
 
       {!isStacked && (
         <div style={{

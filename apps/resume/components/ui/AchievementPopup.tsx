@@ -1,16 +1,23 @@
 'use client'
 
-import { useAchievements, ACHIEVEMENTS } from '@/context/AchievementsContext'
+import { useAchievements } from '@/context/AchievementsContext'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { isAchievementId } from '@/lib/lab/domain/ids'
 
 export function AchievementPopup() {
   const { activePopup } = useAchievements()
+  const labels = useLabLabels()
 
   if (!activePopup) return null
+  if (!isAchievementId(activePopup.id)) return null
 
-  const data = ACHIEVEMENTS[activePopup.id]
+  // 文案走 i18n（审计 E7）——原先读的是 Context 里那张英文表
+  const data = labels.tutorials[activePopup.id]
   if (!data) return null
 
-  const isCompleted = activePopup.status === 'completed'
+  // 按 kind 判样式而不是 status：淡出时 status 变成 'hiding'，
+  // 但一个庆祝气泡在淡出过程中仍该是庆祝的样子
+  const isCompleted = activePopup.kind === 'completed'
   const isHiding    = activePopup.status === 'hiding'
 
   return (

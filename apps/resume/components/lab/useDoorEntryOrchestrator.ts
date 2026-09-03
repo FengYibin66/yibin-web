@@ -12,7 +12,14 @@ import {
 import { isDoorEntryOwner, type RoomLoadState } from '@/lib/lab/roomLoadMachine'
 
 export const ROOM_LOAD_TIMEOUT_MS = 8000
-export const ROOM_LOAD_TIMEOUT_MESSAGE = 'Room loading timed out'
+/**
+ * 加载超时的错误**码**，不是给用户看的文案。
+ *
+ * 原先这里是英文散文 `'Room loading timed out'`，一路传到 UI 直接显示——
+ * 中文用户看到的就是英文（审计 E7）。跨层传递的错误标识应当是码，
+ * 翻译在显示层做（`RoomLoadingIndicator` 把它映射到 `labUi.hints.loadTimedOut`）。
+ */
+export const ROOM_LOAD_TIMEOUT_CODE = 'room-load-timeout'
 
 interface DoorEntryOrchestratorOptions {
   roomId: RoomId
@@ -73,7 +80,7 @@ export function useDoorEntryOrchestrator({
     clearLoadTimeout()
     loadTimeoutRef.current = setTimeout(() => {
       if (ownedEntryRef.current) {
-        timeoutRoomLoad(ROOM_LOAD_TIMEOUT_MESSAGE)
+        timeoutRoomLoad(ROOM_LOAD_TIMEOUT_CODE)
       }
     }, ROOM_LOAD_TIMEOUT_MS)
     return clearLoadTimeout

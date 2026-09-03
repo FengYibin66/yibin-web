@@ -14,7 +14,9 @@ import {
   decideDoorEntry,
   type DoorEntryCommand,
 } from '@/lib/lab/doorEntryFlow'
+import { consumeEscape } from '@/lib/lab/app/escapeStack'
 import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
+import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
@@ -63,6 +65,14 @@ interface DoorEscapeState {
   isTeleporting: boolean
 }
 
+/**
+ * ESC = 退出房间，**除非房间里有更内层的东西认领了它**。
+ *
+ * 房间内的细节视图（Projects 的停靠显示器、Publications 的打开单篇）会往
+ * `escapeStack` 里压一个消费者。不问这一句的话，在停靠状态按 ESC 会直接
+ * 退出整个房间——实机相位序列是
+ * `docked → undocking → undocking(exiting)`，收回被退场打断。
+ */
 export function handleDoorEscape(
   event: KeyboardEvent,
   state: DoorEscapeState,
@@ -70,6 +80,8 @@ export function handleDoorEscape(
 ): void {
   if (event.key !== 'Escape') return
   if (!state.isInsideRoom || state.isAnimating || state.isTeleporting) return
+  // 栈顶先消费；被消费掉就不再退房
+  if (consumeEscape()) return
   requestExit()
 }
 
@@ -536,7 +548,8 @@ export function DoorSection({
   // Respond to the nearest segment's door so teleport works regardless of scroll depth.
   useEffect(() => {
     if (pendingDoorClick !== roomId || isOpenRef.current || isAnimating) return
-    const currentSeg = Math.floor((10 - camera.position.z) / 100)
+    // 原先是裸 `/ 100`——段长若改动，这里静默算错段号，传送就点不到门（审计 B3）
+    const currentSeg = segmentIndexAtZ(camera.position.z)
     if (segmentIndex === currentSeg) {
       handleClick({ isTeleport: true })
     }

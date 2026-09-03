@@ -165,69 +165,11 @@ describe('PublicationsScenery geometry', () => {
     expect(textureDispose).toHaveBeenCalled()
   })
 
-  it('keeps scenery mounted when city ambience playback fails', async () => {
-    const play = vi.fn().mockRejectedValue(new Error('autoplay blocked'))
-    const pause = vi.fn()
-    class RejectingAudio {
-      currentTime = 0
-      loop = false
-      volume = 1
-      pause = pause
-      play = play
-    }
-    vi.stubGlobal('Audio', RejectingAudio)
-
-    const { container, unmount } = render(<PublicationsScenery />)
-
-    await waitFor(() => expect(play).toHaveBeenCalledOnce())
-    expect(container.querySelector('[name="publications-scenery"]')).not.toBeNull()
-    unmount()
-    expect(pause).toHaveBeenCalledOnce()
-  })
-
-  it('syncs city ambience to bgm mute and volume settings', async () => {
-    mocks.audio.isMuted = true
-    mocks.audio.bgmVolume = 0.2
-    const audio = {
-      currentTime: 0,
-      loop: false,
-      muted: false,
-      volume: 1,
-      pause: vi.fn(),
-      play: vi.fn().mockResolvedValue(undefined),
-    }
-    vi.stubGlobal('Audio', vi.fn(function Audio() {
-      return audio
-    }))
-
-    render(<PublicationsScenery />)
-
-    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
-    expect(audio.muted).toBe(true)
-    expect(audio.volume).toBe(0.2)
-  })
-
-  it('stops city ambience when disabled', async () => {
-    const pause = vi.fn()
-    const audio = {
-      currentTime: 0,
-      loop: false,
-      muted: false,
-      volume: 1,
-      pause,
-      play: vi.fn().mockResolvedValue(undefined),
-    }
-    vi.stubGlobal('Audio', vi.fn(function Audio() {
-      return audio
-    }))
-    const { rerender } = render(<PublicationsScenery />)
-    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
-
-    rerender(<PublicationsScenery ambienceEnabled={false} />)
-
-    expect(pause).toHaveBeenCalledOnce()
-    expect(audio.currentTime).toBe(0)
-  })
+  // 这里原有三条「城市环境音」用例（播放失败仍挂载 / 跟随静音与音量 / 禁用时停止）。
+  // 环境音已由 ADR 20260903140618 收归 RoomAmbience + AudioMixer——
+  // PublicationsScenery 不再自己 new Audio()，那是全站第四套音频实现。
+  // 对应的行为断言现在在 __tests__/audioMixer.test.tsx（静音生效、
+  // 3D 参数来自声明、环境音不预载因此不阻塞房间 READY）。
 })
 
 describe('publication bird physics', () => {

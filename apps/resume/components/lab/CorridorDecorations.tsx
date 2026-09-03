@@ -7,6 +7,11 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import '@/components/lab/shaders/RevealMaterial'
 import { getCorridorMurals, fitMuralSize } from '@/lib/lab/corridorMurals'
+import {
+  CORRIDOR_FURNITURE,
+  lampZsForSegment,
+  type CorridorFurniturePlacement,
+} from '@/lib/lab/domain/corridor/layout'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -363,12 +368,17 @@ export function CorridorDecorations({
   segmentIndex = 0,
   setCameraOverride,
 }: CorridorDecorationsProps) {
-  // Lamp positions: every 15 units from zOffset-5
-  const lampZs = useMemo(() => {
-    const zs: number[] = []
-    for (let z = zOffset - 5; z > zOffset - 90; z -= 15) zs.push(z)
-    return zs
-  }, [zOffset])
+  // 吊灯与家具的位置来自 domain（lib/lab/domain/corridor/layout），不在这里
+  // 重复——家具的 Z 原先写成 `zOffset - 27` / `- 49` / `- 63` 三个裸数字，
+  // 而 corridorMurals 的避让区又各写了一份（审计 B3 同一模式）。
+  const lampZs = useMemo(() => lampZsForSegment(segmentIndex), [segmentIndex])
+  const furniture = useMemo(
+    () =>
+      Object.fromEntries(
+        CORRIDOR_FURNITURE.map(item => [item.kind, zOffset + item.relativeZ]),
+      ) as Record<CorridorFurniturePlacement['kind'], number>,
+    [zOffset],
+  )
 
   const murals = useMemo(
     () =>
@@ -399,9 +409,9 @@ export function CorridorDecorations({
         />
       ))}
 
-      <Desk z={zOffset - 27} />
-      <Cabinet z={zOffset - 49} />
-      <PottedTree z={zOffset - 63} />
+      <Desk z={furniture.desk} />
+      <Cabinet z={furniture.cabinet} />
+      <PottedTree z={furniture['potted-tree']} />
     </group>
   )
 }

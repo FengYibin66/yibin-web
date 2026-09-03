@@ -69,10 +69,11 @@ describe('ROOM_ASSETS', () => {
     )
   })
 
-  it('将纸张与城市音频独立于纹理清单', () => {
+  it('将纸张音频独立于纹理清单，且不含已迁走的城市环境音', () => {
+    // 城市环境音已由 ADR 20260903140618 交给 RoomAmbience 按需加载，
+    // 不能再留在预载清单里——那会让访客白下 2.55MB
     expect(PUBLICATION_AUDIO_ASSETS).toEqual([
       '/sounds/papersound.mp3',
-      '/sounds/szummiasta.mp3',
     ])
     expect(ROOM_ASSETS.publications).not.toEqual(
       expect.arrayContaining([...PUBLICATION_AUDIO_ASSETS]),

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { SOUND_MANIFEST, type SoundName } from '@/lib/lab/soundManifest'
+import { SOUND_MANIFEST, type SoundName } from '@/lib/lab/domain/audio/manifest'
 
 /**
  * 音频清单的存在性与格式兜底门禁。

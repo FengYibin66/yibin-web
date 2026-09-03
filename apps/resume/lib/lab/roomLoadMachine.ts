@@ -10,6 +10,19 @@ export type RoomLoadPhase =
   | 'failed'
   | 'exiting'
 
+/**
+ * 走廊此刻是不是"闲着"，可以弹教程 / 提示。
+ *
+ * 审计 D5：`LabTutorial` 只检查 `isInRoom` 与 `isTeleporting`。用户点了门之后
+ * 相位是 `aligning` / `loading` / `opening`——**还没进房**，所以 `isInRoom`
+ * 仍是 false，2.4 秒的延迟一到教程就盖在开门动画上。
+ *
+ * 判断"能不能打扰用户"不该靠列举几个布尔量，而该问一句"走廊现在是不是空闲"。
+ */
+export function isCorridorIdle(phase: RoomLoadPhase): boolean {
+  return phase === 'idle'
+}
+
 export interface RoomLoadState {
   phase: RoomLoadPhase
   roomId: RoomId | null

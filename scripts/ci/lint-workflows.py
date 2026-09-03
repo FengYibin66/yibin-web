@@ -60,12 +60,33 @@ def has_checkout(job: dict) -> bool:
     return any(CHECKOUT in str(s.get("uses", "")) for s in job_steps(job))
 
 
+def step_working_dir(step: dict, job: dict) -> str:
+    """步骤生效的 working-directory（步骤级优先于 job 级 defaults）。"""
+    own = step.get("working-directory")
+    if isinstance(own, str) and own:
+        return own.strip("/")
+    job_default = (job.get("defaults") or {}).get("run", {}).get("working-directory")
+    if isinstance(job_default, str) and job_default:
+        return job_default.strip("/")
+    return ""
+
+
 def referenced_repo_paths(job: dict) -> set[str]:
+    """引用到的仓库路径，已按 working-directory 归一到仓库根。
+
+    加 working-directory 处理的原因：本检查第一版只按字面路径去仓库根找，
+    于是一个带 `working-directory: apps/resume` 的正确步骤被报成
+    「引用的 scripts/… 在仓库里不存在」——**误报**。而误报会训练人忽略这条
+    检查，比漏报更糟（与 ADR 20260822120809 里 push-main 守卫误报的教训相同）。
+    """
     found: set[str] = set()
     for step in job_steps(job):
         run = step.get("run")
-        if isinstance(run, str):
-            found.update(REPO_PATH.findall(run))
+        if not isinstance(run, str):
+            continue
+        prefix = step_working_dir(step, job)
+        for rel in REPO_PATH.findall(run):
+            found.add(f"{prefix}/{rel}" if prefix else rel)
     return found
 
 
@@ -209,6 +230,33 @@ def lint(workflow_dir: Path = WORKFLOW_DIR) -> list[str]:
 
 # ── 内置用例 ────────────────────────────────────────────────────────
 SELF_TESTS: list[tuple[str, str, bool]] = [
+    (
+        "step 级 working-directory 下的路径应按它归一 → 应通过",
+        """
+jobs:
+  resume:
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验预载表
+        working-directory: apps/resume
+        run: node scripts/lab/gen-asset-manifest.mjs --check
+""",
+        True,
+    ),
+    (
+        "job 级 defaults.run.working-directory 同样生效 → 应通过",
+        """
+jobs:
+  resume:
+    defaults:
+      run:
+        working-directory: apps/resume
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/lab/gen-asset-manifest.mjs --check
+""",
+        True,
+    ),
     (
         "引用脚本但缺 checkout → 应报错",
         """
@@ -358,10 +406,75 @@ jobs:
 ]
 
 
+def _path_normalization_cases() -> list[tuple[str, bool]]:
+    """`referenced_repo_paths` 的直接单测。
+
+    为什么不走 SELF_TESTS 的 YAML 夹具：那个循环**刻意过滤掉**「在仓库里不
+    存在」的问题（夹具写在临时目录里，路径必然不存在），所以路径归一是对是错
+    在那一层看不出来。而归一写错的后果恰好是 C3 误报——一个带
+    `working-directory` 的正确步骤被报成「脚本不存在」，误报会训练人忽略整条
+    检查（与 ADR 20260822120809 里 push-main 守卫误报的教训相同）。
+    """
+    step_level = {
+        "steps": [
+            {
+                "working-directory": "apps/resume",
+                "run": "node scripts/lab/gen-asset-manifest.mjs --check",
+            }
+        ]
+    }
+    job_level = {
+        "defaults": {"run": {"working-directory": "apps/resume"}},
+        "steps": [{"run": "node scripts/lab/gen-asset-manifest.mjs --check"}],
+    }
+    step_wins = {
+        "defaults": {"run": {"working-directory": "apps/portal"}},
+        "steps": [
+            {
+                "working-directory": "apps/resume",
+                "run": "node scripts/lab/gen-asset-manifest.mjs",
+            }
+        ],
+    }
+    no_dir = {"steps": [{"run": "bash scripts/ci/evaluate-gate.sh x"}]}
+    trailing_slash = {
+        "steps": [
+            {"working-directory": "apps/resume/", "run": "node scripts/lab/x.mjs"}
+        ]
+    }
+
+    expected = "apps/resume/scripts/lab/gen-asset-manifest.mjs"
+    return [
+        ("step 级 working-directory 归一", referenced_repo_paths(step_level) == {expected}),
+        ("job 级 defaults 归一", referenced_repo_paths(job_level) == {expected}),
+        (
+            "step 级覆盖 job 级",
+            referenced_repo_paths(step_wins) == {expected},
+        ),
+        (
+            "无 working-directory 时保持原样",
+            referenced_repo_paths(no_dir) == {"scripts/ci/evaluate-gate.sh"},
+        ),
+        (
+            "尾斜杠不产生双斜杠",
+            referenced_repo_paths(trailing_slash) == {"apps/resume/scripts/lab/x.mjs"},
+        ),
+    ]
+
+
 def self_test() -> int:
     import tempfile
 
     passed = failed = 0
+
+    for label, ok in _path_normalization_cases():
+        if ok:
+            print(f"  ✅ {label}")
+            passed += 1
+        else:
+            print(f"  ❌ {label}")
+            failed += 1
+
     for label, body, should_pass in SELF_TESTS:
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)

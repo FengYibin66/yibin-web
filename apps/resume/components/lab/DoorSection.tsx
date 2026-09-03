@@ -15,6 +15,7 @@ import {
   type DoorEntryCommand,
 } from '@/lib/lab/doorEntryFlow'
 import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
+import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
@@ -536,7 +537,8 @@ export function DoorSection({
   // Respond to the nearest segment's door so teleport works regardless of scroll depth.
   useEffect(() => {
     if (pendingDoorClick !== roomId || isOpenRef.current || isAnimating) return
-    const currentSeg = Math.floor((10 - camera.position.z) / 100)
+    // 原先是裸 `/ 100`——段长若改动，这里静默算错段号，传送就点不到门（审计 B3）
+    const currentSeg = segmentIndexAtZ(camera.position.z)
     if (segmentIndex === currentSeg) {
       handleClick({ isTeleport: true })
     }

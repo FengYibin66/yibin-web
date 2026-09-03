@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 
-import { pickPlayableSource, type SoundName } from '@/lib/lab/soundManifest'
+import { pickPlayableSource, type SoundName } from '@/lib/lab/domain/audio/manifest'
 
 export type { SoundName }
 

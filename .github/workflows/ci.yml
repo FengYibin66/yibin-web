@@ -144,6 +144,12 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 纹理预载表是生成物（ADR 20260903140615）：从房间注册表 + 走廊布局派生。
+      # 手写它的后果不报错——只会"漏一张贴图"或"为死代码预载"，与 ADR 索引
+      # 同一套纪律（见 scripts/docs/gen_docs_index.py --check）。
+      - name: 校验纹理预载表与声明同步
+        working-directory: apps/resume
+        run: node scripts/lab/gen-asset-manifest.mjs --check
       - run: pnpm --filter @yibin/resume type-check
       - run: pnpm --filter @yibin/resume test
       # 刻意不跑 `pnpm --filter @yibin/resume lint`：eslint.config.mjs 按 flat config 写，

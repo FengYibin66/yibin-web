@@ -158,9 +158,28 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
     dispatchDoorEntry({ type: 'RETRY' })
   }, [dispatchDoorEntry])
 
+  /**
+   * 把传送状态全部清零。
+   *
+   * 定义位置刻意在 `resetRoomLoad` 之前——后者要调用它。原先它定义在文件末尾
+   * 且**零调用方**，这正是审计 B1 的根因：传送中房间加载失败时没有任何地方
+   * 重置 `isTeleporting` / `teleportPhase`。
+   */
+  const cancelTeleport = useCallback(() => {
+    setTeleportTarget(null)
+    isTeleportingRef.current = false
+    setIsTeleporting(false)
+    setTeleportPhase(null)
+    setPendingDoorClick(null)
+    setIsFastTeleport(false)
+  }, [])
+
   const resetRoomLoad = useCallback(() => {
     applyRoomLoadEvent({ type: 'RESET' })
-  }, [applyRoomLoadEvent])
+    // 传送中失败时必须一起取消传送（审计 B1）：否则合上的纸（z-index 9998）
+    // 永久遮住屏幕、错误卡在纸下面看不见、导航全禁用，用户只能刷新。
+    if (isTeleportingRef.current) cancelTeleport()
+  }, [applyRoomLoadEvent, cancelTeleport])
 
   const resetRoomLoadForTeleport = useCallback(() => {
     if (roomLoadStateRef.current.phase !== 'entered' || !isTeleportingRef.current) return
@@ -228,15 +247,6 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
 
   const finishPaperOpen = useCallback(() => {
     setTeleportPhase(null)
-  }, [])
-
-  const cancelTeleport = useCallback(() => {
-    setTeleportTarget(null)
-    isTeleportingRef.current = false
-    setIsTeleporting(false)
-    setTeleportPhase(null)
-    setPendingDoorClick(null)
-    setIsFastTeleport(false)
   }, [])
 
   const value = useMemo<SceneState>(() => ({

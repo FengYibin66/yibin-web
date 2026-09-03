@@ -3,10 +3,12 @@ import { ArtworkFrame } from './ArtworkFrame'
 
 interface GalleryRoomProps {
   room: GalleryRoomType
+  /** 展厅序号（0 起）。用于页头的 "Gallery 01" —— 见下方注释 */
+  index: number
   onExpand: (image: GalleryImage) => void
 }
 
-export function GalleryRoom({ room, onExpand }: GalleryRoomProps) {
+export function GalleryRoom({ room, index, onExpand }: GalleryRoomProps) {
   return (
     <div className="gallery-room relative flex-shrink-0 h-screen flex flex-col">
       {/* Room header */}
@@ -16,7 +18,10 @@ export function GalleryRoom({ room, onExpand }: GalleryRoomProps) {
             className="text-xs uppercase tracking-[0.3em] mb-1"
             style={{ color: '#8b7355', fontFamily: 'var(--font-gallery, Georgia, serif)' }}
           >
-            Gallery {String(room.id).padStart(2, '0')}
+            {/* 原为 String(room.id).padStart(2,'0')——id 是 'iceland' 这类
+                字符串，padStart 对它无效，于是页头显示 "GALLERY ICELAND"
+                而不是 "Gallery 01"（审计 F2）。序号该来自位置，不是 id。 */}
+            Gallery {String(index + 1).padStart(2, '0')}
           </div>
           <h2
             className="text-4xl font-light"

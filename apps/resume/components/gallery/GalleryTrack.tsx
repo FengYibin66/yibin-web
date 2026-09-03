@@ -1,13 +1,16 @@
 'use client'
 
-import { useRef, useEffect, useState, Suspense } from 'react'
+import { useRef, useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { galleryRooms } from '@/lib/gallery/data'
+import { galleryRooms, galleryYearLabel } from '@/lib/gallery/data'
 import type { GalleryImage } from '@/lib/gallery/data'
+import { recordAchievement } from '@/lib/lab/achievementStorage'
+import { useLocale } from '@/hooks/useLocale'
+import { content } from '@/lib/content'
 import { GalleryRoom } from './GalleryRoom'
 import { GalleryLightbox } from './GalleryLightbox'
 
@@ -28,7 +31,7 @@ function ExitBackLink() {
         color: '#2a1f0e',
         textDecoration: 'none',
         fontSize: '13px',
-        fontFamily: "'CabinSketch-Bold', serif",
+        fontFamily: 'var(--font-sketch-bold)',
         letterSpacing: '0.05em',
         transition: 'all 0.2s',
         cursor: 'pointer',
@@ -48,9 +51,24 @@ function ExitBackLink() {
 }
 
 export function GalleryTrack() {
+  const { locale } = useLocale()
+  const copyright = content[locale].footer.copyright
   const containerRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [lightboxImage, setLightboxImage] = useState<GalleryImage | null>(null)
+
+  /**
+   * 打开照片时记成就 `gallery_inspect`（"Art Critic"）。
+   *
+   * 这条成就原先**永远解不开**：唯一解锁调用在零渲染方的
+   * `components/rooms/GalleryRoom.tsx`（已删），而本路由在
+   * `AchievementsProvider` 之外拿不到 `unlockAchievement`。所以直接写模块级
+   * 存储，回到 Lab 时 Provider 初始化会读到（审计 D1）。
+   */
+  const handleExpand = useCallback((image: GalleryImage) => {
+    setLightboxImage(image)
+    recordAchievement('gallery_inspect')
+  }, [])
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
@@ -122,7 +140,7 @@ export function GalleryTrack() {
               </h1>
               <div className="w-24 h-px mx-auto mb-4" style={{ background: '#c8a96e' }} />
               <p className="text-sm italic" style={{ color: '#6b5a3e' }}>
-                Photography · 2019 – 2024
+                Photography · {galleryYearLabel()}
               </p>
               <p className="text-xs mt-6 animate-bounce" style={{ color: '#8b7355' }}>
                 Scroll to explore ↓
@@ -131,8 +149,8 @@ export function GalleryTrack() {
           </div>
 
           {/* Rooms */}
-          {galleryRooms.map((room) => (
-            <GalleryRoom key={room.id} room={room} onExpand={setLightboxImage} />
+          {galleryRooms.map((room, i) => (
+            <GalleryRoom key={room.id} room={room} index={i} onExpand={handleExpand} />
           ))}
 
           {/* Exit hall — closing statement lives inside the horizontal flow,
@@ -168,7 +186,10 @@ export function GalleryTrack() {
                   letterSpacing: '0.1em',
                 }}
               >
-                © 2024 Yibin Feng · All rights reserved
+                {/* 版权年份取自 content.footer，与 Classic 页脚同源——两处
+                    各写一个数字时它们迟早会不一致（审计 F10：这里曾是 2024，
+                    Classic 页脚是 2026）。 */}
+                {copyright} · All rights reserved
               </p>
             </div>
           </div>

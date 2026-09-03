@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react'
 
+import { loadAchievements, saveAchievements } from '@/lib/lab/achievementStorage'
+
 // ─── Achievement definitions ──────────────────────────────────────────────────
 
 export interface AchievementDef {
@@ -15,7 +17,9 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
   corridor_explore:  { id: 'corridor_explore',  title: 'Wanderer',      label: 'Scroll or swipe to explore' },
   about_scroll:      { id: 'about_scroll',      title: 'Sky Walker',    label: 'Scroll to fly through my story' },
   projects_inspect:  { id: 'projects_inspect',  title: 'Director',      label: 'Drag to rotate and browse' },
-  gallery_inspect:   { id: 'gallery_inspect',   title: 'Art Critic',    label: 'Click a project to inspect' },
+  // 文案原为 "Click a project to inspect"——那是 /gallery 还是项目列表时的
+  // 说法。它现在是摄影相册，解锁条件也随之改为"打开一张照片"（审计 D1）。
+  gallery_inspect:   { id: 'gallery_inspect',   title: 'Art Critic',    label: 'Open a photo in the Gallery' },
   contact_found:     { id: 'contact_found',     title: 'Sociable',      label: 'Find a contact method' },
   publications_read: { id: 'publications_read', title: 'Scholar',       label: 'Read a publication' },
 }
@@ -40,21 +44,8 @@ export interface AchievementsState {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function loadFromStorage(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const saved = localStorage.getItem('resume_achievements')
-    if (!saved) return []
-    const parsed = JSON.parse(saved)
-    if (Array.isArray(parsed)) {
-      // corridor_enter is intentionally not persisted so the tutorial always shows
-      return (parsed as string[]).filter(id => id !== 'corridor_enter')
-    }
-  } catch {
-    // ignore
-  }
-  return []
-}
+// 读写下沉到 lib/lab/achievementStorage，因为 /gallery 独立路由在本 Provider
+// 之外也要能记成就（审计 D1）。本 Provider 现在是那份存储的 React 视图。
 
 function playUnlockChime() {
   try {
@@ -96,7 +87,7 @@ export function useAchievements(): AchievementsState {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AchievementsProvider({ children }: { children: React.ReactNode }) {
-  const [completed, setCompleted] = useState<string[]>(loadFromStorage)
+  const [completed, setCompleted] = useState<string[]>(loadAchievements)
   const [activePopup, setActivePopup] = useState<ActivePopup | null>(null)
 
   // Synchronous ref to prevent double-firing on rapid events (scroll)
@@ -107,12 +98,9 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   const activePopupRef = useRef<ActivePopup | null>(null)
   useEffect(() => { activePopupRef.current = activePopup }, [activePopup])
 
-  // Persist (excluding corridor_enter which always re-shows)
+  // 持久化（corridor_enter 的过滤在 saveAchievements 里，读写两侧一致）
   useEffect(() => {
-    try {
-      const toSave = completed.filter(id => id !== 'corridor_enter')
-      localStorage.setItem('resume_achievements', JSON.stringify(toSave))
-    } catch { /* ignore */ }
+    saveAchievements(completed)
   }, [completed])
 
   const showTutorial = useCallback((id: string) => {

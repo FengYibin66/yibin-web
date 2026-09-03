@@ -2,19 +2,12 @@
 
 import { useTexture } from '@react-three/drei'
 import type { RoomId } from '@/context/SceneContext'
+import { CLOUD_TEXTURES } from './cloudTextures'
 
 type OrdinaryRoomId = Exclude<RoomId, 'gallery'>
 
-const CLOUD_TEXTURES = [
-  '/textures/clouds/1131c3eb-dfae-423f-924b-ff39d8ccd6dc.webp',
-  '/textures/clouds/254b8ec8-d6f7-4275-956f-7bab65b2ce2d.webp',
-  '/textures/clouds/2cc88dd1-483c-466d-b07e-f8308c61ccbe.webp',
-  '/textures/clouds/5606fcc0-3252-447d-a58a-7bcbac73229a.webp',
-  '/textures/clouds/7882dc72-3d01-41fb-ac0e-d07b0184ebc1.webp',
-  '/textures/clouds/9b2ca72f-7bd0-473b-ba6e-dd9e0eb79d35.webp',
-  '/textures/clouds/c83293c6-d90c-4a32-8d9d-5ac9af7e2296.webp',
-  '/textures/clouds/f6e358bc-d27c-41dd-95f4-6787a835c41e.webp',
-] as const
+// CLOUD_TEXTURES 现在从 ./cloudTextures 导入（原先此处、SkyChunk、GalleryClouds
+// 三个文件各有一份拷贝，见那个文件顶部注释）
 
 export const PUBLICATION_AUDIO_ASSETS = [
   '/sounds/papersound.mp3',
@@ -89,6 +82,8 @@ export const ROOM_ASSETS: Readonly<Record<OrdinaryRoomId, readonly string[]>> = 
     '/textures/contact/beczka_painted.webp',
     '/textures/contact/paper_form.webp',
     '/textures/contact/send_button.webp',
+    // 漏收这批就是审计 A2：Contact 的云退化成四个无贴图的灰矩形
+    ...CLOUD_TEXTURES,
   ],
 }
 
@@ -99,7 +94,6 @@ export function preloadRoomAssets(roomId: OrdinaryRoomId): void {
 
   preloadedRooms.add(roomId)
   const assets = ROOM_ASSETS[roomId]
-  console.info(`[progress] preloading ${assets.length} ${roomId} room assets`)
   assets.forEach(asset => useTexture.preload(asset))
 }
 

@@ -296,7 +296,9 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
             <planeGeometry args={[1.8, 1.2]} />
             <meshBasicMaterial map={speechTex} transparent alphaTest={0.01} depthWrite={false} />
           </mesh>
-          <Text position={[0, 0.08, 0.01]} fontSize={0.07} color="#1a1a1a" anchorX="center" anchorY="middle" maxWidth={1.4} textAlign="center">
+          {/* font 必填：缺它时 troika 会去 fonts.gstatic.com 拉默认字体，
+              大陆访客加载失败（审计 E8——全仓唯一一处漏 font 的 <Text>）。 */}
+          <Text position={[0, 0.08, 0.01]} fontSize={0.07} color="#1a1a1a" font="/fonts/CabinSketch-Regular.ttf" anchorX="center" anchorY="middle" maxWidth={1.4} textAlign="center">
             {duckQuote || ' '}
           </Text>
         </group>

@@ -5,6 +5,16 @@ import { useTexture } from '@react-three/drei'
 import type * as THREE from 'three'
 import gsap from 'gsap'
 
+/**
+ * ⚠️ 当前**未被任何地方挂载**（审计 H3）。
+ *
+ * 保留而不删除，是因为 ADR 20260903140619 的 Projects 房间重做要用它做左墙的
+ * 夜窗。但它的纹理（`corridor/window_sketch`、`corridor/avatar_window`）已从
+ * `lib/lab/texturePreload.ts` 移除——为一个不渲染的组件预载两张图是纯浪费。
+ * 重新挂载时把纹理加进那个房间的 `assets` 声明里。
+ *
+ * 若 ADR 20260903140619 最终决定另写一个组件，本文件应当删除而不是继续留着。
+ */
 export function CorridorWindow() {
   const avatarRef = useRef<THREE.Mesh>(null)
   const windowTex = useTexture('/textures/corridor/window_sketch.webp')

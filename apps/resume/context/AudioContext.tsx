@@ -2,7 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 
-export type SoundName = 'door_hover' | 'door_open' | 'door_close' | 'corridor_bg' | 'paper_tear' | 'achievement'
+import { pickPlayableSource, type SoundName } from '@/lib/lab/soundManifest'
+
+export type { SoundName }
 
 export interface SoundHandle {
   stop: () => void
@@ -25,13 +27,23 @@ export interface AudioState {
   stopBgm: () => void
 }
 
-const SOUND_PATHS: Record<SoundName, string> = {
-  door_hover:   '/sounds/door_hover.mp3',
-  door_open:    '/sounds/door_open.mp3',
-  door_close:   '/sounds/door_close.mp3',
-  corridor_bg:  '/sounds/bg_corridor.ogg',
-  paper_tear:   '/sounds/paper_tear.mp3',
-  achievement:  '/sounds/achievement.mp3',
+/**
+ * 格式探测元素：只建一次，用来问浏览器"这个 MIME 你能解吗"。
+ *
+ * 需要它是因为走廊 BGM 现在有 m4a 与 ogg 两个候选——WebKit 不支持 OGG
+ * Vorbis，原先只有 .ogg 一种格式时 BGM 在所有 Safari 与全部 iOS 浏览器
+ * 完全静音（审计 C1）。
+ */
+let probeElement: HTMLAudioElement | null = null
+
+function canPlay(mime: string): CanPlayTypeResult {
+  if (typeof Audio === 'undefined') return 'maybe' // SSR：不做取舍，交给客户端
+  probeElement ??= new Audio()
+  return probeElement.canPlayType(mime)
+}
+
+function sourceFor(name: SoundName): string {
+  return pickPlayableSource(name, canPlay)
 }
 
 const AudioCtx = createContext<AudioState | null>(null)
@@ -66,6 +78,46 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const activeSoundsRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const bgmRef = useRef<HTMLAudioElement | null>(null)
   const bgmNameRef = useRef<SoundName | null>(null)
+
+  /**
+   * 音量与静音同时存在 state（给 UI 渲染）与 ref（给回调读）两份。
+   *
+   * 需要 ref 那一份是因为：`play` / `playBgm` 若把音量放进 useCallback 依赖，
+   * 它们的 identity 就会随音量变化，而 `LabScene` 与 `PaperTransition` 把这两个
+   * 回调放进了 `useEffect` 的依赖数组 → **拖一下音量滑块，BGM 从头重放、传送
+   * 动画被 kill 重播**（审计 C2 / C6）。从 ref 读取让 identity 恒定。
+   */
+  const isMutedRef = useRef(isMuted)
+  const sfxVolumeRef = useRef(sfxVolume)
+  const bgmVolumeRef = useRef(bgmVolume)
+  isMutedRef.current = isMuted
+  sfxVolumeRef.current = sfxVolume
+  bgmVolumeRef.current = bgmVolume
+
+  /**
+   * 自动播放解锁：被 `NotAllowedError` 拦下的播放挂在这里，等第一次用户手势重试。
+   *
+   * 原先只在 mount 时调一次 `play()`，被拦下就静默失败且**永不重试**——直接
+   * 打开 /lab 或刷新时，只有碰音量滑块才会响（审计 C3）。
+   */
+  const pendingUnlockRef = useRef<(() => void) | null>(null)
+
+  const armAutoplayRetry = useCallback((retry: () => void) => {
+    pendingUnlockRef.current = retry
+    if (typeof window === 'undefined') return
+
+    const onGesture = () => {
+      window.removeEventListener('pointerdown', onGesture)
+      window.removeEventListener('keydown', onGesture)
+      window.removeEventListener('touchstart', onGesture)
+      const pending = pendingUnlockRef.current
+      pendingUnlockRef.current = null
+      pending?.()
+    }
+    window.addEventListener('pointerdown', onGesture)
+    window.addEventListener('keydown', onGesture)
+    window.addEventListener('touchstart', onGesture)
+  }, [])
 
   // Persist preferences
   useEffect(() => {
@@ -105,13 +157,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const play = useCallback((name: SoundName, opts: { loop?: boolean; volume?: number } = {}): SoundHandle => {
     const { loop = false, volume = 1.0 } = opts
-    const path = SOUND_PATHS[name] ?? `/sounds/${name}.mp3`
-    const audio = new Audio(path)
+    const audio = new Audio(sourceFor(name))
 
     audio.loop = loop;
     (audio as HTMLAudioElement & { _baseVolume?: number })._baseVolume = volume
-    audio.muted = isMuted
-    audio.volume = Math.max(0, Math.min(1, volume * sfxVolume))
+    audio.muted = isMutedRef.current
+    audio.volume = Math.max(0, Math.min(1, volume * sfxVolumeRef.current))
 
     // Stop previous sound with same name if exists
     const existing = activeSoundsRef.current.get(name)
@@ -157,7 +208,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { stop, fade }
-  }, [isMuted, sfxVolume])
+    // deps 刻意为空：音量与静音从 ref 读，identity 必须恒定（见 isMutedRef 的注释）
+  }, [])
 
   const playBgm = useCallback((name: SoundName) => {
     // Stop current BGM first
@@ -166,18 +218,23 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       bgmRef.current.currentTime = 0
     }
 
-    const path = SOUND_PATHS[name] ?? `/sounds/${name}.mp3`
-    const audio = new Audio(path)
+    const audio = new Audio(sourceFor(name))
     audio.loop = true
-    audio.muted = isMuted
-    audio.volume = Math.max(0, Math.min(1, bgmVolume))
+    audio.muted = isMutedRef.current
+    audio.volume = Math.max(0, Math.min(1, bgmVolumeRef.current))
     bgmRef.current = audio
     bgmNameRef.current = name
 
-    audio.play().catch(() => {
-      // silently ignore autoplay blocks
-    })
-  }, [isMuted, bgmVolume])
+    const attempt = () => {
+      audio.play().catch((err: unknown) => {
+        // 只有"被自动播放策略拦下"值得重试；文件缺失 / 格式不支持重试也没用
+        if ((err as { name?: string } | null)?.name !== 'NotAllowedError') return
+        // 仍是当前 BGM 才重试——期间可能已经切歌或 stopBgm
+        armAutoplayRetry(() => { if (bgmRef.current === audio) attempt() })
+      })
+    }
+    attempt()
+  }, [armAutoplayRetry])
 
   const stopBgm = useCallback(() => {
     if (bgmRef.current) {

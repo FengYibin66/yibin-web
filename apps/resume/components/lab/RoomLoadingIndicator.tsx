@@ -87,10 +87,11 @@ export function RoomLoadingIndicator({
   if (state.roomId === null) return null
 
   const label = ROOM_LOADING_LABELS[state.roomId]
+  const isFailed = state.phase === 'failed'
   return (
-    <div className={styles.overlay}>
+    <div className={isFailed ? `${styles.overlay} ${styles.overlayFailed}` : styles.overlay}>
       {isLoading && <LoadingContent label={label} />}
-      {state.phase === 'failed' && (
+      {isFailed && (
         <FailureContent
           error={state.error ?? FALLBACK_ERROR}
           onRetry={onRetry}

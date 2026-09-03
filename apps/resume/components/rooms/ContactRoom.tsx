@@ -10,6 +10,7 @@ import { useLocale } from '@/hooks/useLocale'
 import { getContactRoomLinks } from '@/lib/content/labAdapters'
 import { SocialBarrel } from './contact/SocialBarrel'
 import { MessagePaper, type MessagePaperHandle } from './contact/MessagePaper'
+import { GalleryClouds } from './gallery/GalleryClouds'
 
 interface ContactRoomProps {
   showRoom: boolean
@@ -98,13 +99,27 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
     <group position={[0, -0.7, -5]}>
       <PositionalAudio ref={audioRef as never} url="/sounds/szummorza.mp3" distanceModel="exponential" refDistance={2} rolloffFactor={1.2} loop autoplay volume={2} />
 
-      {/* Simple clouds */}
-      {[[-8, 4, -8], [6, 5, -10], [-4, 6, -14], [10, 4, -12]].map(([cx, cy, cz], i) => (
-        <mesh key={i} position={[cx as number, cy as number, cz as number]}>
-          <planeGeometry args={[3 + i * 0.5, 1 + i * 0.2]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.7} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
+      {/*
+        海上的云。
+
+        原先这里是四个 `planeGeometry + meshBasicMaterial color="#ffffff"`
+        ——**没有贴图**，于是天空里飘着四个灰色矩形（审计 A2）。云纹理一直在
+        仓库里（`CLOUD_TEXTURES`，8 张），About 与 Publications 都在用，只有
+        `ROOM_ASSETS.contact` 没收它们。
+
+        修法是复用 GalleryClouds（带漂移、billboard、原始宽高比处理），而不是
+        在这里再手搓一份贴图逻辑。海景的云比 Publications 的城市屋顶低，所以
+        显式给了 yRange / zRange。
+      */}
+      <GalleryClouds
+        count={10}
+        seed={7}
+        yRange={[2.5, 6.5]}
+        zRange={[-8, -22]}
+        baseWidth={3.5}
+        startX={30}
+        endX={-30}
+      />
 
       {/* Ocean waves */}
       <group position={[0, -1, -8]}>

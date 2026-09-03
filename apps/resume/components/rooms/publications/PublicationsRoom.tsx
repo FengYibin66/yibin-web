@@ -117,45 +117,23 @@ export function PublicationsRoom({
     sequence: number,
   ): Promise<void> => {
     const index = publications.findIndex(publication => publication.id === id)
-    console.log('[pub-debug] openPublication start', {
-      id,
-      index,
-      sequence,
-      phase: motionRef.current.phase,
-      hasHandle: cardHandlesRef.current.has(id),
-      scroll: carousel.currentScroll.current,
-    })
     if (index < 0) return
 
     await carousel.centerItem(index)
     // Scroll refs update immediately; slot meshes only update in useFrame.
     // Sync now so open-pose worldToLocal uses the centered parent matrix.
     clotheslineRef.current?.syncSlotsToScroll()
-    console.log('[pub-debug] centerItem done', {
-      id,
-      sequence,
-      sequenceNow: sequenceRef.current,
-      phase: motionRef.current.phase,
-      scroll: carousel.currentScroll.current,
-    })
     if (sequence !== sequenceRef.current) {
-      console.warn('[pub-debug] aborted after center: sequence mismatch')
       return
     }
 
     const phase = motionRef.current.phase
     if (phase === 'hanging') {
       sendMotion({ type: 'CLICK', id })
-      console.log('[pub-debug] motion CLICK', motionRef.current)
     } else if (
       phase !== 'centering'
       || motionRef.current.selectedId !== id
     ) {
-      console.warn('[pub-debug] aborted after center: unexpected phase', {
-        phase,
-        selectedId: motionRef.current.selectedId,
-        id,
-      })
       return
     }
     sendMotion({ type: 'CENTERED' })
@@ -163,34 +141,19 @@ export function PublicationsRoom({
     // Freeze parent at the synced slot before resolving the camera pose.
     clotheslineRef.current?.syncSlotsToScroll()
     const handle = cardHandlesRef.current.get(id)
-    console.log('[pub-debug] before open()', {
-      hasHandle: !!handle,
-      handleKeys: [...cardHandlesRef.current.keys()],
-      phase: motionRef.current.phase,
-    })
     if (!handle) {
-      console.error('[pub-debug] NO CARD HANDLE — open skipped')
       return
     }
     await handle.open()
-    console.log('[pub-debug] open() resolved', {
-      sequence,
-      sequenceNow: sequenceRef.current,
-      phase: motionRef.current.phase,
-    })
     if (sequence !== sequenceRef.current) {
-      console.warn('[pub-debug] aborted after open: sequence mismatch')
       return
     }
     sendMotion({ type: 'FLIPPED' })
-    console.log('[pub-debug] motion FLIPPED →', motionRef.current)
   }, [carousel, publications, sendMotion])
 
   const handleSelect = useCallback(async (id: string): Promise<void> => {
     const current = motionRef.current
-    console.log('[pub-debug] handleSelect', { id, phase: current.phase, selectedId: current.selectedId })
     if (current.phase !== 'hanging' && current.phase !== 'open') {
-      console.warn('[pub-debug] handleSelect ignored: bad phase', current.phase)
       return
     }
 
@@ -255,12 +218,6 @@ export function PublicationsRoom({
   useEffect(() => {
     if (showRoom && !isExiting && !teleportActive) return
 
-    console.warn('[pub-debug] ROOM CANCEL effect', {
-      showRoom,
-      isExiting,
-      teleportActive,
-      phase: motionRef.current.phase,
-    })
     sequenceRef.current += 1
     paint.cancel()
     cardHandlesRef.current.forEach(handle => handle.cancel(true))

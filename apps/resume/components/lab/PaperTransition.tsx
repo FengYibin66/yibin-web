@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo } from 'react'
 import { useScene } from '@/context/SceneContext'
 import { useAudio } from '@/context/AudioContext'
+import { buildTearPoints, tearEdgeCoords, tearSvgPath } from '@/lib/lab/tearEdge'
 import gsap from 'gsap'
 
 // Reusable SVG tear line drawn on top of each half
@@ -40,40 +41,22 @@ export function PaperTransition() {
   const rightRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<gsap.core.Timeline | null>(null)
 
-  // Generate stable tear points — computed once at mount, never changes on re-render
-  const tearPoints = useMemo<[number, number][]>(() => {
-    const pts: [number, number][] = [[50, 0]]
-    for (let i = 1; i <= 11; i++) {
-      const y = (i / 12) * 100
-      // Layered sin waves to mimic hand-torn paper
-      const x = 50 + Math.sin(i * 2.3 + 1.1) * 3.2 + Math.sin(i * 5.7 + 0.7) * 1.5
-      pts.push([x, y])
-    }
-    pts.push([50, 100])
-    return pts
-  }, [])
+  // 与 LabLoader 共用同一条撕痕（lib/lab/tearEdge）：loader 退场与传送合纸是
+  // 同一张纸的视觉延续，两处各算一份的话改了参数就会露馅。
+  const tearPoints = useMemo(() => buildTearPoints(), [])
 
-  // SVG path string for the visible tear line
-  const svgPathData = useMemo(() => {
-    return tearPoints
-      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`)
-      .join(' ')
-  }, [tearPoints])
+  const svgPathData = useMemo(() => tearSvgPath(tearPoints), [tearPoints])
 
-  // CSS clip-path polygon — left half keeps the tear edge and extends left
-  const leftClip = useMemo(() => {
-    const edge = tearPoints.map(([x, y]) => `${x}% ${y}%`).join(', ')
-    return `polygon(0% 0%, ${edge}, 0% 100%)`
-  }, [tearPoints])
+  const leftClip = useMemo(
+    () => `polygon(0% 0%, ${tearEdgeCoords(tearPoints)}, 0% 100%)`,
+    [tearPoints],
+  )
 
-  // Right half: reversed tear edge, extends right
-  const rightClip = useMemo(() => {
-    const edge = [...tearPoints]
-      .reverse()
-      .map(([x, y]) => `${x}% ${y}%`)
-      .join(', ')
-    return `polygon(100% 0%, 100% 100%, ${edge})`
-  }, [tearPoints])
+  // 右半：撕痕反向，向右延伸
+  const rightClip = useMemo(
+    () => `polygon(100% 0%, 100% 100%, ${tearEdgeCoords([...tearPoints].reverse())})`,
+    [tearPoints],
+  )
 
   useEffect(() => {
     const container = containerRef.current

@@ -26,7 +26,7 @@ function BackButton() {
         border: '1.5px solid rgba(42,31,14,0.15)',
         borderRadius: 6,
         padding: '8px 14px',
-        fontFamily: "'CabinSketch-Bold', serif",
+        fontFamily: 'var(--font-sketch-bold)',
         fontSize: 13,
         color: '#2a1f0e',
         cursor: 'pointer',

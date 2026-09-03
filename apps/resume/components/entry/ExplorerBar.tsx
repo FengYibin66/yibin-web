@@ -28,7 +28,7 @@ export function ExplorerBar() {
       textAlign: 'center',
     }}>
       <span style={{
-        fontFamily: "'CabinSketch-Bold', sans-serif",
+        fontFamily: 'var(--font-sketch-bold)',
         fontSize: '13px',
         letterSpacing: '0.08em',
         color: '#1a1a1a',

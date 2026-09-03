@@ -104,12 +104,6 @@ function addOpenSteps(
   const present = resolvePresentLocalTarget(paper)
   const reading = resolveReadingCameraPose(paper, camera)
 
-  console.log('[pub-debug] present target (itom clothesline-local)', {
-    presentLocal: present.toArray().map(n => n.toFixed(3)),
-    readingPos: reading.position.toArray().map(n => n.toFixed(3)),
-    slot: paper.parent?.parent?.position.toArray().map(n => n.toFixed(3)),
-    anchor: open.presentAnchor,
-  })
 
   addCameraPoseTween(timeline, camera, hangCamera, {
     position: reading.position,
@@ -326,16 +320,6 @@ export function usePublicationCardMotion(): PublicationCardMotionApi {
         onComplete: () => {
           const world = new THREE.Vector3()
           paper.getWorldPosition(world)
-          console.log('[pub-debug] card.open COMPLETE', {
-            localPos: paper.position.toArray().map(n => n.toFixed(3)),
-            worldPos: world.toArray().map(n => n.toFixed(3)),
-            camPos: camera.position.toArray().map(n => n.toFixed(3)),
-            rotation: [
-              paper.rotation.x.toFixed(3),
-              paper.rotation.y.toFixed(3),
-              paper.rotation.z.toFixed(3),
-            ],
-          })
           settleAction(action)
         },
         onInterrupt: () => settleAction(action),

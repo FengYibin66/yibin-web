@@ -25,7 +25,6 @@ export const CORRIDOR_TEXTURES: string[] = [
   '/textures/corridor/kratanalampy.webp',
   '/textures/corridor/kratkawentylacyjna.webp',
   '/textures/corridor/bokilampy.webp',
-  '/textures/corridor/window_sketch.webp',
 
   // Doors (all type variants + shared frame/handles)
   ...DOOR_TYPES.flatMap(type => [
@@ -45,8 +44,6 @@ export const CORRIDOR_TEXTURES: string[] = [
   '/textures/corridor/decorations/coffee_debug.webp',
   '/textures/corridor/decorations/idea_process.webp',
   '/textures/corridor/decorations/while_true_loop.webp',
-  '/textures/corridor/ramkanazdjecieduza.webp',
-  '/textures/corridor/ramkanazdjecieduza_painted.webp',
   '/textures/corridor/ramkanazdjeciemala.webp',
   '/textures/corridor/drzewkowdoniczce.webp',
   '/textures/corridor/kwiatekwdoniczce.webp',
@@ -57,7 +54,6 @@ export const CORRIDOR_TEXTURES: string[] = [
 
   // Welcome area (avatar animation frames, doodles, cat, easter eggs)
   ...Array.from({ length: 9 }, (_, i) => `/textures/corridor/avatar_anim/${i + 1}.webp`),
-  '/textures/corridor/avatar_window.webp',
   '/textures/corridor/doodles/coffee_cup.webp',
   '/textures/corridor/doodles/paper_airplane.webp',
   '/textures/corridor/doodles/paper_ball.webp',
@@ -93,11 +89,9 @@ export const ENTRANCE_TEXTURES: string[] = [
 ]
 
 export function preloadCorridorTextures(): void {
-  console.info(`[progress] preloading ${CORRIDOR_TEXTURES.length} corridor textures`)
   CORRIDOR_TEXTURES.forEach(url => useTexture.preload(url))
 }
 
 export function preloadEntranceTextures(): void {
-  console.info(`[progress] preloading ${ENTRANCE_TEXTURES.length} entrance textures`)
   ENTRANCE_TEXTURES.forEach(url => useTexture.preload(url))
 }

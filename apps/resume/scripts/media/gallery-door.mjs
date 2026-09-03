@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 
 import { DOOR_PLANS, coverSize } from '../../lib/lab/domain/galleryDoorPlan.mjs'
+import { checkFresh, digestOf, writeStamp } from './freshness.mjs'
 import { STICKER_ART } from './stickerArt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -60,7 +61,35 @@ async function renderSticker(kind, region, rotate, seed) {
   return { buffer: rotated, width: meta.width, height: meta.height }
 }
 
+
+/*
+  `--check` 判的是**内容指纹**（`./freshness.mjs`），不是 mtime。
+
+  git 不保存 mtime：新克隆里所有文件的 mtime 都是签出那一刻，先后顺序取决于
+  checkout 的写入顺序。按 mtime 判定属于"本地永远绿、CI 永远红"，CI 第一次跑
+  就抓到了。指纹里也包含生成脚本本身——改了参数而源没变时，产物同样过期。
+*/
+const STAMP_NAME = 'gallery-door'
+const stampInputs = [
+  ...DOOR_PLANS.map(d => join(SRC, `${d.id}.webp`)),
+  fileURLToPath(import.meta.url),
+  join(HERE, 'stickerArt.mjs'),
+  resolve(HERE, '../../lib/lab/domain/galleryDoorPlan.mjs'),
+]
+const stampOutputs = DOOR_PLANS.map(d =>
+  join(PUBLIC_TEXTURES, d.dir, `${d.id}.webp`))
+
 const checkOnly = process.argv.includes('--check')
+
+if (checkOnly) {
+  const { fresh, reason } = checkFresh(STAMP_NAME, stampInputs, stampOutputs)
+  console.log(`  ${fresh ? '·' : '!'} 门贴图  ${reason}`)
+  console.log(fresh
+    ? '\n[同步] 门贴图已是最新'
+    : '\n[待处理] 跑 node scripts/media/gallery-door.mjs')
+  process.exit(fresh ? 0 : 1)
+}
+
 let problems = 0
 
 for (const door of DOOR_PLANS) {
@@ -70,13 +99,6 @@ for (const door of DOOR_PLANS) {
   if (!existsSync(src)) {
     console.error(`  ✗ 缺少原图：media-src/doors/${door.id}.webp`)
     problems += 1
-    continue
-  }
-
-  if (checkOnly) {
-    const ok = existsSync(dst) && statSync(dst).mtimeMs >= statSync(src).mtimeMs
-    console.log(`  ${ok ? '·' : '!'} ${door.id}  ${ok ? '已是最新' : '需要重新生成'}`)
-    if (!ok) problems += 1
     continue
   }
 
@@ -110,4 +132,6 @@ if (problems > 0) {
   console.log(`\n[待处理] ${problems} 项`)
   process.exit(1)
 }
-console.log(checkOnly ? '\n[同步] 门贴图已是最新' : '\n完成')
+
+writeStamp(STAMP_NAME, digestOf(stampInputs))
+console.log('\n完成')

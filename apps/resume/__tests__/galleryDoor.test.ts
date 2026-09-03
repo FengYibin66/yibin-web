@@ -26,6 +26,7 @@ import { STICKER_ART } from '../scripts/media/stickerArt.mjs'
 
 const ROOT = join(import.meta.dirname, '..')
 
+
 /** 贴纸旋转后的外接矩形（sharp 输出的就是外接矩形） */
 function rotatedBounds(width: number, height: number, degrees: number) {
   const rad = (Math.abs(degrees) * Math.PI) / 180
@@ -212,15 +213,14 @@ describe('产物', () => {
     }
   })
 
-  it('生成物比原图新 —— 改了计划忘了重新生成的话，线上还是旧贴纸', () => {
+  it('每扇门都有生成物', () => {
     for (const door of DOOR_PLANS) {
-      const src = join(ROOT, 'media-src/doors', `${door.id}.webp`)
       const dst = join(ROOT, 'public/textures', door.dir, `${door.id}.webp`)
       expect(existsSync(dst), `${door.id} 没有生成物`).toBe(true)
-      expect(
-        statSync(dst).mtimeMs,
-        `${door.id} 的生成物比原图旧，跑 node scripts/media/gallery-door.mjs`,
-      ).toBeGreaterThanOrEqual(statSync(src).mtimeMs)
     }
   })
+
+  // 「产物是否与源同步」统一在 `__tests__/mediaFreshness.test.ts`
+  // ——那里真的比对指纹，而"指纹文件存在"是个空断言（源改了、指纹没更新，
+  // 文件照样存在）。
 })

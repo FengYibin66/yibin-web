@@ -51,14 +51,9 @@ describe('入口页纹理', () => {
     }
   })
 
-  it('产物比原图新 —— 换了素材忘了重跑的话，线上还是旧的大图', () => {
-    for (const file of readdirSync(SRC_ENTRANCE).filter(f => f.endsWith('.webp'))) {
-      expect(
-        statSync(join(ENTRANCE, file)).mtimeMs,
-        `${file} 的产物比原图旧，跑 node scripts/media/optimize-textures.mjs`,
-      ).toBeGreaterThanOrEqual(statSync(join(SRC_ENTRANCE, file)).mtimeMs)
-    }
-  })
+  // 「产物是否与源同步」统一在 `__tests__/mediaFreshness.test.ts`
+  // ——那里真的比对指纹，而"指纹文件存在"是个空断言（源改了、指纹没更新，
+  // 文件照样存在）。
 
   it(`总量不超过 ${TOTAL_BUDGET_KB} KB`, () => {
     const files = readdirSync(ENTRANCE).filter(f => f.endsWith('.webp'))

@@ -38,6 +38,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -48,6 +50,7 @@ HERE = Path(__file__).resolve().parent
 APP = HERE.parent.parent
 SRC = APP / "media-src" / "fonts"
 OUT = APP / "public" / "fonts"
+STAMP = APP / "media-src" / ".stamps" / "subset-fonts.json"
 
 # 扫这些目录里的字符串取字符集
 SCAN_DIRS = ["app", "components", "lib", "hooks", "context"]
@@ -111,6 +114,57 @@ def subset_font(src: Path, chars: set[str], flavor: str | None) -> Path:
     return dst
 
 
+def expected_outputs(sources: list[Path]) -> list[Path]:
+    """每个源对应的产物：woff2 + （给 troika 的）TTF。"""
+    out: list[Path] = []
+    for src in sources:
+        out.append(OUT / (src.stem + ".woff2"))
+        if src.stem in TROIKA_FONTS:
+            out.append(OUT / (src.stem + ".ttf"))
+    return out
+
+
+def digest_of(sources: list[Path]) -> str:
+    """内容指纹：源 TTF + 本脚本 + 字符集。
+
+    **不能用 mtime。** git 不保存 mtime，新克隆里所有文件的 mtime 都是签出
+    那一刻，按 mtime 判定属于"本地永远绿、CI 永远红"（CI 第一次跑就抓到了
+    同一个错，见 scripts/media/freshness.mjs 的说明）。
+
+    字符集也进指纹：改了中文文案而字体源没变时，产物同样过期——漏收的字会
+    静默落到兜底字体。这是这条流水线**最容易出**的过期形态。
+    """
+    parts: list[str] = []
+    for src in sorted(sources):
+        parts.append(f"{src.name}:{hashlib.sha256(src.read_bytes()).hexdigest()}")
+    script = Path(__file__)
+    parts.append(f"{script.name}:{hashlib.sha256(script.read_bytes()).hexdigest()}")
+    charset = "".join(sorted(collect_chars()))
+    parts.append(f"charset:{hashlib.sha256(charset.encode()).hexdigest()}")
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()
+
+
+def read_stamp() -> str | None:
+    if not STAMP.exists():
+        return None
+    try:
+        return json.loads(STAMP.read_text())["digest"]
+    except Exception:
+        return None
+
+
+def write_stamp(digest: str) -> None:
+    STAMP.parent.mkdir(parents=True, exist_ok=True)
+    STAMP.write_text(
+        json.dumps(
+            {"digest": digest, "note": "内容指纹，见 scripts/media/freshness.mjs"},
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+
+
 def main() -> int:
     check_only = "--check" in sys.argv
 
@@ -124,18 +178,24 @@ def main() -> int:
         return 1
 
     if check_only:
-        problems = 0
-        for src in sources:
-            expected = [OUT / (src.stem + ".woff2")]
-            if src.stem in TROIKA_FONTS:
-                expected.append(OUT / (src.stem + ".ttf"))
-            for dst in expected:
-                ok = dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime
-                print(f"  {'·' if ok else '!'} {dst.name}  {'已是最新' if ok else '需要重新生成'}")
-                if not ok:
-                    problems += 1
-        print("\n[同步] 字体已是最新" if problems == 0 else f"\n[待处理] {problems} 项")
-        return 0 if problems == 0 else 1
+        missing = [d.name for d in expected_outputs(sources) if not d.exists()]
+        if missing:
+            print(f"  ! 字体产物缺失：{', '.join(missing)}")
+            print("\n[待处理] 跑 python3 scripts/media/subset-fonts.py")
+            return 1
+
+        stamp = read_stamp()
+        digest = digest_of(sources)
+        if stamp is None:
+            print(f"  ! 字体产物  没有指纹（{STAMP.relative_to(APP)}）")
+        elif stamp != digest:
+            print("  ! 字体产物  源、字符集或本脚本变了，指纹不一致")
+        else:
+            print("  · 字体产物  指纹一致")
+            print("\n[同步] 字体已是最新")
+            return 0
+        print("\n[待处理] 跑 python3 scripts/media/subset-fonts.py")
+        return 1
 
     chars = collect_chars()
     cjk = sum(1 for c in chars if "一" <= c <= "鿿")
@@ -157,6 +217,8 @@ def main() -> int:
             total_after += ttf.stat().st_size
             line += f"  (+ {ttf.stat().st_size // 1024} KB TTF，troika 用)"
         print(line)
+
+    write_stamp(digest_of(sources))
 
     print(f"\n合计 {total_before // 1024} KB → {total_after // 1024} KB"
           f"（省下 {(total_before - total_after) // 1024} KB）")

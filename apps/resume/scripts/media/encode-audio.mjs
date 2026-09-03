@@ -39,6 +39,8 @@ import { existsSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { checkFresh, digestOf, writeStamp } from './freshness.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 /**
  * 源与产物分开放：
@@ -69,6 +71,14 @@ const MUSIC = [
 const force = process.argv.includes('--force')
 const checkOnly = process.argv.includes('--check')
 
+/** 参与指纹的：全部源文件 + 本脚本自身（改了码率也算过期） */
+const STAMP_NAME = 'encode-audio'
+const stampInputs = [
+  ...[...AMBIENCE, ...MUSIC].map(job => join(srcDirFor(job.from), job.from)),
+  fileURLToPath(import.meta.url),
+]
+const stampOutputs = [...AMBIENCE, ...MUSIC].map(job => join(OUT, job.to))
+
 /**
  * `bg_corridor.ogg` 仍住在 `public/`——它是音频清单里声明的 fallback 源，
  * `__tests__/soundManifest.test.ts` 会断言清单里每个候选文件真实可达。
@@ -91,18 +101,34 @@ function kb(path) {
   return existsSync(path) ? Math.round(statSync(path).size / 1024) : 0
 }
 
+/**
+ * 这一项要不要重编。
+ *
+ * 判据是**内容指纹**（`scripts/media/freshness.mjs`），不是 mtime：
+ * git 不保存 mtime，新克隆里所有文件的 mtime 都是签出那一刻，
+ * 按 mtime 判定在 CI 上必然失败。
+ */
 function needsWork({ from, to }) {
   const src = join(srcDirFor(from), from)
   const dst = join(OUT, to)
   if (!existsSync(src)) return { skip: true, reason: `源文件缺失：${from}` }
-  if (!existsSync(dst)) return { skip: false }
   if (force) return { skip: false }
-  // 目标比源新 → 已是最新
-  if (statSync(dst).mtimeMs >= statSync(src).mtimeMs) {
-    return { skip: true, reason: '已是最新' }
-  }
-  return { skip: false }
+  if (!existsSync(dst)) return { skip: false }
+  return stampFresh
+    ? { skip: true, reason: '已是最新' }
+    : { skip: false }
 }
+
+if (checkOnly) {
+  const { fresh, reason } = checkFresh(STAMP_NAME, stampInputs, stampOutputs)
+  console.log(`  ${fresh ? '·' : '!'} 音频产物  ${reason}`)
+  console.log(fresh
+    ? '\n[同步] 音频已是最新'
+    : '\n[待处理] 跑 node scripts/media/encode-audio.mjs')
+  process.exit(fresh ? 0 : 1)
+}
+
+const stampFresh = checkFresh(STAMP_NAME, stampInputs, stampOutputs).fresh
 
 let encoded = 0
 let savedKb = 0
@@ -150,6 +176,8 @@ if (checkOnly) {
   console.log(problems === 0 ? '\n[同步] 音频已是最新' : `\n[待处理] ${problems} 个文件`)
   process.exit(problems === 0 ? 0 : 1)
 }
+
+writeStamp(STAMP_NAME, digestOf(stampInputs))
 
 console.log(`\n重编码 ${encoded} 个文件，共省下 ${savedKb} KB`)
 if (problems > 0) process.exit(1)

@@ -55,6 +55,14 @@ const VIEWPORT = { width: 1656, height: 1000 }
 const checkOnly = process.argv.includes('--check')
 
 if (checkOnly) {
+  /*
+    这一条只查**存在性**，不查指纹。
+
+    它的源不是文件而是"整个已构建的站点"——3D 场景、贴图、字体、布局任何
+    一处变了首帧就该重截。给这个算指纹等于给整个 `out/` 算指纹，那不如
+    直接重截。所以这里只守最要紧的一条：文件在不在（不在的话手机端是一块
+    空白，而那条路径桌面开发时看不到）。
+  */
   const ok = existsSync(OUT_FILE)
   console.log(ok
     ? `  · door-firstframe.webp  已存在（${Math.round(statSync(OUT_FILE).size / 1024)} KB）`

@@ -107,17 +107,9 @@ describe('字体产物', () => {
       .toBeLessThan(400 * 1024)
   })
 
-  it('产物比源新 —— 改了文案忘了重跑的话，新字会变成兜底字体', () => {
-    for (const source of readdirSync(SRC_FONTS).filter(f => f.endsWith('.ttf'))) {
-      const stem = source.replace(/\.ttf$/, '')
-      const src = statSync(join(SRC_FONTS, source)).mtimeMs
-      const woff2 = join(FONTS, `${stem}.woff2`)
-      expect(
-        statSync(woff2).mtimeMs,
-        `${stem}.woff2 比源旧，跑 python3 scripts/media/subset-fonts.py`,
-      ).toBeGreaterThanOrEqual(src)
-    }
-  })
+  // 「产物是否与源同步」统一在 `__tests__/mediaFreshness.test.ts`
+  // ——那里真的比对指纹，而"指纹文件存在"是个空断言（源改了、指纹没更新，
+  // 文件照样存在）。
 })
 
 describe('子集覆盖了实际用到的字', () => {

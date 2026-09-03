@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url'
 
 import sharp from 'sharp'
 
+import { checkFresh, digestOf, writeStamp } from './freshness.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = resolve(HERE, '../../media-src/textures')
 const OUT = resolve(HERE, '../../public/textures')
@@ -80,6 +82,16 @@ const PLAN = {
   },
 }
 
+
+/*
+  `--check` 判的是**内容指纹**（`./freshness.mjs`），不是 mtime。
+
+  git 不保存 mtime：新克隆里所有文件的 mtime 都是签出那一刻，先后顺序取决于
+  checkout 的写入顺序。按 mtime 判定属于"本地永远绿、CI 永远红"，CI 第一次跑
+  就抓到了。指纹里也包含生成脚本本身——改了参数而源没变时，产物同样过期。
+*/
+const STAMP_NAME = 'optimize-textures'
+
 const checkOnly = process.argv.includes('--check')
 
 if (!existsSync(join(SRC, PLAN.dir))) {
@@ -88,6 +100,24 @@ if (!existsSync(join(SRC, PLAN.dir))) {
 }
 
 mkdirSync(join(OUT, PLAN.dir), { recursive: true })
+
+const stampSources = readdirSync(join(SRC, PLAN.dir))
+  .filter(f => f.endsWith('.webp'))
+  .sort()
+const stampInputs = [
+  ...stampSources.map(f => join(SRC, PLAN.dir, f)),
+  fileURLToPath(import.meta.url),
+]
+const stampOutputs = stampSources.map(f => join(OUT, PLAN.dir, f))
+
+if (checkOnly) {
+  const { fresh, reason } = checkFresh(STAMP_NAME, stampInputs, stampOutputs)
+  console.log(`  ${fresh ? '·' : '!'} 入口页纹理  ${reason}`)
+  console.log(fresh
+    ? '\n[同步] 纹理已是最新'
+    : '\n[待处理] 跑 node scripts/media/optimize-textures.mjs')
+  process.exit(fresh ? 0 : 1)
+}
 
 let problems = 0
 let before = 0
@@ -103,13 +133,6 @@ for (const file of readdirSync(join(SRC, PLAN.dir)).sort()) {
   if (!target) {
     console.error(`  ✗ ${stem} 没有在 PLAN.targets 里声明上限`)
     problems += 1
-    continue
-  }
-
-  if (checkOnly) {
-    const ok = existsSync(dst) && statSync(dst).mtimeMs >= statSync(src).mtimeMs
-    console.log(`  ${ok ? '·' : '!'} ${file}  ${ok ? '已是最新' : '需要重新生成'}`)
-    if (!ok) problems += 1
     continue
   }
 
@@ -155,10 +178,7 @@ for (const file of readdirSync(join(SRC, PLAN.dir)).sort()) {
   )
 }
 
-if (checkOnly) {
-  console.log(problems === 0 ? '\n[同步] 纹理已是最新' : `\n[待处理] ${problems} 项`)
-  process.exit(problems === 0 ? 0 : 1)
-}
+if (problems === 0) writeStamp(STAMP_NAME, digestOf(stampInputs))
 
 console.log(
   `\n合计 ${before.toFixed(0)} KB → ${after.toFixed(0)} KB` +

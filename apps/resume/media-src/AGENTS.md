@@ -24,6 +24,10 @@ textures/entrance/ 入口页纹理原图（砖墙一张 604KB）
                    → scripts/media/optimize-textures.mjs
 ```
 
+```
+.stamps/           内容指纹（跟着源一起提交，不部署）
+```
+
 四条流水线的产物都在 `public/` 下，四个脚本都支持 `--check`（只报告不写），
 CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**——这是这类生成物
 的共同失败模式：
@@ -65,6 +69,22 @@ python3 scripts/media/subset-fonts.py
 
 刻意不把 ffmpeg 装成 devDependency：那是 30MB+ 的二进制，而它只在换素材时
 用一次。`sharp` 与 `fonttools` 则是常规依赖（sharp 已在 devDependencies）。
+
+## `--check` 判的是内容指纹，不是 mtime
+
+`.stamps/*.json` 里存的是「源文件 + 生成脚本（+ 字体那条还有字符集）」的
+sha256。生成时写下，`--check` 时重算比对。
+
+**不能用 mtime。** git 不保存 mtime：新克隆里所有文件的 mtime 都是签出那
+一刻，先后顺序取决于 checkout 的写入顺序。四条流水线第一版都是比 mtime，
+本地全绿而 CI 第一次跑就红（`校验音频重编码产物`）。这属于"本地永远绿、
+CI 永远红"，不是偶发。
+
+**脚本也进指纹**：改了码率 / 质量 / 尺寸上限而源没变时，产物同样过期，
+只看源的哈希抓不到。
+
+对应的单测在 `__tests__/mediaFreshness.test.ts`，它**真的比对指纹**——
+只断言"指纹文件存在"是空断言（源改了、指纹没更新，文件照样存在）。
 
 ## 字体的一个坑
 

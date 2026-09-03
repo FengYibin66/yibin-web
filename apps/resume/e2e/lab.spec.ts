@@ -460,8 +460,30 @@ test.describe('教程气泡', () => {
         timeout: ROOM_ENTER_TIMEOUT,
       })
 
-      // 回到走廊后房间教程不该还在
-      await expect(page.getByTestId('achievement-popup')).toHaveCount(0)
+      /*
+        断言的是**房间教程**不在了，而不是"一个气泡都没有"。
+
+        退回走廊后走廊自己的教程会合法地重新出现（`corridor_explore` 还没解锁，
+        而 `NavigationUI` 在 `!isInRoom` 时会 `showTutorial('corridor_explore',
+        'corridor')`）。第一版断言 `achievement-popup` 计数为 0，那既包括房间教程
+        也包括走廊教程——它在这个分支上通过纯属时序侥幸（走廊教程的 effect 晚一拍
+        才跑），合并之后时序一变就红。
+
+        作用域机制要保证的是"**房间**的气泡不跟着你出房间"，所以断言也该按作用域写。
+      */
+      await expect(
+        page.locator('[data-popup-id="about_scroll"]'),
+        'About 的教程跟着出了房间 —— 它会占住队首让后续教程永远显示不出来',
+      ).toHaveCount(0)
+
+      /*
+        再正向断言一次：走廊自己的教程**应该**回来了。
+
+        只查"房间教程不在"是不够的——选择器写错、气泡整个渲染失败，那条同样会绿。
+        加上这一条，队列确实在工作这件事也被覆盖了。
+      */
+      await expect(page.locator('[data-popup-id="corridor_explore"]'))
+        .toBeVisible({ timeout: 10_000 })
     },
   )
 })

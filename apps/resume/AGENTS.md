@@ -142,7 +142,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 `app/` 下页面的文案与 `<head>` metadata 不在漏译门禁范围内。各条的理由写在
 `labContrast.test.ts` 顶部与 `sourceScan.ts` 的文档注释里。
 
-四个踩过的坑，改这块前先读：
+六条，改这块前先读：
 
 1. **`entryPose` 是门坐标系**：原点在门平面、**+Z 指向门外**，所以房间内的
    一切都是负 z。房间自己的内容用「桌心坐标系」，两者差一个 `ROOM_ORIGIN_Z`
@@ -150,17 +150,39 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 2. **位姿锚定在房间根上**：`enterRoom` 换算一次不够——门板与走廊段落在进房
    之后还会动，房间内容整体移动而相机留在旧世界坐标上。`followAnchor()`
    每帧按房间根矩阵的增量同步。
-3. **所有权靠一个布尔 `suspended`，而这是个设计缺陷**：`controls.update()` 每帧
-   都把内部位姿写回相机（`enabled` 只关输入），所以 director 默认挂起。问题是
-   「此刻谁在写相机」成了隐式运行时状态，且**在挂起态调用动作方法不报错也不生效**
-   ——已经造成三条缺陷：进房时导演与 DoorSection 的 gsap 同帧双写约 2 秒
-   （今天靠 rAF 注册顺序侥幸看起来正常）、`moveToWorld({duration:0})` 传送是空操作
-   （`push()` 只写 controls 内部状态，要 `update()` 才应用）、About 的 `setLean`
-   永不生效。改为显式 `claim()` / `release()` 的决策见 ADR
-   [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md)。
-4. **不要用内部 `snapshot()` 断言相机行为**：`cameraDirector.test.ts` 就是这么漏掉
-   传送失效的——`snapshot()` 是导演记的目标位姿，不是相机的实际位姿。断言对象必须是
-   `camera.position`。
+3. **所有权是显式的 `claim()` / `release()`，不是一个布尔**（ADR
+   [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md)）。
+   `controls.update()` 每帧都把内部位姿写回相机（`enabled` 只关输入），所以导演
+   默认不持有。第一版用 `suspended` 布尔加 `suspend()` / `resume()`，那让"此刻谁在
+   写相机"成了隐式运行时状态，且**在非持有态调用动作方法不报错也不生效**——三条
+   缺陷都出自这里：
+
+   - `moveToWorld({duration:0})` 传送是**空操作**（`push()` 只写 controls 的内部
+     球面坐标，位姿要等 `update()` 才应用）。**已修**：走廊传送改走
+     `lib/lab/app/camera/corridorRail.ts` 的导轨命令，不经导演
+   - 进房时导演与 `DoorSection` 的 gsap **同帧双写约 2 秒**（靠 rAF 注册顺序侥幸
+     看起来正常，飞行动画被静默吞掉）。**已修**：房间等 `phase === 'entered'` 才
+     `claim()`，两个写者前后相继
+   - About 的 `setLean` 是**死代码**（`applyLean` 在持有检查之后，而 About 从不
+     持有）。**未修**——见下方第 5 条
+
+4. **两个持有者，不是一个。** 走廊是一维导轨（x/y 固定、z 随滚动），与
+   `camera-controls` 的 orbit 模型是两种东西，`useCorridorCamera` 是它的持有者。
+   关键在于同一时刻只有一个在写，由 `cameraDirector.owner` 与 `CameraRig` 的
+   **开发态每帧断言**保证（持有期间相机被别人写过就抛）。那条断言比写点棘轮强：
+   棘轮守的是"谁写了相机"这个静态事实，守不住"在错误的时刻写"。
+
+5. **About / Contact 仍然没有房间级相机**（审计 A1 / A3 未修）。它们的
+   `RoomDefinition.entryPose` 是**声明了但没被消费**的数据——ADR 20260903140615
+   说「A1/A3 由 entryPose 修复」，而运行时从来只有 Projects 消费它。
+   接上去不是加一行 `useRoomCamera` 那么简单：About 的坐标系是混着的
+   （根 group 在 `position={[0,0,-25]}`，而里程碑又各自算 `ROOM_Z + scrollProgress + z`，
+   `ROOM_Z` 也是 −25），那些 `entryPose` 数值**从未被应用过、因此从未被验证**。
+   在没有视觉验证回路的情况下套上去，正是 ADR 615 已经犯过的那个错的重演。
+   要做这件事得先有一次带截图的取景标定。
+6. **不要用内部 `snapshot()` 断言相机行为**：传送失效那条就是这么漏过去的
+   ——`snapshot()` 是导演**想要**的位姿，不是相机**实际**的位姿，而那个 bug 下两者
+   恰好不一致。断言对象必须是 `camera.position`。
 
 ### 入口页的两条路径
 

@@ -52,7 +52,7 @@ vi.mock('@/context/AchievementsContext', () => ({
 
 vi.mock('@/context/SceneContext', () => ({
   useScene: () => ({
-    enterRoom: vi.fn(),
+    claim: vi.fn(),
     exitRoom: vi.fn(),
     exitRequested: false,
     pendingDoorClick: null,

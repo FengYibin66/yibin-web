@@ -4,7 +4,7 @@ import { memo, useEffect, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { useScene } from '@/context/SceneContext'
 import * as THREE from 'three'
-import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
+import { corridorRailJumpTo } from '@/lib/lab/app/camera/corridorRail'
 import {
   doorForRoom,
   doorWorldZ,
@@ -53,19 +53,26 @@ const TeleportRoom = memo(function TeleportRoom() {
 
       {
         /*
-          瞬移到门前 8 单位。走相机所有者的 duration=0 路径
-          （ADR 20260903140617）——这里原本是直接 `camera.position.set` +
-          `camera.rotation.set`，是四处违例之一。
+          瞬移到门前 8 单位 —— 命令**走廊导轨**，不经相机导演
+          （ADR 20260903211244）。
 
-          走廊坐标就是世界坐标（走廊内容不挂在旋转过的 group 下），所以
-          直接用 moveToWorld 而不是 enterRoom：没有房间局部坐标要换算。
+          第一版走 `cameraDirector.moveToWorld({ duration: 0 })`，而那在导演不
+          持有相机时是**空操作**：`moveToWorld` 的零时长分支只调 `push()`，
+          而 `push()` 只写 controls 的内部球面坐标——相机位姿要等 `update()`
+          才应用，而走廊里导演不持有相机，`update()` 第一行就 return。
+
+          于是相机一动不动，随后 `DoorSection` 的对齐 tween 从**旧位置**飞过去：
+          非 fast 模式下用户看到的是穿过整条走廊的 1 秒飞行而不是瞬移。
+          它的单测断言的是导演内部的 `snapshot()` 而不是 `camera.position`，
+          所以一直是绿的。
+
+          走廊里相机是一维导轨，本来就该由导轨的持有者移动。
         */
-        cameraDirector.moveToWorld(
-          _teleportPos.set(0, 0.2, doorZ + 8),
-          // 看向门（−Z 方向），等价于原先把 rotation 归零
-          _teleportTarget.set(0, 0.2, doorZ),
-          { duration: 0 },
-        )
+        const delivered = corridorRailJumpTo(doorZ + 8)
+        if (!delivered && process.env.NODE_ENV !== 'production') {
+          // 送不到不能静默：传送落空不报错，只表现为"传送后相机在错误的位置"
+          throw new Error('走廊导轨没挂载，传送的位置命令没人接收')
+        }
         camera.updateMatrixWorld()
         hasPositioned.current = true
 

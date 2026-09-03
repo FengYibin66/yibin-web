@@ -68,7 +68,7 @@ const _tgt = new THREE.Vector3()
   同步用的独立暂存量。
 
   **不能复用 `_pos` / `_tgt`**：`enterRoom` 先把换算好的位姿放进它们，接着调
-  `resume()` → `syncControlsFromCamera()`，后者若也用这两个就会把前者刚算好的
+  `take()` → `syncControlsFromCamera()`，后者若也用这两个就会把前者刚算好的
   值覆盖掉——然后 `moveToWorld(_pos, _tgt)` 收到的是相机当前位姿，房间的
   entryPose 被静默丢弃。（这个别名 bug 是被 cameraDirector 的测试抓出来的，
   症状恰好和 A4 一样："进房了但取景不对"。）
@@ -98,6 +98,14 @@ export function roomLocalToWorld(
   return out.applyMatrix4(roomRoot.matrixWorld)
 }
 
+/**
+ * 相机的持有者。
+ *
+ * `'corridor'`：走廊导轨（`useCorridorCamera`）与进出房编排（`DoorSection`）在写。
+ * `'director'`：本类在写；此期间任何别处的写入都是缺陷，开发态会被断言抓到。
+ */
+export type CameraOwner = 'corridor' | 'director'
+
 export class CameraDirector {
   private controls: CameraControls | null = null
   private camera: THREE.PerspectiveCamera | null = null
@@ -113,17 +121,39 @@ export class CameraDirector {
   private readonly lean = { pitch: 0, bank: 0 }
 
   /**
-   * 默认挂起 —— 这一点很关键。
+   * 当前谁在写相机（ADR 20260903211244）。
+   *
+   * ## 为什么是显式持有者而不是一个 `suspended` 布尔
    *
    * `controls.update()` 每帧都把内部位姿写回相机，**`enabled` 只关输入、
-   * 不关姿态应用**。所以只要 controls 在跑，任何别处对 `camera.position` 的
-   * 写入都会在同一帧被它抹掉。走廊由 `useCorridorCamera` 的导轨驱动、进出房
-   * 由 `DoorSection` 编排，两者都还直接写相机（见 cameraOwnership 白名单）。
+   * 不关姿态应用**。所以只要 controls 在跑，任何别处对 `camera.position` 的写入
+   * 都会在同一帧被它抹掉。走廊由 `useCorridorCamera` 的导轨驱动、进出房由
+   * `DoorSection` 编排，两者都直接写相机（见 cameraOwnership 的写点棘轮）。
    *
-   * 于是所有权是**显式交接**的：默认挂起，房间进房时 `resume()` 接管，
-   * 退房前 `suspend()` 交还。挂起期间 `update()` 直接返回，controls 不碰相机。
+   * 所以"谁在写"这件事必须被明确表达。第一版用的是 `private suspended = true`
+   * 加 `suspend()` / `resume()`，那让它成了一个**隐式的运行时状态**，且
+   * **在错误时刻调用动作方法不报错也不生效**——三条已核实的缺陷都出自这里：
+   *
+   * - `moveToWorld({duration: 0})` 在挂起态是**空操作**：它走 `push()`，而
+   *   `push()` 只写 controls 的内部球面坐标，相机位姿要等 `update()` 才应用
+   *   ——而 `update()` 第一行就 `return`。传送因此不再瞬移。
+   * - `setLean` 是**死代码**：`applyLean()` 在 `update()` 内、挂起检查之后，
+   *   而 About 从不 `resume()`。它每帧把值写进 `this.lean` 然后无人读取。
+   * - 进房时**两个写者重叠约 2 秒**：房间在 `CAMERA_ALIGNED` 就挂载并 `resume()`，
+   *   而 `DoorSection` 的进房飞行 tween 之后才开始。谁赢取决于 gsap 的 rAF 与
+   *   R3F 渲染循环谁后注册——今天恰好是导演后写、每帧覆盖，所以飞行动画被静默
+   *   吞掉、画面看起来正常。
+   *
+   * 判定原则（写进 ADR）：**所有权必须是一个能被断言的显式状态，而不是一个
+   * 能被忘记检查的布尔。** 一个"在错误时刻调用会静默无效"的 API 比四处乱写更
+   * 危险——因为它看起来是对的。
+   *
+   * 配套的可观测出口：`owner` getter + `CameraRig` 在开发态每帧断言"本帧只有
+   * 持有者写过相机"。
    */
-  private suspended = true
+  private ownership: CameraOwner = 'corridor'
+  /** 持有期间本类最后一次写给相机的位姿，供开发态断言比对 */
+  private readonly lastWritten = { px: 0, py: 0, pz: 0, qx: 0, qy: 0, qz: 0, qw: 1 }
 
   /** 退房 / 取消对焦时回到哪 —— 进房时记下的房间位姿（世界坐标） */
   private roomPose: { px: number; py: number; pz: number; tx: number; ty: number; tz: number } | null = null
@@ -154,7 +184,7 @@ export class CameraDirector {
     controls.touches.two = CameraControls.ACTION.TOUCH_ZOOM
     controls.touches.three = CameraControls.ACTION.NONE
     this.controls = controls
-    controls.enabled = false // 默认挂起，见 `suspended` 的注释
+    controls.enabled = false // 默认不持有相机，见 `ownership` 的注释
     this.syncPoseFromControls()
   }
 
@@ -171,7 +201,7 @@ export class CameraDirector {
     this.anchorValid = false
     this.lean.pitch = 0
     this.lean.bank = 0
-    this.suspended = true
+    this.ownership = 'corridor'
   }
 
   /**
@@ -183,11 +213,12 @@ export class CameraDirector {
    * 写序列由所有者持有"的意义。
    */
   update(delta: number): void {
-    if (this.suspended) return
+    if (this.ownership !== 'director') return
     this.followAnchor()
     this.controls?.update(delta)
     if (this.mode === 'free') this.syncPoseFromControls()
     this.applyLean()
+    this.recordWritten()
   }
 
   /**
@@ -212,12 +243,12 @@ export class CameraDirector {
    * 会 kill 进行中的 tween：挂起后还继续插值 `this.pose` 却不推给 controls
    * 是纯浪费，恢复时又要重新同步。
    */
-  suspend(): void {
+  release(): void {
     this.tween?.kill()
     this.tween = null
     this.mode = 'idle'
-    this.suspended = true
-    // 挂起期间房间可能移动，恢复时要重新取基准而不是补一个巨大的增量
+    this.ownership = 'corridor'
+    // 交还期间房间可能移动，重新接管时要重新取基准而不是补一个巨大的增量
     this.anchorValid = false
     if (this.controls) this.controls.enabled = false
   }
@@ -229,13 +260,51 @@ export class CameraDirector {
    * 把相机移走了，controls 记的还是挂起那一刻的值，不同步的话恢复第一帧会
    * 猛地跳回去。
    */
-  resume(): void {
-    this.suspended = false
+  private take(): void {
+    this.ownership = 'director'
     this.syncControlsFromCamera()
   }
 
-  get isSuspended(): boolean {
-    return this.suspended
+  /** 当前谁在写相机 */
+  get owner(): CameraOwner {
+    return this.ownership
+  }
+
+  /**
+   * 相机的实际位姿与本类最后写入的是否一致（开发态断言用）。
+   *
+   * 持有期间两者不一致，说明**同一帧里有别人也写了相机**——那正是进房双写那类
+   * 缺陷的形态，而它不报错、不掉帧、在开发机上截图正常。返回偏差的平方距离，
+   * `null` 表示当前不由本类持有（此时不该断言）。
+   */
+  ownershipDrift(): number | null {
+    if (this.ownership !== 'director') return null
+    const camera = this.camera
+    if (!camera) return null
+    const { px, py, pz, qx, qy, qz, qw } = this.lastWritten
+    const dp =
+      (camera.position.x - px) ** 2 +
+      (camera.position.y - py) ** 2 +
+      (camera.position.z - pz) ** 2
+    const dq =
+      (camera.quaternion.x - qx) ** 2 +
+      (camera.quaternion.y - qy) ** 2 +
+      (camera.quaternion.z - qz) ** 2 +
+      (camera.quaternion.w - qw) ** 2
+    return dp + dq
+  }
+
+  /** 记下本帧写完之后的相机位姿，作为下一帧的比对基准 */
+  private recordWritten(): void {
+    const camera = this.camera
+    if (!camera) return
+    this.lastWritten.px = camera.position.x
+    this.lastWritten.py = camera.position.y
+    this.lastWritten.pz = camera.position.z
+    this.lastWritten.qx = camera.quaternion.x
+    this.lastWritten.qy = camera.quaternion.y
+    this.lastWritten.qz = camera.quaternion.z
+    this.lastWritten.qw = camera.quaternion.w
   }
 
   get currentMode(): CameraMode {
@@ -330,7 +399,7 @@ export class CameraDirector {
    * @param roomRoot 挂载后的房间根 group。`null` 时按世界坐标处理
    *                 （只有测试和没有房间容器的场景会这样）
    */
-  enterRoom(
+  claim(
     pose: RoomEntryPose,
     roomRoot: THREE.Object3D | null,
     freedom: RoomCameraFreedom | null,
@@ -350,9 +419,9 @@ export class CameraDirector {
       this.anchorValid = false
     }
 
-    // 进房即接管：从相机当前位姿（DoorSection 刚把它推进门里）平滑过去，
+    // 接管：从相机当前位姿（DoorSection 刚把它推进门里）平滑过去，
     // 而不是从 controls 记的旧值
-    if (this.suspended) this.resume()
+    if (this.ownership !== 'director') this.take()
 
     this.moveToWorld(_pos, _tgt, {
       duration: opts.duration ?? pose.duration,
@@ -614,6 +683,7 @@ if (typeof window !== 'undefined') {
     roomToWorld: (x: number, y: number, z: number) => cameraDirector.roomToWorld(x, y, z),
     fov: () => cameraDirector.lensInfo(),
     mode: () => cameraDirector.currentMode,
-    suspended: () => cameraDirector.isSuspended,
+    owner: () => cameraDirector.owner,
+    drift: () => cameraDirector.ownershipDrift(),
   }
 }

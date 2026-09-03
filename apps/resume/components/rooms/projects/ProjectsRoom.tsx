@@ -27,6 +27,7 @@ import { Desk, DeskLamp, ServerCabinet, WallDecor } from './LabFurniture'
 import { LabShell } from './LabShell'
 import { ProjectMonitor } from './ProjectMonitor'
 import { SketchPanel } from './SketchPanel'
+import { useRoomCamera } from '@/hooks/useRoomCamera'
 
 /**
  * Projects —— 「深夜实验室」（ADR 20260903140619）。
@@ -72,27 +73,20 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
 
   // ── 进房取景 ───────────────────────────────────────────────────────────────
 
-  /**
-   * 房间挂载 + 可见后把 entryPose 交给相机所有者。
-   *
-   * 必须等 `showRoom`：房间根 group 的 worldMatrix 只有挂进场景图之后才有
-   * 意义，提前算会拿到单位矩阵——那就退回成"按世界坐标处理"，也就是 A4。
-   */
-  useEffect(() => {
-    if (!showRoom || isExiting) return
-    const root = rootRef.current
-    if (!root) return
-    cameraDirector.enterRoom(
-      projectsRoom.entryPose,
-      root,
-      projectsRoom.cameraFreedom,
-      { onArrive: () => unlockAchievement('projects_inspect') },
-    )
-    return () => {
-      // 退房前把相机交还给 DoorSection 的退场编排
-      cameraDirector.suspend()
-    }
-  }, [showRoom, isExiting, unlockAchievement])
+  /*
+    进房取景交给共用 hook（`useRoomCamera`）：它从注册表取 `entryPose`，
+    并且**等门开完**（`phase === 'entered'`）才接管。
+
+    第一版在这里自己写这段 effect，触发条件是 `showRoom`——而房间在
+    `CAMERA_ALIGNED` 就挂载，比 `DoorSection` 的进房飞行 tween 早约 2 秒。
+    两个写者因此重叠，飞行动画被导演每帧覆盖掉（画面看起来正常，动画静默消失）。
+    详见 `hooks/useRoomCamera.ts` 的说明与 ADR 20260903211244。
+  */
+  const handleArrive = useCallback(() => {
+    unlockAchievement('projects_inspect')
+  }, [unlockAchievement])
+
+  useRoomCamera('projects', rootRef, { showRoom, isExiting }, { onArrive: handleArrive })
 
   // ── 停靠 ───────────────────────────────────────────────────────────────────
 
@@ -122,7 +116,7 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
 
     if (phase === 'centering' && selectedIndex >= 0) {
       const pose = monitorDockPose(selectedIndex, projects.length)
-      cameraDirector.enterRoom(
+      cameraDirector.claim(
         {
           // monitorDockPose 给的是桌心坐标，enterRoom 要门坐标
           position: toDoorFrame(pose.position),
@@ -144,7 +138,7 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
     }
 
     if (phase === 'undocking') {
-      cameraDirector.enterRoom(
+      cameraDirector.claim(
         projectsRoom.entryPose,
         root,
         projectsRoom.cameraFreedom,

@@ -1,7 +1,7 @@
 # 20260903140617. Lab 相机收归单一导演，底层换成 camera-controls；手势统一用 @use-gesture
 
-- 状态：提议
-- 索引：resume 的 Lab 只允许 `lib/lab/app/camera/CameraDirector` 写 `camera.position/rotation/lookAt`，底层委托 `camera-controls`（drei `<CameraControls>`）；房间内相机自由度由 `RoomDefinition.cameraFreedom` 声明；四套手写 wheel/pointer/touch 处理统一换成 `@use-gesture/react`
+- 状态：已接受
+- 索引：resume 的 Lab 只允许 `lib/lab/app/camera/CameraDirector` 写 `camera.position/rotation/lookAt`，底层委托 `camera-controls`（drei `<CameraControls>`）；房间内相机自由度由 `RoomDefinition.cameraFreedom` 声明；四套手写 wheel/pointer/touch 处理统一换成 `@use-gesture/react`。注记：所有权的**形态**已被 `20260903211244` 修订——`suspended` 布尔改为显式 `claim()` / `release()`，进房飞行由导演持有、走廊传送不再经由导演；原形态导致三条已核实缺陷（进房双写相机、传送不瞬移、About 探身失效）。「只有 CameraDirector 能写相机」这条**结论不变**。`@use-gesture` 迁移未做（未安装，装了不用等于空依赖）。
 - 日期：2026-09-03
 
 ## 背景

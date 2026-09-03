@@ -1,7 +1,7 @@
 # 20260903140619. Lab 引入外部创意素材，风格统一为手绘线稿；程序化草图用 Rough.js 运行时生成
 
-- 状态：提议
-- 索引：resume 的 Lab 首次引入外部创意素材，限定为手绘线稿类并记录许可（Rough.js MIT、Excalidraw MIT、Khushmeen Doodle Icons 免费商用、Open Doodles CC0、Google Fonts OFL、freesound CC0）；重复性草图元素（白板高亮、便签、机柜、刻度盘）用 Rough.js 运行时生成 `CanvasTexture` 而非预制位图；Projects 房间据此重做为「深夜实验室」
+- 状态：已接受
+- 索引：resume 的 Lab 首次引入外部创意素材，限定为手绘线稿类并记录许可（Rough.js MIT、Excalidraw MIT、Khushmeen Doodle Icons 免费商用、Open Doodles CC0、Google Fonts OFL、freesound CC0）；重复性草图元素（白板高亮、便签、机柜、刻度盘）用 Rough.js 运行时生成 `CanvasTexture` 而非预制位图；Projects 房间据此重做为「深夜实验室」。注记：许可记录的落点 `apps/resume/public/CREDITS.md` 在本文写下时并未创建，已于 `20260903211338` 那批补齐；中文门牌的字形问题（`CabinSketch` 无汉字字形，troika 缺字时默认回退到 jsDelivr 拉 Noto，大陆访客看到空白门牌）由 `20260903211244` 那批修正为使用仓库内的 `ZCOOLKuaiLe` 并禁用外网回退。
 - 日期：2026-09-03
 
 ## 背景

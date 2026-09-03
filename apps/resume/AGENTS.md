@@ -73,29 +73,53 @@ __tests__/               # vitest
 六步已全部实施，但**不是每一份 ADR 都完全落地**——下表的「取代的现状」列
 记的是实际状态。改动前先看清那一栏。
 
-已知的剩余差距集中在三处：相机所有权是白名单形态（走廊导轨与 DoorSection
-的进出房编排还直接写相机）、`SceneContext` / `PerformanceContext` 还没
-reducer 化、中文门牌的字形与 Publications 不统一。审计报告的
-「未做的项与理由」一节列了完整清单。
+### 落地状态（读之前先读这一段）
 
-| ADR | 目标 | 取代的现状 |
+**「已定义、未接线」不算落地。** 2026-09-03 的四份独立 review 查出：三份 ADR 的主体
+（房间注册表的消费路径、`room`/`corridor` 状态图、派生预载表）代码写了、测试绿了，
+**但运行时从没引用过它们**，而这张表上一版把它们写成「已落地 / 已用」。后果不是「文档不整洁」，
+而是下一个人会相信 About/Contact 的取景由 `entryPose` 驱动、房间生命周期由状态图保护，
+然后基于错误前提往上叠设计——根 CLAUDE.md 用 libSQL 被写成 MySQL 那次事故举的正是这个例子。
+
+判断落地的操作性标准，改动这张表时照着做：
+
+```bash
+grep -rl <模块> app components context hooks lib   # 有非测试命中才算接线
+```
+
+接线计划见 ADR [20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)。
+
+| ADR | 目标 | 实际状态 |
 |-----|------|-----------|
-| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已落地**：门坐标单一来源，预载表由生成器派生并有 `--check` |
-| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：三台状态图 + 音频 store + 成就队列 reducer 已用；`SceneContext` 与 `PerformanceContext` 仍是手写 Context |
-| [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **已落地**（房间域）：grep 白名单守住，走廊导轨与 DoorSection 编排待迁移。手势尚未迁移，`@use-gesture` 未安装（装了不用等于空依赖） |
-| [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB |
-| [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做为「深夜实验室」+ 平台隐喻已去；Gallery 门贴纸未换 |
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **部分落地**：注册表已定义且门坐标已是单一来源；但 `view` / `tutorial` **零消费者**（`RoomInterior` 仍是硬编码 `switch`，四个房间各自硬编码教程 id），`entryPose` / `cameraFreedom` **只有 Projects 消费**（所以 ADR 说的「A1/A3 由 entryPose 修复」运行时不成立），`manifest.gen.ts` **唯一引用者是生成它的脚本自己**（运行时仍 import 手写的 `roomAssets.ts` / `texturePreload.ts`，两份已漂移，首屏壁画仍是 3 段 = 审计 G1 未修），`roomId === 'gallery'` 特例仍在 7 处，生成物**未**加入 hook 保护名单 |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **部分落地**：音频 store（zustand）与成就队列 reducer 已接线；三台状态图**只有 `dockMachine` 接线了**（且只有 Projects 用，Publications 仍用 `publicationMotionMachine`），`room.machine` / `corridor.machine` 运行时零引用——`labMachines.test.ts` 守的是死代码，其中为审计 A8 加的 `entered → failed` 边**运行时不存在**，A8 未修。`@xstate/graph` 装了没用 |
+| [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **部分落地，且所有权形态已被 [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md) 修订**：`suspended` 布尔让三处出错——进房时导演与 DoorSection 的 gsap **同帧双写约 2 秒**（靠 rAF 顺序侥幸不出事）、传送的 `moveToWorld({duration:0})` 在挂起态是**空操作**、About 的 `setLean` 是**死代码**。手势未迁移，`@use-gesture` 未安装 |
+| [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |
+| [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做 + 平台隐喻已去 + Gallery 门贴纸已换。许可记录（`public/CREDITS.md`）当时**未创建**，已补；ADR 表里列的 Doodle Icons / Open Doodles / freesound / Excalidraw **实际一个都没用**，出入见 `public/CREDITS.md` 文末 |
 
-### 相机所有权（已是机制，不再是约定）
+### 相机所有权（机制的**覆盖边界**要连着读）
 
 **只有 `lib/lab/app/camera/CameraDirector` 能写相机。** 房间组件只声明目标
 pose（`RoomDefinition.entryPose`，房间局部坐标），换算与插值由所有者做。
-`__tests__/cameraOwnership.test.ts` 用 grep 守住，并且是**白名单**形态：
-现存的写点逐一登记并写明理由（走廊导轨、DoorSection 的门对齐编排、
-Publications 三处、入口预览、Classic 场景），任何**新增**写点立刻红灯。
-白名单只能缩——删掉一行就是完成一次迁移。
+`__tests__/cameraOwnership.test.ts` 是**白名单**形态：现存写点逐一登记并写明
+理由，任何**新增**写点立刻红灯，白名单只能缩。
 
-三个踩过的坑，改这块前先读：
+**但这道门禁当前的覆盖边界比它看起来窄得多**，改这块之前必须知道：
+
+- 它用正则匹配写法，**不认** `camera.rotation.set(`、`camera.position.setZ(`、
+  `camera.rotateX(`、`camera.position.applyMatrix4(`、`gsap.to(camera.rotation`，
+  也不认别名 `const cam = camera; cam.position.set(...)`。变异测试 20 个绕过形态
+  **活了 10 个**。其中 `camera.rotation.set` 正是 `DoorSection.tsx` 眼下在用的写法
+  ——门禁连自己白名单注释里登记过的形态都抓不到。
+- 手写的字符串剥离器把 JSX 文本里的撇号当字符串起点，一个 `Don't` 就能让同文件
+  后面所有写点隐身。
+- 白名单是**文件级**的：已在名单里的文件再加 20 个写点也是绿的。
+
+换成 TS AST 扫描 + 写点计数棘轮的决策见 ADR
+[20260903211320](../../docs/adr/20260903211320-source-gates-use-ts-ast-not-regex.md)。
+**在那之前，不要把「测试绿了」当成「没有新增写点」。**
+
+四个踩过的坑，改这块前先读：
 
 1. **`entryPose` 是门坐标系**：原点在门平面、**+Z 指向门外**，所以房间内的
    一切都是负 z。房间自己的内容用「桌心坐标系」，两者差一个 `ROOM_ORIGIN_Z`
@@ -103,9 +127,17 @@ Publications 三处、入口预览、Classic 场景），任何**新增**写点�
 2. **位姿锚定在房间根上**：`enterRoom` 换算一次不够——门板与走廊段落在进房
    之后还会动，房间内容整体移动而相机留在旧世界坐标上。`followAnchor()`
    每帧按房间根矩阵的增量同步。
-3. **所有权是显式交接的**：`controls.update()` 每帧都把内部位姿写回相机
-   （`enabled` 只关输入），所以 director 默认**挂起**，进房 `resume()`、
-   退房 `suspend()`。不交接的话它会抹掉 DoorSection 的进出房 tween。
+3. **所有权靠一个布尔 `suspended`，而这是个设计缺陷**：`controls.update()` 每帧
+   都把内部位姿写回相机（`enabled` 只关输入），所以 director 默认挂起。问题是
+   「此刻谁在写相机」成了隐式运行时状态，且**在挂起态调用动作方法不报错也不生效**
+   ——已经造成三条缺陷：进房时导演与 DoorSection 的 gsap 同帧双写约 2 秒
+   （今天靠 rAF 注册顺序侥幸看起来正常）、`moveToWorld({duration:0})` 传送是空操作
+   （`push()` 只写 controls 内部状态，要 `update()` 才应用）、About 的 `setLean`
+   永不生效。改为显式 `claim()` / `release()` 的决策见 ADR
+   [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md)。
+4. **不要用内部 `snapshot()` 断言相机行为**：`cameraDirector.test.ts` 就是这么漏掉
+   传送失效的——`snapshot()` 是导演记的目标位姿，不是相机的实际位姿。断言对象必须是
+   `camera.position`。
 
 ### 入口页的两条路径
 
@@ -152,7 +184,12 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 52 个用例，跑 chromium + mobile-safari 两个形态。
+`e2e/` 下 78 个用例（39 条 spec × chromium / mobile-safari 两个形态），全部集中在
+`staticExport.spec.ts` 一个文件里。
+
+**覆盖缺口：E2E 完全不进 Lab。** `/lab` 只断言了返回 200，进房 / 退房 / 传送 / ESC
+一条都没有。ADR [20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)
+把补这批 E2E 列为状态图接线的**前置条件**——没有它，那次改动的回归无从发现。
 
 **打在静态产物 `out/` 上，不打 `next dev`。** 这是刻意的：生产由 nginx 直接提供 `out/`，而 `next dev` 有 HMR、按需编译、不同的路由解析——测它测不到真实部署形态，尤其是 `trailingSlash: true` 的 `dir/index.html` 结构（`next.config.js` 的注释记着一次真实故障：`/gallery` 直接访问返回 403）。
 

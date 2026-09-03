@@ -1,17 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-} from 'react'
+import { useEffect, useRef } from 'react'
 
-import type { RoomId } from '@/context/SceneContext'
-import {
-  decideDoorEntry,
-  type DoorEntryCommand,
-} from '@/lib/lab/doorEntryFlow'
-import { isDoorEntryOwner, type RoomLoadState } from '@/lib/lab/roomLoadMachine'
+import type { RoomId, RoomLoadState } from '@/context/SceneContext'
 
-export const ROOM_LOAD_TIMEOUT_MS = 8000
 /**
  * 加载超时的错误**码**，不是给用户看的文案。
  *
@@ -23,92 +13,75 @@ export const ROOM_LOAD_TIMEOUT_CODE = 'room-load-timeout'
 
 interface DoorEntryOrchestratorOptions {
   roomId: RoomId
-  segmentIndex: number
   roomLoadState: RoomLoadState
   isEntryOwner: boolean
   isFastTeleport: boolean
-  markRoomOpening: () => void
-  timeoutRoomLoad: (message: string) => void
   openDoorPanels: (fastMode: boolean, onComplete: () => void) => void
   flyIntoRoom: (fastMode: boolean) => void
-  onFailureReset: (commands: DoorEntryCommand[]) => void
 }
 
-interface DoorEntryOrchestratorControls {
-  clearLoadTimeout: () => void
-}
-
+/**
+ * 门开合动画的触发时机 —— **只剩这一件事**（ADR 20260903211338）。
+ *
+ * ## 删掉了什么
+ *
+ * 这个 hook 原先有 5 个 effect 和 4 个 ref，其中三件已经由状态图接管：
+ *
+ * 1. **8 秒加载超时**：`loadTimeoutRef` + 一个 `setTimeout` + 一个 effect 负责
+ *    在 `loading` 相位开始时起、在别的相位清。现在是 `loading` 状态的一行
+ *    `after: { 8000: 'failed' }`。
+ * 2. **进房所有权**：`ownedEntryRef` 记着"我是不是这次进房的门"，靠另一个 effect
+ *    在相位变化时维护。现在由机器 context 派生（`isDoorEntryOwner`）。
+ * 3. **失败复位**：`previousPhaseRef` 记上一次相位，靠观察 `failed → idle` 这次
+ *    转移来复位另外两个 ref。**这是一个真实缺陷的来源**——中间只要插进一次别的
+ *    渲染，`previousPhase` 就被覆盖、复位永远不发生，表现是「从加载失败退出后
+ *    再也传送不了」（`e2e/lab.spec.ts` 里那条 `test.fail` 抓的就是它）。
+ *    机器里 `failed --RESET--> idle` 是一条显式边，没有需要复位的影子状态。
+ *
+ * 剩下的这一件必须留在 React 里：开门是 DOM/gsap 动画，机器不该知道它。
+ *
+ * ## 为什么还要 `openedAttemptRef`
+ *
+ * 「每次 attempt 只开一次门」不是状态，是**副作用的幂等保护**：`ready` 相位会
+ * 因为别的 state 变化而多次渲染，而开门动画重放会让门板抖一下。用 attempt 号
+ * 而不是布尔，是因为重试会回到 `loading` 再到 `ready`，那时该重新开门。
+ */
 export function useDoorEntryOrchestrator({
   roomId,
-  segmentIndex,
   roomLoadState,
   isEntryOwner,
   isFastTeleport,
-  markRoomOpening,
-  timeoutRoomLoad,
   openDoorPanels,
   flyIntoRoom,
-  onFailureReset,
-}: DoorEntryOrchestratorOptions): DoorEntryOrchestratorControls {
-  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const openingAttemptRef = useRef<number | null>(null)
-  const previousPhaseRef = useRef(roomLoadState.phase)
-  const ownedEntryRef = useRef(false)
-
-  const clearLoadTimeout = useCallback(() => {
-    if (!loadTimeoutRef.current) return
-    clearTimeout(loadTimeoutRef.current)
-    loadTimeoutRef.current = null
-  }, [])
+}: DoorEntryOrchestratorOptions): void {
+  const openedAttemptRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (isEntryOwner) {
-      ownedEntryRef.current = true
-      return
-    }
-    if (ownedEntryRef.current && !isDoorEntryOwner(roomLoadState, roomId, segmentIndex)) {
-      ownedEntryRef.current = false
-      clearLoadTimeout()
-      openingAttemptRef.current = null
-    }
-  }, [clearLoadTimeout, isEntryOwner, roomId, roomLoadState, segmentIndex])
-
-  useEffect(() => {
-    if (!ownedEntryRef.current) return
-    if (roomLoadState.phase !== 'loading' || roomLoadState.roomId !== roomId) return
-
-    clearLoadTimeout()
-    loadTimeoutRef.current = setTimeout(() => {
-      if (ownedEntryRef.current) {
-        timeoutRoomLoad(ROOM_LOAD_TIMEOUT_CODE)
-      }
-    }, ROOM_LOAD_TIMEOUT_MS)
-    return clearLoadTimeout
-  }, [clearLoadTimeout, roomId, roomLoadState.attempt, roomLoadState.phase, roomLoadState.roomId, timeoutRoomLoad])
-
-  useEffect(() => {
-    if (!ownedEntryRef.current) return
+    if (!isEntryOwner) return
     if (roomLoadState.phase !== 'ready' || roomLoadState.roomId !== roomId) return
-    if (openingAttemptRef.current === roomLoadState.attempt) return
+    if (openedAttemptRef.current === roomLoadState.attempt) return
 
-    openingAttemptRef.current = roomLoadState.attempt
-    markRoomOpening()
+    openedAttemptRef.current = roomLoadState.attempt
     openDoorPanels(isFastTeleport, () => flyIntoRoom(isFastTeleport))
-  }, [flyIntoRoom, isFastTeleport, markRoomOpening, openDoorPanels, roomId, roomLoadState.attempt, roomLoadState.phase, roomLoadState.roomId])
+  }, [
+    flyIntoRoom,
+    isEntryOwner,
+    isFastTeleport,
+    openDoorPanels,
+    roomId,
+    roomLoadState.attempt,
+    roomLoadState.phase,
+    roomLoadState.roomId,
+  ])
 
+  /*
+    回到 idle 就清掉幂等标记，让下一次进房能重新开门。
+
+    这一条与旧实现的 `previousPhaseRef` 不同：它只看**当前**相位是不是 idle，
+    不需要"观察到某次转移"。少一个只能看见一帧的判据，就少一处漏掉就永久卡住
+    的地方。
+  */
   useEffect(() => {
-    const previousPhase = previousPhaseRef.current
-    previousPhaseRef.current = roomLoadState.phase
-    if (!ownedEntryRef.current) return
-    if (previousPhase !== 'failed' || roomLoadState.phase !== 'idle') return
-
-    onFailureReset(decideDoorEntry({ type: 'BACK' }).commands)
-    ownedEntryRef.current = false
-    clearLoadTimeout()
-    openingAttemptRef.current = null
-  }, [clearLoadTimeout, onFailureReset, roomLoadState.phase])
-
-  useEffect(() => clearLoadTimeout, [clearLoadTimeout])
-
-  return { clearLoadTimeout }
+    if (roomLoadState.phase === 'idle') openedAttemptRef.current = null
+  }, [roomLoadState.phase])
 }

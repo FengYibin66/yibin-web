@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cameraWrites,
   colorLiterals,
+  eventTypeLiterals,
   userStrings,
 } from './helpers/sourceScan'
 
@@ -261,10 +262,73 @@ describe('对比度门禁：变异形态', () => {
   })
 })
 
+// ─────────────────────────────────── 状态机事件的运行时发送方（第四条门禁）
+
+/**
+ * `machineEventWiring.test.ts` 的变异形态。
+ *
+ * 这一组不是当年那 20 个 review 形态，是**接线 `room.machine` 时新写的门禁自己
+ * 的变异**（ADR 20260903211338）。放进这份清单的理由与那 20 个相同：一个门禁
+ * 能被什么形态绕过，只有写下来才不会在下一次改动里被悄悄放宽。
+ */
+const EVENT_WIRING_MUTATIONS: readonly Mutation[] = [
+  {
+    id: 'W1',
+    then: 'survived',
+    what: '注释里出现事件形状 —— 文本匹配版把注释当成了发送方',
+    code: "// old: decideDoorEntry({ type: 'BACK' })\nconst a = 1",
+  },
+  {
+    id: 'W2',
+    then: 'survived',
+    what: '机器自己的事件联合类型声明 —— 文本匹配版把类型声明也当成发送方',
+    code: "type E = { type: 'MOUNTED' } | { type: 'READY' }",
+  },
+  {
+    id: 'W3',
+    then: 'killed',
+    what: '真的发送方 —— 必须认出来，否则门禁会误报一片',
+    code: "tryRoom({ type: 'MOUNTED' })",
+  },
+]
+
+describe('事件发送方扫描', () => {
+  it('W1：注释里的事件形状不算发送方', () => {
+    const found = eventTypeLiterals(EVENT_WIRING_MUTATIONS[0]!.code, 'm.ts')
+    expect(found, '注释被当成了发送方 —— 4 条 BACK 死边就是这么绿着的').toEqual([])
+  })
+
+  it('W2：联合类型声明不算发送方 —— AST 顺带解决的，不是刻意排除的', () => {
+    /*
+      我原先以为这条要靠"跳过机器定义目录"才能过：声明与发送在源码里都是
+      `type: 字面量`。实际不用——类型字面量里那是 `PropertySignature`，
+      对象字面量里才是 `PropertyAssignment`，AST 天然分得开。
+      文本匹配分不开，所以这条当年（第一版）是存活的。
+
+      门禁那边仍然排除机器定义目录，理由不同：机器内部若自己 `send` 一个事件，
+      那不算"运行时有消费方"。
+    */
+    const found = eventTypeLiterals(EVENT_WIRING_MUTATIONS[1]!.code, 'm.ts')
+    expect(found, '类型声明被当成了发送方').toEqual([])
+  })
+
+  it('W3：真的发送方认得出来', () => {
+    expect(eventTypeLiterals(EVENT_WIRING_MUTATIONS[2]!.code, 'm.ts')).toEqual(['MOUNTED'])
+  })
+
+  it('只认全大写 —— 普通的 type 属性不该被当成事件', () => {
+    expect(eventTypeLiterals("const p = { type: 'button' }", 'm.ts')).toEqual([])
+    expect(eventTypeLiterals("const p = { type: 'Submit' }", 'm.ts')).toEqual([])
+  })
+})
+
 describe('清单本身', () => {
   it('三组变异都保留了当年存活的形态 —— 清单只能增不能删', () => {
-    const all = [...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS]
-    expect(all.filter(m => m.then === 'survived').length).toBeGreaterThanOrEqual(14)
+    const all = [
+      ...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS,
+      ...EVENT_WIRING_MUTATIONS,
+    ]
+    expect(all.filter(m => m.then === 'survived').length).toBeGreaterThanOrEqual(16)
     for (const m of all) {
       expect(m.what.length, m.id).toBeGreaterThan(10)
       expect(m.code.length, m.id).toBeGreaterThan(5)
@@ -272,7 +336,10 @@ describe('清单本身', () => {
   })
 
   it('编号不重复', () => {
-    const ids = [...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS].map(m => m.id)
+    const ids = [
+      ...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS,
+      ...EVENT_WIRING_MUTATIONS,
+    ].map(m => m.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 })

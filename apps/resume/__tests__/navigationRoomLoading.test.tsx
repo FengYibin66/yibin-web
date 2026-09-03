@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { RoomLoadPhase, RoomLoadState } from '@/lib/lab/roomLoadMachine'
+import type { RoomLoadPhase, RoomLoadState } from '@/context/SceneContext'
 
 const sceneMocks = vi.hoisted(() => ({
   currentRoom: null as 'publications' | null,
@@ -58,11 +58,19 @@ vi.mock('@/components/ui/AchievementsPanel', () => ({
 
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
+/*
+  `opening` 换成了 `mounting`（ADR 20260903211338 接线状态图时）。
+
+  这不是重命名：旧 reducer 的 `opening` 表示"门板正在开"，而**没有任何消费方
+  区分过它与 `ready`**；机器新增的 `mounting` 表示"房间子树挂了、纹理还没开始
+  加载"，旧实现只能靠 `showRoom` 那个组件局部 state 判断。两者都属于"不该让
+  用户点导航"的相位，所以这张表的语义不变。
+*/
 const BLOCKED_PHASES: RoomLoadPhase[] = [
   'aligning',
+  'mounting',
   'loading',
   'ready',
-  'opening',
   'failed',
   'exiting',
 ]

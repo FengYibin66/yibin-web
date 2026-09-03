@@ -527,22 +527,46 @@ test.describe('房间加载失败与重试', () => {
     await expect(page.getByTestId('room-load-back')).toBeVisible()
     // 失败的房间不算"进去了"
     await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false')
+    /*
+      错误卡可见还不够 —— 机器的相位也必须是 `failed`。两者脱钩过：审计 A8 的形态
+      正是「房间静默消失而相位仍是 entered」，那时错误卡的可见性与状态图各说各话。
+    */
+    await expect(page.getByTestId('lab-ui'), 'UI 显示失败但状态图不认')
+      .toHaveAttribute('data-lab-phase', 'failed')
   })
 
   /*
-    ── 这条 E2E 查出的缺陷：从失败退出后，下一次传送会挂住 ────────────────────
+    ── 从失败退出后再进同一间房：两层缺陷，一层已修 ──────────────────────────
 
-    表现：`data-lab-teleporting` 永久停在 `true`，房间再也进不去。与审计 B1
-    同一族（B1 是"传送中加载失败 → isTeleporting 没人重置 → 纸永久遮屏"），
-    这一条是"从失败退出 → 门的 ref 记账没复位 → 下一次进房的门点击被忽略"。
+    ## 我最初的根因判断是错的
 
-    根因在 `useDoorEntryOrchestrator` 那套 ref 记账：`ownedEntryRef` 与
-    `previousPhaseRef` 要靠"观察到 failed → idle 这次转移"来复位，而中间只要插进
-    一次别的渲染，那个 `previousPhase` 就被覆盖、复位永远不发生。
+    第一版这里写的是「根因在 `useDoorEntryOrchestrator` 的 ref 记账
+    （`ownedEntryRef` / `previousPhaseRef`），接线状态图就会修掉」。
+    **实测数据推翻了它**——把相位与传送状态暴露成属性之后逐帧看：
 
-    **这正是 ADR 20260903211338 要接线状态图的核心理由**：所有权由机器的 context
-    派生（`roomId` + `segmentIndex`），而不是靠三个 ref 互相看护。接线之后这条会
-    开始通过，`test.fail()` 随即报错，标记去掉——那时它就是接线的验收条件。
+    ```
+    [返回走廊后]        phase: idle,   teleporting: false   ← 清理完全正常
+    [第二次传送 +1s]    phase: failed, teleporting: true    ← 1 秒内就失败了
+    ```
+
+    清理没问题，是**第二次加载立刻失败**。
+
+    ## 第一层（已修）：drei 缓存里留着被拒绝的 promise
+
+    `useTexture` 会把**失败的 promise 也缓存起来**，于是下一次读同一批纹理立刻
+    拿到同一个 rejection——不重发请求、不管网络是否已恢复。而只有「重试」那条
+    路径清了缓存，「返回走廊」没清。所以那间房**永久坏掉**，除非用户恰好点了重试。
+
+    修法在 `LabScene.handleBackFromFailure`：放弃失败时也清缓存。
+
+    ## 第二层（未修）：纸的关闭动画不再推进
+
+    修掉缓存之后卡的位置变了：`phase: idle` 而 `teleport-phase: closing`
+    ——第二次传送的纸合上之后没有进入 `teleporting`，`PaperTransition` 的动画
+    没有重新起来。这是传送动画自己的重入问题，与房间状态图无关。
+
+    不在这一批里修：它需要单独看 `PaperTransition` 的触发条件，而在一次已经很长的
+    改动末尾硬塞第三层修复，比留一条写清楚的 `test.fail()` 更糟。
   */
   test.fail('（已知缺陷）「返回走廊」之后还能再进房', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
@@ -554,6 +578,9 @@ test.describe('房间加载失败与重试', () => {
 
     await page.getByTestId('room-load-back').click()
     await expect(page.getByTestId('room-load-failed')).toHaveCount(0)
+    // 上面那段实测数据里"清理完全正常"的那一行，钉住它：第一层修复不能退回去
+    await expect(page.getByTestId('lab-ui'), '退出失败后没回到走廊空闲态')
+      .toHaveAttribute('data-lab-phase', 'idle')
 
     /*
       从失败退出之后状态必须真的回到"走廊空闲"，否则下一次进房会卡在

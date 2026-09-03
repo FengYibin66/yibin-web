@@ -42,9 +42,16 @@ export type RoomEvent =
   | { type: 'RUNTIME_ERROR'; message: string }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY' }
-  | { type: 'BACK' }
   | { type: 'EXIT' }
   | { type: 'EXIT_DONE' }
+  /**
+   * 放弃当前这次进房，无条件回到 idle（从失败退出、退场收尾）。
+   *
+   * 原先还有一个 `BACK`，目标与动作和 `RESET` **逐字相同**，而运行时没有任何
+   * 地方发它——4 条边全是死的。`__tests__/machineEventWiring.test.ts` 抓出来后
+   * 删掉：两个名字表达同一件事只会让下一个人猜该发哪一个。
+   */
+  | { type: 'RESET' }
   /** 传送开始：无动画地把房间收回 idle，不播退场 */
   | { type: 'TELEPORT_RESET' }
 
@@ -91,7 +98,7 @@ export const roomMachine = setup({
     aligning: {
       on: {
         CAMERA_ALIGNED: 'mounting',
-        BACK: { target: 'idle', actions: 'clear' },
+        RESET: { target: 'idle', actions: 'clear' },
       },
     },
 
@@ -99,8 +106,17 @@ export const roomMachine = setup({
     mounting: {
       on: {
         MOUNTED: 'loading',
+        /*
+          直接就绪：纹理**已在缓存里**时房间不会 Suspend，于是没有 `MOUNTED`
+          （那个事件的来源是 Suspense fallback 挂载）。少了这条边，缓存命中的
+          房间会永久卡在 `mounting`——门开不了、加载卡也不显示，只能刷新。
+
+          接线时才发现这个缺口：机器写好了但从未接入运行时，所以「缓存命中」
+          这条最常见的路径（第二次进同一间房）从来没被走过。
+        */
+        READY: 'ready',
         LOAD_ERROR: { target: 'failed', actions: 'recordError' },
-        BACK: { target: 'idle', actions: 'clear' },
+        RESET: { target: 'idle', actions: 'clear' },
       },
     },
 
@@ -115,7 +131,7 @@ export const roomMachine = setup({
       on: {
         READY: 'ready',
         LOAD_ERROR: { target: 'failed', actions: 'recordError' },
-        BACK: { target: 'idle', actions: 'clear' },
+        RESET: { target: 'idle', actions: 'clear' },
       },
     },
 
@@ -124,6 +140,7 @@ export const roomMachine = setup({
       on: {
         DOOR_OPENED: 'entered',
         LOAD_ERROR: { target: 'failed', actions: 'recordError' },
+        RESET: { target: 'idle', actions: 'clear' },
       },
     },
 
@@ -139,12 +156,21 @@ export const roomMachine = setup({
     failed: {
       on: {
         RETRY: { target: 'loading', actions: 'countRetry' },
-        BACK: { target: 'idle', actions: 'clear' },
+        RESET: { target: 'idle', actions: 'clear' },
       },
     },
 
     exiting: {
-      on: { EXIT_DONE: { target: 'idle', actions: 'clear' } },
+      on: {
+        EXIT_DONE: { target: 'idle', actions: 'clear' },
+        /*
+          `RESET` 与 `EXIT_DONE` 都回到 idle，保留两个是因为语义不同：
+          前者是"放弃"（从失败里退出），后者是"退场动画跑完了"。运行时
+          `resetRoomLoad()` 一个函数服务两种场景（旧 reducer 也是
+          `exiting | failed --RESET--> idle`），所以两个状态都要接 `RESET`。
+        */
+        RESET: { target: 'idle', actions: 'clear' },
+      },
     },
   },
 })
@@ -154,6 +180,37 @@ export type RoomPhase = keyof typeof roomMachine.states | 'idle'
 /** 加载中（该显示 loading 卡） */
 export function isRoomLoading(phase: string): boolean {
   return phase === 'aligning' || phase === 'mounting' || phase === 'loading'
+}
+
+/**
+ * 走廊此刻是不是"闲着"，可以弹教程 / 提示。
+ *
+ * 审计 D5：`LabTutorial` 原先只检查 `isInRoom` 与 `isTeleporting`。用户点了门之后
+ * 相位是 `aligning` / `mounting` / `loading` / `ready`——**还没进房**，所以
+ * `isInRoom` 仍是 false，2.4 秒的延迟一到教程就盖在开门动画上。
+ *
+ * 判断"能不能打扰用户"不该靠列举几个布尔量，而该问一句"走廊现在是不是空闲"。
+ */
+export function isCorridorIdle(phase: string): boolean {
+  return phase === 'idle'
+}
+
+/**
+ * 这扇门是不是这次进房的**所有者**。
+ *
+ * 15 段走廊各有自己的 `DoorSection` 实例，共享一台状态机——只有点了的那一扇
+ * 该响应后续的编排。判据从机器的 context 派生（`roomId` + `segmentIndex`），
+ * **不是靠组件里的 ref 记账**：旧实现用 `ownedEntryRef` + `previousPhaseRef`
+ * 互相看护，而它们要靠"观察到 failed → idle 这次转移"来复位，中间插进一次
+ * 别的渲染就永久卡住（E2E 抓到的表现是"从失败退出后再也传送不了"）。
+ */
+export function isDoorEntryOwner(
+  context: Pick<RoomContext, 'roomId' | 'segmentIndex'>,
+  phase: string,
+  roomId: RoomId,
+  segmentIndex: number,
+): boolean {
+  return phase !== 'idle' && context.roomId === roomId && context.segmentIndex === segmentIndex
 }
 
 /** 房间子树该挂载了吗（相机对齐之后就挂，让纹理开始加载） */

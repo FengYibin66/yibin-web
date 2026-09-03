@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isCorridorIdle } from '@/lib/lab/roomLoadMachine'
+import { isCorridorIdle } from '@/lib/lab/domain/machines/room.machine'
 
 /**
  * 「能不能打扰用户」（审计 D5）。

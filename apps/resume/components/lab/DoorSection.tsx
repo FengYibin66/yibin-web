@@ -10,11 +10,7 @@ import { useAudio } from '@/context/AudioContext'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
-import {
-  decideDoorEntry,
-  type DoorEntryCommand,
-} from '@/lib/lab/doorEntryFlow'
-import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
+import { isDoorEntryOwner } from '@/lib/lab/domain/machines/room.machine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
@@ -103,10 +99,9 @@ export function DoorSection({
     currentRoom,
     signalRoomReady,
     roomLoadState,
-    dispatchDoorEntry,
-    markRoomOpening,
-    timeoutRoomLoad,
-    resetRoomLoad,
+    tryRoom,
+    failRoomLoad,
+    finishRoomExit,
     resetRoomLoadForTeleport,
     requestExit,
   } = useScene()
@@ -181,7 +176,19 @@ export function DoorSection({
   const hideDelayRef     = useRef<gsap.core.Tween | null>(null)
   const hasPreloadedNearbyRef = useRef(false)
 
-  const isEntryOwner = isDoorEntryOwner(roomLoadState, roomId, segmentIndex)
+  /*
+    所有权从状态机的 context 派生，不再靠组件里的 ref 记账。
+
+    旧实现在 `useDoorEntryOrchestrator` 里用 `ownedEntryRef` +
+    `previousPhaseRef` 互相看护，而它们要靠"观察到 failed → idle 这次转移"来
+    复位——中间插进一次别的渲染就永久卡住，表现是「从加载失败退出后再也传送不了」。
+  */
+  const isEntryOwner = isDoorEntryOwner(
+    roomLoadState,
+    roomLoadState.phase,
+    roomId,
+    segmentIndex,
+  )
 
   // Camera state saved before entering (for exit reverse animation)
   const savedCameraState   = useRef({ x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0 })
@@ -299,14 +306,15 @@ export function DoorSection({
   }, [play])
 
   const finishRoomEntry = useCallback((useFastMode: boolean) => {
-    const result = dispatchDoorEntry({ type: 'ENTRY_COMPLETED' })
-    if (!result?.commands.includes('ENTER_ROOM')) return
+    // 门开完了。`tryRoom` 返回 false = 这个事件在当前状态下不合法（比如已经
+    // 因为超时进了 failed），那就不该继续走"进房成功"的那一串副作用
+    if (!tryRoom({ type: 'DOOR_OPENED' })) return
     enterRoom(roomId)
     setIsAnimating(false)
     setIsInsideRoom(true)
     unlockAchievement('corridor_enter')
     if (useFastMode) signalRoomReady()
-  }, [dispatchDoorEntry, enterRoom, roomId, signalRoomReady, unlockAchievement])
+  }, [tryRoom, enterRoom, roomId, signalRoomReady, unlockAchievement])
 
   const flyIntoRoom = useCallback((useFastMode: boolean) => {
     const direction = new THREE.Vector3()
@@ -321,17 +329,47 @@ export function DoorSection({
     })
   }, [camera, enterDistance, finishRoomEntry])
 
+  /**
+   * 房间开始 Suspend —— 纹理真的在下载了。
+   *
+   * **这个回调必须接上，否则 8 秒加载超时永远不会启动。** `RoomInterior` 的
+   * `onLoading` 默认值是 NOOP，接线时漏掉它的后果是：机器停在 `mounting`，
+   * 而超时那条 `after` 挂在 `loading` 上——弱网下用户看着加载卡转到世界末日，
+   * 既不失败也不重试。
+   *
+   * 旧实现的超时是 `setTimeout`，在**相机对齐**时就起（`aligning → loading`
+   * 是一步），所以不需要这个信号；机器把"挂载了"与"在下载"分成两个状态之后
+   * 就需要了。这类"多了一个状态、于是多了一个必须接的信号"的缺口没有编译期
+   * 保护，只能靠测试——见 `__tests__/roomSuspenseWiring.test.tsx`。
+   */
+  const handleRoomLoading = useCallback(() => {
+    if (!isEntryOwner) return
+    tryRoom({ type: 'MOUNTED' })
+  }, [isEntryOwner, tryRoom])
+
   const handleRoomReady = useCallback(() => {
     if (!isEntryOwner) return
-    if (roomLoadState.phase !== 'loading') return
-    dispatchDoorEntry({ type: 'ROOM_READY' })
-  }, [dispatchDoorEntry, isEntryOwner, roomLoadState.phase])
+    /*
+      `mounting` 也要接：纹理**已在缓存里**时房间不会 Suspend，于是没有
+      `MOUNTED`（那个事件的来源是 Suspense fallback 挂载），相位会停在
+      `mounting` 直到 `READY` 到达。第二次进同一间房走的就是这条路。
+    */
+    if (roomLoadState.phase !== 'loading' && roomLoadState.phase !== 'mounting') return
+    tryRoom({ type: 'READY' })
+  }, [isEntryOwner, roomLoadState.phase, tryRoom])
 
   const handleRoomError = useCallback((message: string) => {
     if (!isEntryOwner) return
-    if (roomLoadState.phase !== 'loading') return
-    dispatchDoorEntry({ type: 'ROOM_ERROR', message })
-  }, [dispatchDoorEntry, isEntryOwner, roomLoadState.phase])
+    /*
+      **不再限定相位**。旧实现是 `if (phase !== 'loading') return`，于是
+      `entered` 之后的运行时错误被直接丢掉——房间静默消失而相位仍是 `entered`，
+      没有提示、没有重试、只能刷新（审计 A8）。
+
+      现在交给 `failRoomLoad` 按当前相位选事件（`entered` → `RUNTIME_ERROR`，
+      否则 `LOAD_ERROR`），机器两条边都有；相位不合法时 `tryRoom` 自己会拒绝。
+    */
+    failRoomLoad(message)
+  }, [failRoomLoad, isEntryOwner])
 
   // ─── Main click / teleport handler ──────────────────────────────────────────
   const handleClick = useCallback((opts?: { isTeleport?: boolean }) => {
@@ -339,8 +377,7 @@ export function DoorSection({
 
     const isTeleport = opts?.isTeleport ?? false
     if (roomId !== 'gallery') {
-      const result = dispatchDoorEntry({ type: 'CLICK', roomId, segmentIndex })
-      if (!result?.commands.includes('ALIGN_CAMERA')) return
+      if (!tryRoom({ type: 'BEGIN', roomId, segmentIndex })) return
     }
     setIsAnimating(true)
     setCameraOverride(true)
@@ -407,12 +444,11 @@ export function DoorSection({
           return
         }
 
-        const result = dispatchDoorEntry({ type: 'CAMERA_ALIGNED' })
-        if (!result?.commands.includes('MOUNT_ROOM')) return
+        if (!tryRoom({ type: 'CAMERA_ALIGNED' })) return
         setShowRoom(true)
       },
     })
-  }, [camera, dispatchDoorEntry, isAnimating, isFastTeleport, position, roomId, router, segmentIndex, setCameraOverride, side, unlockAchievement])
+  }, [camera, tryRoom, isAnimating, isFastTeleport, position, roomId, router, segmentIndex, setCameraOverride, side, unlockAchievement])
 
   const restoreSavedCamera = useCallback(() => {
     const saved = savedCameraState.current
@@ -437,28 +473,55 @@ export function DoorSection({
     isTiltLockedRef.current = false
   }, [])
 
-  const executeFailureCleanup = useCallback((commands: DoorEntryCommand[]) => {
-    if (commands.includes('RESTORE_CAMERA')) restoreSavedCamera()
-    if (commands.includes('CLOSE_DOOR')) resetDoorVisuals()
-    if (commands.includes('RESET_LOCAL_STATE')) {
-      setIsInsideRoom(false)
-      setIsAnimating(false)
-      setShowRoom(false)
+  /*
+    回到 idle 时把这扇门的局部状态清干净。
+
+    ## 与旧实现的区别
+
+    原先这是一个 `executeFailureCleanup(commands)`：由 `useDoorEntryOrchestrator`
+    在**观察到 `failed → idle` 这次转移**时调用，命令清单来自
+    `decideDoorEntry({ type: 'BACK' })`。两处问题：
+
+    1. 「观察到某次转移」只能看见一帧。中间插进一次别的渲染，`previousPhaseRef`
+       就被覆盖、清理永远不发生——表现是「从加载失败退出后再也传送不了」
+       （`e2e/lab.spec.ts` 那条 `test.fail` 抓的就是它）
+    2. 清理内容用「命令清单」间接表达，而这四件事本来就是这扇门自己的局部状态
+
+    现在只看**当前相位**：idle 且我曾是这次进房的门 → 清。不需要知道"从哪来"，
+    所以漏不掉。相位从 `failed`、`exiting` 还是 `aligning` 回来都一样处理
+    ——它们都意味着"这次进房结束了"。
+  */
+  const wasEntryOwnerRef = useRef(false)
+  useEffect(() => {
+    if (isEntryOwner) {
+      wasEntryOwnerRef.current = true
+      return
     }
-    if (commands.includes('RELEASE_CAMERA_OVERRIDE')) setCameraOverride(false)
-  }, [resetDoorVisuals, restoreSavedCamera, setCameraOverride])
+    if (!wasEntryOwnerRef.current) return
+    if (roomLoadState.phase !== 'idle') return
+
+    wasEntryOwnerRef.current = false
+    restoreSavedCamera()
+    resetDoorVisuals()
+    setIsInsideRoom(false)
+    setIsAnimating(false)
+    setShowRoom(false)
+    setCameraOverride(false)
+  }, [
+    isEntryOwner,
+    resetDoorVisuals,
+    restoreSavedCamera,
+    roomLoadState.phase,
+    setCameraOverride,
+  ])
 
   useDoorEntryOrchestrator({
     roomId,
-    segmentIndex,
     roomLoadState,
     isEntryOwner,
     isFastTeleport,
-    markRoomOpening,
-    timeoutRoomLoad,
     openDoorPanels,
     flyIntoRoom,
-    onFailureReset: executeFailureCleanup,
   })
 
   // ─── Exit room handler ───────────────────────────────────────────────────────
@@ -502,14 +565,15 @@ export function DoorSection({
                 setShowRoom(false)
                 contextExitRoom()
                 setCameraOverride(false)
-                resetRoomLoad()
+                // 退场动画真的播完了 —— 走 `EXIT_DONE` 而不是 `RESET`
+                finishRoomExit()
               })
             })
           }
         })
       }
     })
-  }, [isEntryOwner, isInsideRoom, isAnimating, camera, closeDoorPanels, contextExitRoom, resetRoomLoad, setCameraOverride])
+  }, [isEntryOwner, isInsideRoom, isAnimating, camera, closeDoorPanels, contextExitRoom, finishRoomExit, setCameraOverride])
 
   // ─── exitRequested listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -631,6 +695,7 @@ export function DoorSection({
           <RoomInterior
             roomId={roomId}
             showRoom={showRoom}
+            onLoading={handleRoomLoading}
             onReady={handleRoomReady}
             onError={handleRoomError}
             isExiting={isInsideRoom && isAnimating}

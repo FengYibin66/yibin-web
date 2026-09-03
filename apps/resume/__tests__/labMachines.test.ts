@@ -5,16 +5,13 @@ import {
   corridorMachine,
   isTeleporting,
 } from '@/lib/lab/domain/machines/corridor.machine'
-import {
-  ROOM_LOAD_TIMEOUT_MS,
-  isRoomLoading,
-  roomMachine,
-  shouldMountRoom,
-} from '@/lib/lab/domain/machines/room.machine'
+import { roomMachine } from '@/lib/lab/domain/machines/room.machine'
 import { canBrowse, dockMachine, hasSelection } from '@/lib/lab/domain/machines/dock.machine'
 
 /**
  * 三台状态机的测试（ADR 20260903140616）。
+ *
+ * `roomMachine` 的部分已搬到 `roomMachineFlow.test.ts`（见下方注释）。
  *
  * 核心是最后一组：**每个可达状态都必须至少被一条生成路径走到**。
  * 这条断言是引入 XState 的主要理由——审计里两个「只能刷新页面」级别的故障
@@ -25,146 +22,18 @@ import { canBrowse, dockMachine, hasSelection } from '@/lib/lab/domain/machines/
  * 那条边，「aborted 可达」会红。
  */
 
-// ─── roomMachine ─────────────────────────────────────────────────────────────
+/*
+  `roomMachine` 的行为测试**不在这个文件**，在
+  `__tests__/roomMachineFlow.test.ts`。
 
-function roomActor() {
-  const actor = createActor(roomMachine)
-  actor.start()
-  return actor
-}
+  接线之后（ADR 20260903211338）那台机器成了运行时唯一的房间生命周期来源，
+  测试也跟着升级成 `@xstate/graph` 的全路径覆盖——"每个状态可达 / 每条简单路径
+  真能跑完 / 每个状态都有出边"，而不是手写几条 happy path。这里原先那三组
+  describe 是它的真子集，留着只会让两处断言各自漂移。
 
-function phaseOf(actor: ReturnType<typeof roomActor>): string {
-  return String(actor.getSnapshot().value)
-}
-
-describe('roomMachine 正常路径', () => {
-  it('点门 → 对齐 → 挂载 → 加载 → 就绪 → 开门 → 进房', () => {
-    const a = roomActor()
-    expect(phaseOf(a)).toBe('idle')
-
-    a.send({ type: 'BEGIN', roomId: 'about', segmentIndex: 0 })
-    expect(phaseOf(a)).toBe('aligning')
-    expect(a.getSnapshot().context).toMatchObject({ roomId: 'about', segmentIndex: 0, attempt: 1 })
-
-    a.send({ type: 'CAMERA_ALIGNED' })
-    expect(phaseOf(a)).toBe('mounting')
-    a.send({ type: 'MOUNTED' })
-    expect(phaseOf(a)).toBe('loading')
-    a.send({ type: 'READY' })
-    expect(phaseOf(a)).toBe('ready')
-    a.send({ type: 'DOOR_OPENED' })
-    expect(phaseOf(a)).toBe('entered')
-  })
-
-  it('退房回到 idle 并清空上下文', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'contact', segmentIndex: 1 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    a.send({ type: 'READY' })
-    a.send({ type: 'DOOR_OPENED' })
-    a.send({ type: 'EXIT' })
-    expect(phaseOf(a)).toBe('exiting')
-    a.send({ type: 'EXIT_DONE' })
-    expect(phaseOf(a)).toBe('idle')
-    expect(a.getSnapshot().context).toEqual({
-      roomId: null,
-      segmentIndex: null,
-      attempt: 0,
-      error: null,
-    })
-  })
-})
-
-describe('roomMachine 失败路径', () => {
-  it('加载超时进 failed —— 原先是手写 setTimeout + 三个互相看护的 ref', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'projects', segmentIndex: 0 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    expect(phaseOf(a)).toBe('loading')
-
-    // XState 的 after 用真实时钟；这里直接发等价的错误事件验证目标状态，
-    // 超时时长本身用常量断言（见下一条）
-    a.send({ type: 'LOAD_ERROR', message: 'texture 404' })
-    expect(phaseOf(a)).toBe('failed')
-    expect(a.getSnapshot().context.error).toBe('texture 404')
-  })
-
-  it('超时时长仍是 8 秒（改动它会影响弱网体验，需显式）', () => {
-    expect(ROOM_LOAD_TIMEOUT_MS).toBe(8000)
-  })
-
-  it('failed → RETRY 回 loading 并递增 attempt（用作重挂 key）', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'about', segmentIndex: 0 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    a.send({ type: 'LOAD_ERROR', message: 'boom' })
-    a.send({ type: 'RETRY' })
-    expect(phaseOf(a)).toBe('loading')
-    expect(a.getSnapshot().context.attempt).toBe(2)
-    expect(a.getSnapshot().context.error).toBeNull()
-  })
-
-  it('failed → BACK 回 idle', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'about', segmentIndex: 0 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    a.send({ type: 'LOAD_ERROR', message: 'boom' })
-    a.send({ type: 'BACK' })
-    expect(phaseOf(a)).toBe('idle')
-  })
-
-  it('**entered 之后报错有出口**（审计 A8：原先房间静默消失、状态仍是 entered）', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'publications', segmentIndex: 0 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    a.send({ type: 'READY' })
-    a.send({ type: 'DOOR_OPENED' })
-    expect(phaseOf(a)).toBe('entered')
-
-    a.send({ type: 'RUNTIME_ERROR', message: 'shader compile failed' })
-    expect(phaseOf(a)).toBe('failed')
-    expect(a.getSnapshot().context.error).toBe('shader compile failed')
-  })
-
-  it('传送时无动画收回房间', () => {
-    const a = roomActor()
-    a.send({ type: 'BEGIN', roomId: 'about', segmentIndex: 0 })
-    a.send({ type: 'CAMERA_ALIGNED' })
-    a.send({ type: 'MOUNTED' })
-    a.send({ type: 'READY' })
-    a.send({ type: 'DOOR_OPENED' })
-    a.send({ type: 'TELEPORT_RESET' })
-    expect(phaseOf(a)).toBe('idle')
-    expect(a.getSnapshot().context.roomId).toBeNull()
-  })
-
-  it('非法事件被忽略而不是抛异常 —— 原实现 throw，调用方再 try/catch 翻译成 null，'
-    + '于是"非法转移"与"守卫拒绝"在调用点无法区分', () => {
-    const a = roomActor()
-    expect(() => a.send({ type: 'READY' })).not.toThrow()
-    expect(phaseOf(a)).toBe('idle')
-    expect(() => a.send({ type: 'DOOR_OPENED' })).not.toThrow()
-    expect(phaseOf(a)).toBe('idle')
-  })
-})
-
-describe('roomMachine 的相位判定辅助', () => {
-  it('isRoomLoading 覆盖三个加载相位', () => {
-    expect(['aligning', 'mounting', 'loading'].every(isRoomLoading)).toBe(true)
-    expect(['idle', 'ready', 'entered', 'failed', 'exiting'].some(isRoomLoading)).toBe(false)
-  })
-
-  it('shouldMountRoom 从 mounting 起为真 —— 相机对齐后就该挂载让纹理开始下载', () => {
-    expect(shouldMountRoom('idle')).toBe(false)
-    expect(shouldMountRoom('aligning')).toBe(false)
-    expect(['mounting', 'loading', 'ready', 'entered', 'exiting'].every(shouldMountRoom)).toBe(true)
-  })
-})
+  这个文件现在管 `corridorMachine`（**仍未接线**，运行时零引用）与
+  `dockMachine`（Projects 在用），外加文件末尾对三台机器共用的静态分析。
+*/
 
 // ─── corridorMachine ─────────────────────────────────────────────────────────
 
@@ -173,6 +42,10 @@ function corridorActor() {
   actor.start()
   actor.send({ type: 'LOADED' })
   return actor
+}
+
+function phaseOf(actor: { getSnapshot: () => { value: unknown } }): string {
+  return String(actor.getSnapshot().value)
 }
 
 describe('corridorMachine', () => {

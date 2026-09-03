@@ -29,6 +29,7 @@ export function NavigationUI() {
     teleportTo,
     isTeleporting,
     roomLoadState,
+    teleportPhase,
   } = useScene()
   const { isMuted, toggleMute, sfxVolume, setSfxVolume, bgmVolume, setBgmVolume } = useAudio()
   const { showTutorial, unlockAchievement } = useAchievements()
@@ -166,6 +167,9 @@ export function NavigationUI() {
       data-lab-room={currentRoom ?? ''}
       data-lab-in-room={isInRoom}
       data-lab-teleporting={isTeleporting}
+      /* 传送的纸动画相位。诊断"传送卡住"时唯一能分辨卡在哪一步的信息 */
+      data-lab-teleport-phase={teleportPhase ?? ''}
+      data-lab-phase={roomLoadState.phase}
     >
       {/* Global achievement popup */}
       <AchievementPopup />

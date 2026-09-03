@@ -659,6 +659,44 @@ export function importSpecifiers(source: string, fileName = 'input.ts'): string[
   return out
 }
 
+/**
+ * 文件里所有作为**对象字面量属性**出现的 `type: 'X'`，X 为全大写事件名。
+ *
+ * 用于「状态机声明的事件，运行时得有人发」那条门禁
+ * （`__tests__/machineEventWiring.test.ts`）。
+ *
+ * **为什么不能用正则。** 第一版是按文本匹配 `type:` 后跟大写串，于是
+ * `DoorSection.tsx` 里一句解释旧实现的**注释**被当成了 `BACK` 的发送方，
+ * 而运行时没有任何地方发它——门禁绿着，4 条 `BACK` 边全是死的。
+ * 这跟本仓库那三条门禁改用 AST 的理由是同一个（ADR 20260903211320）：
+ * 注释与字符串里的代码形状跟真代码一模一样。
+ *
+ * 只认**对象字面量**的属性。类型声明里的 `{ type: 'X' }` 是 `PropertySignature`，
+ * 不在此列——所以机器自己的事件联合类型不会被误当成发送方，这是走 AST 顺带得到的，
+ * 文本匹配分不开这两者。
+ *
+ * `{ type: someVar }` 看不见——目前没有这种写法，出现了该在门禁里加断言，
+ * 而不是把这里放宽。
+ */
+export function eventTypeLiterals(source: string, fileName = 'input.ts'): string[] {
+  const sf = parse(source, fileName)
+  const out: string[] = []
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === 'type' &&
+      ts.isStringLiteral(node.initializer) &&
+      /^[A-Z][A-Z_]*$/.test(node.initializer.text)
+    ) {
+      out.push(node.initializer.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}
+
 /** 一个文件是否 import 了某个模块 */
 export function importsModule(source: string, moduleName: string, fileName = 'input.ts'): boolean {
   const sf = parse(source, fileName)

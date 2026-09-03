@@ -116,7 +116,7 @@ describe('ProjectsRoom 的相机接线', () => {
   /*
     ── 这一组锁的是「什么时候接管」，而那正是进房双写的根因 ──────────────────
 
-    房间在 `CAMERA_ALIGNED` 就挂载（`doorEntryFlow` 的 `MOUNT_ROOM`），而
+    房间在 `CAMERA_ALIGNED` 就挂载（`room.machine` 的 `CAMERA_ALIGNED → mounting`），而
     `DoorSection` 的进房飞行 tween 要到 `OPEN_DOOR` 之后才开始。第一版在**挂载时**
     就接管，于是两个写者重叠约 2 秒：导演每帧 `controls.update()` 写相机，
     `gsap.to(camera.position, …)` 也在写。

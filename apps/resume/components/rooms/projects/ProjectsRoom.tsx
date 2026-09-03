@@ -59,7 +59,7 @@ export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const { locale } = useLocale()
   const { unlockAchievement } = useAchievements()
   const rootRef = useRef<THREE.Group>(null)
-  useRoomTutorial('projects_inspect')
+  useRoomTutorial('projects_inspect', 'projects')
 
   const projects = useMemo(() => [...getProjectRoomItems(locale)], [locale])
   const [state, send] = useMachine(dockMachine)

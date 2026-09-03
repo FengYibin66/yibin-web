@@ -124,7 +124,9 @@ export function ImagePreview({
           rounded,
           className,
         )}
-        aria-label={alt ? `Preview ${alt}` : labels.hints.previewImage}
+        aria-label={alt
+          ? labels.hints.previewNamed.replace('{name}', alt)
+          : labels.hints.previewImage}
       >
         <img
           src={src}

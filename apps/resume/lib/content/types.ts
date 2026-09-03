@@ -280,6 +280,13 @@ export interface LabUiLabels {
     /** 图片预览 */
     imagePreview: string
     previewImage: string
+    /** 「预览 {name}」——`{name}` 是图片的 alt */
+    previewNamed: string
+    /** 教程卡片底部的两个按钮 */
+    skipTutorial: string
+    startExploring: string
+    /** 返回上一层（走廊 / 首页）的可见文字 */
+    back: string
   }
   /**
    * 入口页。
@@ -296,6 +303,30 @@ export interface LabUiLabels {
     classicTitle: string
     classicTagline: string
     classicCta: string
+    /** Classic 面板上的三个方向标签 */
+    classicTags: readonly string[]
+    /** 底部说明条 */
+    explorerBar: string
+    /** 「点一扇门进入。音频当前」——后面接一个可点的开关 */
+    explorerHint: string
+    explorerHintTouch: string
+  }
+  /**
+   * 兜底页与降级路径的文案。
+   *
+   * 这一组以前整个是硬编码英文，因为**只有不支持 3D 的设备会看到**——开发机上
+   * 永远走不到，所以没人注意到它没翻译。慢网提示同理（本地永远不慢）。
+   */
+  fallback: {
+    /** WebGL 不可用 */
+    webglTitle: string
+    webglBody: string
+    webglCta: string
+    /** 加载很慢时给的旁路出口 */
+    slowConnection: string
+    /** 3D 场景里的彩蛋 */
+    bugFixed: string
+    drawing: string
   }
   /** 「这个操作能做什么」的结果说明 */
   results: {

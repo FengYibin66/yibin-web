@@ -35,10 +35,16 @@ import { useLabLabels } from '@/hooks/useLabLabels'
 // Camera controller lives inside Canvas so it has access to R3F context
 function CameraController({
   onSetOverride,
+  onExplored,
 }: {
   onSetOverride: (fn: (active: boolean) => void) => void
+  onExplored: () => void
 }) {
-  const { setCameraOverride } = useCorridorCamera({ smoothing: 0.035, scrollSpeed: 0.02 })
+  const { setCameraOverride } = useCorridorCamera({
+    smoothing: 0.035,
+    scrollSpeed: 0.02,
+    onExplored,
+  })
 
   useEffect(() => {
     onSetOverride(setCameraOverride)
@@ -53,13 +59,30 @@ function LabCanvas() {
   const { settings } = usePerformance()
   const { playBgm, stopBgm } = useAudio()
   const {
+    currentRoom,
     isInRoom,
     markEntered,
     roomLoadState,
     retryRoomLoad,
     resetRoomLoad,
   } = useScene()
-  const { unlockAchievement } = useAchievements()
+  const { unlockAchievement, enterScope } = useAchievements()
+
+  /*
+    场景切换时清掉不属于当前场景的气泡（ADR 20260903211302）。
+
+    这是**唯一**需要调用的清理入口，也是刻意只放一处的：原先「什么时候关掉教程
+    气泡」由四个互不知情的房间组件各自负责，结果只有一间房做了——教程气泡退房后
+    残留并堵死队列，让后续所有教程永远显示不出来（审计 A7 记过并标为已修，
+    实际只修了一间房）。
+
+    清理动作只发生在场景切换这一处，就漏不掉；房间组件的卸载路径里还有一层
+    `useRoomTutorial` 的按 id 出队，两条互不依赖（传送时房间可能被整棵子树替换，
+    那时组件卸载不一定按预期发生）。
+  */
+  useEffect(() => {
+    enterScope(isInRoom && currentRoom ? `room:${currentRoom}` : 'corridor')
+  }, [isInRoom, currentRoom, enterScope])
 
   // Lab 里唯一的 ESC 监听点（ADR 20260903211244）
   useEscapeRouter()
@@ -72,20 +95,16 @@ function LabCanvas() {
   // Mark as entered immediately — /lab route means the user has entered the corridor
   useEffect(() => { markEntered() }, [markEntered])
 
-  // Unlock corridor_explore on first scroll
-  const hasScrolledRef = useRef(false)
-  useEffect(() => {
-    const handleFirstScroll = () => {
-      if (hasScrolledRef.current) return
-      hasScrolledRef.current = true
-      unlockAchievement('corridor_explore')
-    }
-    window.addEventListener('wheel', handleFirstScroll, { once: true })
-    window.addEventListener('touchmove', handleFirstScroll, { once: true })
-    return () => {
-      window.removeEventListener('wheel', handleFirstScroll)
-      window.removeEventListener('touchmove', handleFirstScroll)
-    }
+  /*
+    `corridor_explore` 的解锁点在**走廊导轨的位移**上，不在输入事件上
+    （见 `domain/corridor/exploration.ts`）。
+
+    原先监听 `wheel` / `touchmove`，于是键盘前进（↑↓ / PgUp / PgDn / 空格）不算
+    ——键盘用户永远拿不到这个成就，而它那条教程气泡**只有被解锁才会消失**
+    （教程不自动消失），所以从进 Lab 起就有一条关不掉的白底气泡压在屏幕底部。
+  */
+  const handleExplored = useCallback(() => {
+    unlockAchievement('corridor_explore')
   }, [unlockAchievement])
 
   const setCameraOverrideRef = useRef<(active: boolean) => void>(() => {})
@@ -127,7 +146,7 @@ function LabCanvas() {
           <SceneFog />
           {/* 相机所有者接进渲染循环，全站唯一一处（ADR 20260903140617） */}
           <CameraRig />
-          <CameraController onSetOverride={handleSetOverride} />
+          <CameraController onSetOverride={handleSetOverride} onExplored={handleExplored} />
           <InfiniteCorridorManager setCameraOverride={setCameraOverride} />
 
           <TeleportRoom />

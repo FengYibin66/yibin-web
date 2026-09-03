@@ -83,7 +83,7 @@ export function PublicationsRoom({
     itemCount: publications.length,
     itemGap: PUBLICATION_CAROUSEL_ITEM_GAP,
   })
-  useRoomTutorial(PUBLICATION_TUTORIAL_ID)
+  useRoomTutorial(PUBLICATION_TUTORIAL_ID, 'publications')
   usePublicationBrowseCamera({
     entered: (
       showRoom

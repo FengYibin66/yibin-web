@@ -34,7 +34,7 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   const { unlockAchievement } = useAchievements()
   const { locale } = useLocale()
   const links = getContactRoomLinks(locale)
-  useRoomTutorial('contact_found')
+  useRoomTutorial('contact_found', 'contact')
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
   const statekRef    = useRef<THREE.Mesh>(null)

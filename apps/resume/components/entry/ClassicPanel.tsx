@@ -1,24 +1,26 @@
 'use client'
 
+import { useLabLabels } from '@/hooks/useLabLabels'
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
+import { ENTRY_COLORS } from '@/lib/lab/domain/overlayColors'
 
 export function ClassicPanel() {
   const { locale } = useLocale()
   const hero = content[locale].hero
+  const labels = useLabLabels()
 
-  const tags =
-    locale === 'zh'
-      ? [
-          { icon: '◈', label: 'AI 研究' },
-          { icon: '◉', label: '前端工程' },
-          { icon: '◎', label: '结构工程' },
-        ]
-      : [
-          { icon: '◈', label: 'AI Research' },
-          { icon: '◉', label: 'Frontend' },
-          { icon: '◎', label: 'Structural' },
-        ]
+  /*
+    标签文案本来就是中英分支，只是**硬编码在组件里**而不是 content 里。搬进
+    `labUi.entry.classicTags` 之后：改文案不用碰组件，漏译门禁也能看见它
+    （它扫的是 content 与组件里的字面量，组件内联的条件分支两边都算硬编码）。
+    图标留在这里——那是排版而不是文案。
+  */
+  const ICONS = ['◈', '◉', '◎']
+  const tags = labels.entry.classicTags.map((label, i) => ({
+    icon: ICONS[i] ?? '◈',
+    label,
+  }))
 
   return (
     <div style={{
@@ -35,12 +37,12 @@ export function ClassicPanel() {
         fontFamily: 'var(--font-mono, monospace)',
         fontSize: '10px',
         letterSpacing: '0.35em',
-        color: 'rgba(200,169,110,0.7)',
+        color: ENTRY_COLORS.gold,
         textTransform: 'uppercase',
         marginBottom: '20px',
         margin: '0 0 20px',
       }}>
-        Classic View
+        {labels.entry.classicTitle}
       </p>
 
       <h1 style={{
@@ -80,12 +82,12 @@ export function ClassicPanel() {
       <div style={{ display: 'flex', gap: '28px', marginBottom: '40px' }}>
         {tags.map(({ icon, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '18px', color: '#c8a96e', marginBottom: '4px' }}>{icon}</div>
+            <div style={{ fontSize: '18px', color: ENTRY_COLORS.gold, marginBottom: '4px' }}>{icon}</div>
             <div style={{
               fontFamily: 'var(--font-mono, monospace)',
               fontSize: '9px',
               letterSpacing: '0.2em',
-              color: '#9c8570',
+              color: ENTRY_COLORS.tag,
             }}>{label}</div>
           </div>
         ))}
@@ -95,9 +97,9 @@ export function ClassicPanel() {
         fontFamily: 'var(--font-mono, monospace)',
         fontSize: '11px',
         letterSpacing: '0.2em',
-        color: '#c8a96e',
+        color: ENTRY_COLORS.gold,
       }}>
-        ENTER →
+        {labels.entry.classicCta}
       </div>
     </div>
   )

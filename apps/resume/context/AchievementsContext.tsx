@@ -18,6 +18,7 @@ import {
   initialQueueState,
   queueReducer,
   type Popup,
+  type PopupScope,
 } from '@/lib/lab/domain/achievements/queue'
 
 /*
@@ -45,9 +46,27 @@ export interface ActivePopup {
 export interface AchievementsState {
   completed: string[]
   activePopup: ActivePopup | null
-  showTutorial: (id: string) => void
+  /**
+   * 弹一条教程提示。
+   *
+   * `scope` 声明它属于哪个场景，离开那个场景时自动出队（ADR 20260903211302）。
+   * 这个参数是**必填**的：原先没有它，"什么时候该关掉"由四个互不知情的房间组件
+   * 各自负责，结果只有一间房做了——教程气泡退房后残留并堵死队列，让后续所有
+   * 教程永远显示不出来。
+   */
+  showTutorial: (id: string, scope: PopupScope) => void
   unlockAchievement: (id: string) => void
+  /** 关掉当前显示的那一条（走淡出） */
   hidePopup: () => void
+  /** 按 id 关掉某一条 —— 房间自己收尾时用 */
+  dismissTutorial: (id: string) => void
+  /**
+   * 进入一个场景：把不属于它、也不是 `global` 的气泡全部出队。
+   *
+   * 这是**唯一**需要被调用的清理入口。比"每个房间在卸载时关自己的"强：清理动作
+   * 只发生在一处（场景切换），漏不掉。
+   */
+  enterScope: (scope: PopupScope) => void
   isUnlocked: (id: string) => boolean
 }
 
@@ -93,10 +112,16 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
    */
   const [state, dispatch] = useReducer(queueReducer, initialQueueState)
 
-  // 首次挂载时从存储恢复
+  /*
+    首次挂载时从存储恢复。
+
+    **无条件派发**，哪怕存储是空的：`HYDRATE` 同时把 `hydrated` 置为 true，
+    而解锁音的基线要等它。原先是 `if (stored.length > 0)`，于是首访用户永远
+    `hydrated: false`。
+  */
   useEffect(() => {
     const stored = loadAchievements().filter(isAchievementId)
-    if (stored.length > 0) dispatch({ type: 'HYDRATE', completed: stored })
+    dispatch({ type: 'HYDRATE', completed: stored })
   }, [])
 
   useEffect(() => {
@@ -126,21 +151,42 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
    * reducer 会去重（重复解锁返回同一个 state），所以"真的新解锁了"这件事
    * 只有比较前后状态才知道。在回调里播会让重复点击响多次。
    */
-  const lastCompletedCount = useRef(-1)
+  /*
+    基线在 **HYDRATE 之后**建立，不在首帧。
+
+    原先在首帧建立（那时 `completed` 是空的），而 `HYDRATE` 是上面那个 effect
+    异步派发的——于是回访用户的序列是 `0 → N`，被判成"刚解锁了 N 条"，
+    **每次进 Lab 都响一声解锁音**。原注释写着「首次（含从存储恢复）不响」，
+    与实际行为相反：注释描述的是意图，代码实现的是另一件事。
+
+    这一层此前**零测试**（其余测试全部 mock 掉 `useAchievements`），所以队列
+    reducer 再正确也保不住 React 侧的接线。现在有
+    `__tests__/achievementsContext.test.tsx`。
+  */
+  const chimeBaseline = useRef<number | null>(null)
   useEffect(() => {
+    if (!state.hydrated) return
     const count = state.completed.length
-    // 首次（含从存储恢复）不响：那不是刚刚发生的解锁
-    if (lastCompletedCount.current === -1) {
-      lastCompletedCount.current = count
+    if (chimeBaseline.current === null) {
+      chimeBaseline.current = count
       return
     }
-    if (count > lastCompletedCount.current) playUnlockChime()
-    lastCompletedCount.current = count
-  }, [state.completed])
+    if (count > chimeBaseline.current) playUnlockChime()
+    chimeBaseline.current = count
+  }, [state.hydrated, state.completed])
 
-  const showTutorial = useCallback((id: string) => {
+  const showTutorial = useCallback((id: string, scope: PopupScope) => {
     if (!isAchievementId(id)) return
-    dispatch({ type: 'SHOW_TUTORIAL', id })
+    dispatch({ type: 'SHOW_TUTORIAL', id, scope })
+  }, [])
+
+  const dismissTutorial = useCallback((id: string) => {
+    if (!isAchievementId(id)) return
+    dispatch({ type: 'DISMISS_ID', id })
+  }, [])
+
+  const enterScope = useCallback((scope: PopupScope) => {
+    dispatch({ type: 'ENTER_SCOPE', scope })
   }, [])
 
   const unlockAchievement = useCallback((id: string) => {
@@ -171,10 +217,21 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     completed,
     activePopup,
     showTutorial,
+    dismissTutorial,
+    enterScope,
     unlockAchievement,
     hidePopup,
     isUnlocked,
-  }), [completed, activePopup, showTutorial, unlockAchievement, hidePopup, isUnlocked])
+  }), [
+    completed,
+    activePopup,
+    showTutorial,
+    dismissTutorial,
+    enterScope,
+    unlockAchievement,
+    hidePopup,
+    isUnlocked,
+  ])
 
   return (
     <AchievementsCtx.Provider value={value}>

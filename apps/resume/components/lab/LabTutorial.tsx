@@ -8,6 +8,7 @@ import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { hasSeenTutorial, markTutorialSeen, TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import type { LabUiLabels } from '@/lib/content/types'
+import { OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
 
 // Wait for the loader's paper-tear exit (1.8s) to finish before showing
 const SHOW_DELAY_MS = 2400
@@ -163,14 +164,14 @@ export function LabTutorial() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h2 style={{ margin: '0 0 4px', fontSize: 20, letterSpacing: '0.06em' }}>
-            How to explore
+            {labels.hints.howToExplore}
           </h2>
           <p style={{
             margin: '0 0 18px',
             fontFamily: 'var(--font-mono, monospace)',
             fontSize: 10.5,
             letterSpacing: '0.15em',
-            color: 'rgba(42,31,14,0.5)',
+            color: OVERLAY_COLORS.mutedText,
             textTransform: 'uppercase',
           }}>
             {isTouch ? labels.hints.touchControls : labels.hints.mouseKeyboard}
@@ -193,7 +194,7 @@ export function LabTutorial() {
                   <div style={{
                     fontFamily: 'var(--font-mono, monospace)',
                     fontSize: 11,
-                    color: 'rgba(42,31,14,0.55)',
+                    color: OVERLAY_COLORS.mutedText,
                     letterSpacing: '0.04em',
                   }}>
                     {row.result}
@@ -214,13 +215,13 @@ export function LabTutorial() {
                 fontFamily: 'var(--font-mono, monospace)',
                 fontSize: 12,
                 letterSpacing: '0.08em',
-                color: 'rgba(42,31,14,0.5)',
+                color: OVERLAY_COLORS.mutedText,
                 textDecoration: 'underline',
                 textUnderlineOffset: 3,
                 cursor: 'pointer',
               }}
             >
-              Skip
+              {labels.hints.skipTutorial}
             </button>
             <button
               onClick={dismiss}
@@ -238,7 +239,7 @@ export function LabTutorial() {
                 cursor: 'pointer',
               }}
             >
-              Start exploring
+              {labels.hints.startExploring}
             </button>
           </div>
         </div>

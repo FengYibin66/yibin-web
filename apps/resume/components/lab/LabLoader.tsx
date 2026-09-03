@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useRef, useMemo, useState } from 'react'
 import gsap from 'gsap'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { buildTearPoints, tearEdgeCoords } from '@/lib/lab/tearEdge'
 
 const SLOW_LOAD_HINT_MS = 8000
 
 export function LabLoader() {
+  const labels = useLabLabels()
   // Monotonic progress (never jumps back to 0 between load waves);
   // `complete` only fires after loading has been quiet for a while.
   const { progress, complete } = useStableProgress(600)
@@ -136,7 +138,7 @@ export function LabLoader() {
                 pointerEvents: 'auto',
               }}
             >
-              Slow connection? Open Classic View →
+              {labels.fallback.slowConnection}
             </a>
           )}
           <svg

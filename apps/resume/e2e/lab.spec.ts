@@ -423,33 +423,44 @@ test.describe('教程气泡', () => {
   })
 
   /*
-    ── 已核实的缺陷：房间教程气泡退房后残留并堵死队列 ────────────────────────
+    ── 房间教程气泡随退房消失 ────────────────────────────────────────────────
 
-    教程类气泡永不自动消失（`domain/achievements/queue.ts` 的设计），而全仓只有
-    `PublicationsRoom` 在退场时调 `hidePopup()`。于是进 About 不滚动 → 2 秒后
-    出现教程 → 退回走廊 → 气泡一直挂着；再进别的房间，它的教程排在队列第二位，
-    永远显示不出来。
+    这条曾是 `test.fail()`：教程类气泡永不自动消失（刻意的——它在等用户照着做），
+    而全仓只有 `PublicationsRoom` 在退场时调 `hidePopup()`。于是进 About 不滚动 →
+    2 秒后出现教程 → 退回走廊 → 气泡一直挂着；再进别的房间，它的教程排在队列
+    第二位，**永远显示不出来**。漏掉一处不是"多一个气泡"，而是教程系统整体失效。
+    审计 A7 记过这条并标为已修，实际只修了一间房。
 
-    审计 A7 记录过这条并标为已修，实际只修了一间房。修法（气泡带作用域，
-    离开作用域即出队）见 ADR 20260903211302。
+    气泡带作用域之后（ADR 20260903211302）它开始通过，`test.fail()` 随即报
+    "Expected to fail, but passed"——标记就得去掉。
   */
-  test.fail(
-    '（已知缺陷）退房后房间教程气泡不该留在走廊里',
+  test(
+    '退房后房间教程气泡不留在走廊里',
     async ({ page }) => {
       test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
       await teleportTo(page, 'about')
-      // 房间教程在进房 2 秒后弹出
-      await expect(page.getByTestId('achievement-popup')).toBeVisible({ timeout: 10_000 })
-      await expect(page.getByTestId('achievement-popup'))
-        .toHaveAttribute('data-popup-kind', 'tutorial')
+
+      /*
+        直接定位**教程类**气泡，不要"取第一个可见的再断言它的 kind"。
+
+        进房会解锁 `corridor_enter`，而庆祝气泡**插队到队首**（那是刻意的：
+        它是对刚才动作的反馈，排在一条不自动消失的教程后面就失去因果关系）。
+        所以第一个可见的气泡很可能是庆祝而不是教程——CI 上就是这么红的，
+        本地跑不出来是因为时序更快。
+      */
+      const roomTutorial = page.locator(
+        '[data-testid="achievement-popup"][data-popup-kind="tutorial"]',
+      )
+      // 房间教程在进房 2 秒后弹出，前面还可能排着一条 2 秒的庆祝
+      await expect(roomTutorial).toBeVisible({ timeout: 20_000 })
 
       await page.getByTestId('nav-back').click()
       await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false', {
         timeout: ROOM_ENTER_TIMEOUT,
       })
 
-      // 回到走廊后房间教程不该还在 —— 这一条现在失败
+      // 回到走廊后房间教程不该还在
       await expect(page.getByTestId('achievement-popup')).toHaveCount(0)
     },
   )

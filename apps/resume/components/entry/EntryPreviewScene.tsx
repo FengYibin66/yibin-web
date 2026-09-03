@@ -11,6 +11,8 @@ import gsap from 'gsap'
 import { useAudio } from '@/context/AudioContext'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { preloadEntranceTextures } from '@/lib/lab/texturePreload'
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { OVERLAY_COLORS } from '@/lib/lab/domain/overlayColors'
 
 // Register all entrance texture requests in one LoadingManager wave when
 // this chunk loads — see texturePreload.ts for why this matters.
@@ -40,6 +42,7 @@ interface BrickSceneProps {
 }
 
 function BrickScene({ onEntered, play }: BrickSceneProps) {
+  const labels = useLabLabels()
   const brickTex        = useTexture('/textures/entrance/wall_bricks_2.webp')
   const floorTex        = useTexture('/textures/entrance/floor_paper.webp')
   const treeTex         = useTexture('/textures/entrance/tree_sketch.webp')
@@ -379,7 +382,7 @@ function BrickScene({ onEntered, play }: BrickSceneProps) {
           anchorY="middle"
           clipRect={[-1, -0.5, -1 + bugClipProg * 2.5, 0.5]}
         >
-          BUG FIXED!
+          {labels.fallback.bugFixed}
         </Text>
       )}
 
@@ -429,6 +432,7 @@ function EntryCamera({ flying }: { flying: boolean }) {
 // works outside <Canvas>. Progress is monotonic; `complete` fires once,
 // after all load waves have finished.
 function PreviewLoadingOverlay() {
+  const labels = useLabLabels()
   const { progress, complete } = useStableProgress(400)
 
   if (complete) return null
@@ -451,11 +455,11 @@ function PreviewLoadingOverlay() {
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: 11,
           letterSpacing: '0.25em',
-          color: 'rgba(42,31,14,0.55)',
+          color: OVERLAY_COLORS.mutedText,
           textTransform: 'uppercase',
         }}
       >
-        Drawing… {progress}%
+        {labels.fallback.drawing} {progress}%
       </span>
     </div>
   )

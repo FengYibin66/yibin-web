@@ -488,6 +488,105 @@ test.describe('教程气泡', () => {
   )
 })
 
+test.describe('房间加载失败与重试', () => {
+  /*
+    ── 为什么必须有这一组 ────────────────────────────────────────────────────
+
+    「超时 → 点重试 → 成功」这条链此前**完全没有测试**：单测覆盖了
+    `RoomLoadingIndicator` 把错误码翻成文案，但"真的失败了会怎样"没人验过。
+    而这恰恰是房间生命周期最复杂的一段——加载超时、失败、重试、返回走廊四条边
+    都汇在这里，也是 ADR 20260903211338 要接线的那台状态图的核心价值所在。
+
+    没有它，那次接线的回归无从发现：happy path 的 E2E 全绿，而失败路径可能已经
+    变成"点了重试没反应"或"错误卡在纸下面只能刷新"（审计 B1 的原始形态）。
+
+    制造失败的办法是**拦掉纹理请求**，而不是改代码加开关：后者测的是开关，
+    前者测的是真实的加载失败。
+  */
+
+  /** 房间纹理的路径前缀（走廊与入口页的不拦，否则连走廊都进不去） */
+  const ROOM_TEXTURES = '**/textures/{about,gallery,studio,clouds}/**'
+
+  test('纹理加载失败时给出错误与两个出口', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    await page.route(ROOM_TEXTURES, route => route.abort())
+
+    await page.getByTestId('nav-map').click()
+    await page.getByTestId('map-room-about').click()
+
+    const failed = page.getByTestId('room-load-failed')
+    await expect(failed, '加载失败了但没有任何提示（审计 A8 的形态）')
+      .toBeVisible({ timeout: 30_000 })
+
+    /*
+      两个出口都必须在：只有"重试"的话，一个持续失败的房间就是死路
+      ——而那正是审计 B1 的表现（错误卡在合上的纸下面，导航全禁用，只能刷新）。
+    */
+    await expect(page.getByTestId('room-load-retry')).toBeVisible()
+    await expect(page.getByTestId('room-load-back')).toBeVisible()
+    // 失败的房间不算"进去了"
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false')
+  })
+
+  /*
+    ── 这条 E2E 查出的缺陷：从失败退出后，下一次传送会挂住 ────────────────────
+
+    表现：`data-lab-teleporting` 永久停在 `true`，房间再也进不去。与审计 B1
+    同一族（B1 是"传送中加载失败 → isTeleporting 没人重置 → 纸永久遮屏"），
+    这一条是"从失败退出 → 门的 ref 记账没复位 → 下一次进房的门点击被忽略"。
+
+    根因在 `useDoorEntryOrchestrator` 那套 ref 记账：`ownedEntryRef` 与
+    `previousPhaseRef` 要靠"观察到 failed → idle 这次转移"来复位，而中间只要插进
+    一次别的渲染，那个 `previousPhase` 就被覆盖、复位永远不发生。
+
+    **这正是 ADR 20260903211338 要接线状态图的核心理由**：所有权由机器的 context
+    派生（`roomId` + `segmentIndex`），而不是靠三个 ref 互相看护。接线之后这条会
+    开始通过，`test.fail()` 随即报错，标记去掉——那时它就是接线的验收条件。
+  */
+  test.fail('（已知缺陷）「返回走廊」之后还能再进房', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    await page.route(ROOM_TEXTURES, route => route.abort())
+    await page.getByTestId('nav-map').click()
+    await page.getByTestId('map-room-about').click()
+    await expect(page.getByTestId('room-load-failed')).toBeVisible({ timeout: 30_000 })
+
+    await page.getByTestId('room-load-back').click()
+    await expect(page.getByTestId('room-load-failed')).toHaveCount(0)
+
+    /*
+      从失败退出之后状态必须真的回到"走廊空闲"，否则下一次进房会卡在
+      `failed`（旧实现里靠 `previousPhase === 'failed'` 那个 ref 判断，
+      漏一次就永久卡住）。所以这里放开拦截再进一次房。
+    */
+    await page.unroute(ROOM_TEXTURES)
+    await teleportTo(page, 'about')
+  })
+
+  test('放开拦截后「重试」能真的进房', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    await page.route(ROOM_TEXTURES, route => route.abort())
+    await page.getByTestId('nav-map').click()
+    await page.getByTestId('map-room-about').click()
+    await expect(page.getByTestId('room-load-failed')).toBeVisible({ timeout: 30_000 })
+
+    /*
+      重试前放开拦截。重试的实现要先 `useTexture.clear` 再重载——不清缓存的话
+      drei 会立刻把上一次失败的 promise 还回来，表现是"点了重试没反应"。
+      这条断言就是那件事的验收。
+    */
+    await page.unroute(ROOM_TEXTURES)
+    await page.getByTestId('room-load-retry').click()
+
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'true', {
+      timeout: 40_000,
+    })
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-room', 'about')
+  })
+})
+
 test.describe('首访', () => {
   test('第一次进 Lab 会自动弹操作说明，点一下关掉且不再弹', async ({ page }) => {
     /*

@@ -102,10 +102,20 @@ function FailureContent({
         </p>
       )}
       <div className={styles.actions}>
-        <button className={styles.button} type="button" onClick={onRetry}>
+        <button
+          className={styles.button}
+          type="button"
+          onClick={onRetry}
+          data-testid="room-load-retry"
+        >
           {labels.loading.retry}
         </button>
-        <button className={styles.button} type="button" onClick={onBack}>
+        <button
+          className={styles.button}
+          type="button"
+          onClick={onBack}
+          data-testid="room-load-back"
+        >
           {labels.loading.backToCorridor}
         </button>
       </div>

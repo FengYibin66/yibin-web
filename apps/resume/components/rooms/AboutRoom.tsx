@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
+import { LAB_FONT_DISPLAY, LAB_FONT_LATIN_BOLD, LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
 import { useScene } from '@/context/SceneContext'
 import { useAchievements } from '@/context/AchievementsContext'
@@ -78,12 +79,12 @@ function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
     <group ref={groupRef} position={[0, 0, z]}>
       <Text ref={titleRef as never} position={[0, 5, 0.1]} fontSize={0.8}
         color="#1a1a1a" anchorX="center" anchorY="middle"
-        font="/fonts/RubikScribble-Regular.ttf">
+        font={fontForText(copy.name, LAB_FONT_DISPLAY)}>
         {copy.name}
       </Text>
       <Text ref={brandRef as never} position={[0, 4.3, 0.1]} fontSize={0.4}
         color="#4a4a4a" anchorX="center" anchorY="middle"
-        font="/fonts/CabinSketch-Regular.ttf" maxWidth={10} textAlign="center">
+        font={fontForText(copy.rolesLine, LAB_FONT_LATIN_REGULAR)} maxWidth={10} textAlign="center">
         {copy.rolesLine}
       </Text>
       <mesh ref={avatarRef} position={[0, 2, 0]}>
@@ -92,7 +93,7 @@ function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
           side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <Text position={[0, 0, 0.1]} fontSize={0.28} color="#555555"
-        anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Regular.ttf"
+        anchorX="center" anchorY="middle" font={fontForText(copy.tagline, LAB_FONT_LATIN_REGULAR)}
         maxWidth={11} textAlign="center">
         {copy.tagline}
       </Text>
@@ -145,11 +146,11 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
   return (
     <group ref={groupRef} position={[0, 0, z]}>
       <Text position={[0, 5, 0.3]} fontSize={1.2} color="#1a1a1a"
-        anchorX="center" anchorY="middle" font="/fonts/RubikScribble-Regular.ttf">
+        anchorX="center" anchorY="middle" font={fontForText(copy.journeyTitle, LAB_FONT_DISPLAY)}>
         {copy.journeyTitle}
       </Text>
       <Text position={[0, 4.2, 0.3]} fontSize={0.35} color="#555555"
-        anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Regular.ttf">
+        anchorX="center" anchorY="middle" font={fontForText(copy.journeySubtitle, LAB_FONT_LATIN_REGULAR)}>
         {copy.journeySubtitle}
       </Text>
       <group ref={uoRef} position={[-3.5, -2, 0]}>
@@ -158,7 +159,7 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
           <meshBasicMaterial color="#e0e0e0" map={uoTexture} transparent side={THREE.DoubleSide} />
         </mesh>
         <Text position={[0, -0.85, 0.1]} fontSize={0.35} color="#1a1a1a"
-          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf"
+          anchorX="center" anchorY="middle" font={fontForText(copy.leftIslandLabel, LAB_FONT_LATIN_BOLD)}
           maxWidth={5} textAlign="center">
           {copy.leftIslandLabel}
         </Text>
@@ -169,7 +170,7 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
           <meshBasicMaterial color="#e0e0e0" map={frTexture} transparent side={THREE.DoubleSide} />
         </mesh>
         <Text position={[0, -0.65, 0.1]} fontSize={0.35} color="#1a1a1a"
-          anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf"
+          anchorX="center" anchorY="middle" font={fontForText(copy.rightIslandLabel, LAB_FONT_LATIN_BOLD)}
           maxWidth={5} textAlign="center">
           {copy.rightIslandLabel}
         </Text>
@@ -193,7 +194,7 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
   return (
     <group ref={groupRef} position={[0, 0, z]}>
       <Text position={[0, 6, 0.5]} fontSize={1.2} color="#1a1a1a"
-        anchorX="center" anchorY="middle" font="/fonts/RubikScribble-Regular.ttf">
+        anchorX="center" anchorY="middle" font={fontForText(copy.skillsTitle, LAB_FONT_DISPLAY)}>
         {copy.skillsTitle}
       </Text>
       {copy.skills.map((skill, i) => {
@@ -204,7 +205,7 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
             position={[(col - 1.5) * 2.5, 4.5 - row * 1.2, 0.3]}
             fontSize={0.35} color="#2a1f0e"
             anchorX="center" anchorY="middle"
-            font="/fonts/CabinSketch-Bold.ttf"
+            font={fontForText(skill, LAB_FONT_LATIN_BOLD)}
             maxWidth={2.3} textAlign="center">
             {skill}
           </Text>

@@ -1,21 +1,8 @@
 import { fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import * as DoorSectionModule from '@/components/lab/DoorSection'
 import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 
-const { DoorSection } = DoorSectionModule
-
-interface DoorEscapeState {
-  isInsideRoom: boolean
-  isAnimating: boolean
-  isTeleporting: boolean
-}
-
-type HandleDoorEscape = (
-  event: KeyboardEvent,
-  state: DoorEscapeState,
-  requestExit: () => void,
-) => void
+import { DoorSection } from '@/components/lab/DoorSection'
 
 const testState = vi.hoisted(() => ({
   frameCallbacks: [] as Array<() => void>,
@@ -110,40 +97,23 @@ function prepareThreeGroups(container: HTMLElement): void {
   })
 }
 
-function getHandleDoorEscape(): HandleDoorEscape {
-  const handler: unknown = Reflect.get(DoorSectionModule, 'handleDoorEscape')
-  expect(handler).toBeTypeOf('function')
-  if (typeof handler !== 'function') {
-    throw new Error('DoorSection must export handleDoorEscape')
-  }
-  return handler as HandleDoorEscape
-}
+/*
+  ── ESC 的守卫测试搬走了 ────────────────────────────────────────────────────
 
-describe('DoorSection Escape exit guard', () => {
-  it('does not request exit while teleporting from inside a room', () => {
-    const requestExit = vi.fn()
+  这里原先测 `DoorSection` 导出的 `handleDoorEscape(event, state, requestExit)`，
+  两条断言是「传送中不退房」与「已进房且不在传送时退房」。
 
-    getHandleDoorEscape()(
-      new KeyboardEvent('keydown', { key: 'Escape' }),
-      { isInsideRoom: true, isAnimating: false, isTeleporting: true },
-      requestExit,
-    )
+  那个函数与它**每个门实例各挂一个**的 window 监听（15 段走廊 = 15 个监听）已被
+  `components/lab/useEscapeRouter.ts` 取代（ADR 20260903211244），退房的守卫也
+  合并回 `requestExit()` 自己那一处——它守着
+  `phase === 'entered' && !isTeleporting`，正是上面那两条断言的内容，只是不再
+  有第二套并行判断。
 
-    expect(requestExit).not.toHaveBeenCalled()
-  })
-
-  it('requests exit from Escape when entered and not teleporting', () => {
-    const requestExit = vi.fn()
-
-    getHandleDoorEscape()(
-      new KeyboardEvent('keydown', { key: 'Escape' }),
-      { isInsideRoom: true, isAnimating: false, isTeleporting: false },
-      requestExit,
-    )
-
-    expect(requestExit).toHaveBeenCalledTimes(1)
-  })
-})
+  接替的覆盖：
+  - `__tests__/escapeStack.test.ts` 测路由规则（栈顶优先、没人认领才兜底）
+  - `e2e/lab.spec.ts` 端到端测「房间里 ESC 退房」「走廊 ESC 关面板」——那才是
+    当初出问题的层面（多个真实 window 监听互相不知情），单测层面看不出来
+*/
 
 describe('DoorSection room asset preload', () => {
   beforeEach(() => {

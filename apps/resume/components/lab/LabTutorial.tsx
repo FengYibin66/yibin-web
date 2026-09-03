@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { isCorridorIdle } from '@/lib/lab/roomLoadMachine'
 import { useStableProgress } from '@/hooks/useStableProgress'
 import { useScene } from '@/context/SceneContext'
+import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { hasSeenTutorial, markTutorialSeen, TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import type { LabUiLabels } from '@/lib/content/types'
@@ -98,12 +99,15 @@ export function LabTutorial() {
     setTimeout(() => { setVisible(false); setLeaving(false) }, 320)
   }, [])
 
-  // ESC to skip
+  /*
+    ESC 跳过 —— 认领消费栈而不是自己挂 window 监听。
+
+    这个遮罩是 `inset: 0` 的，在房间里被"?"按钮打开时，自己挂监听会让一次 ESC
+    同时跳过说明**并**让房间退场。认领之后它在栈顶，ESC 只关它。
+  */
   useEffect(() => {
     if (!visible) return
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') dismiss() }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    return pushEscapeConsumer(dismiss)
   }, [visible, dismiss])
 
   if (!visible) return null

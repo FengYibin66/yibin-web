@@ -14,9 +14,9 @@ import {
   decideDoorEntry,
   type DoorEntryCommand,
 } from '@/lib/lab/doorEntryFlow'
-import { consumeEscape } from '@/lib/lab/app/escapeStack'
 import { isDoorEntryOwner } from '@/lib/lab/roomLoadMachine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
+import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 import { preloadRoomAssets } from '@/lib/lab/roomAssets'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
@@ -59,31 +59,18 @@ export interface DoorSectionProps {
   setCameraOverride: (active: boolean) => void
 }
 
-interface DoorEscapeState {
-  isInsideRoom: boolean
-  isAnimating: boolean
-  isTeleporting: boolean
-}
+/*
+  ESC 的处理已经搬到 `components/lab/useEscapeRouter.ts`（ADR 20260903211244）。
 
-/**
- * ESC = 退出房间，**除非房间里有更内层的东西认领了它**。
- *
- * 房间内的细节视图（Projects 的停靠显示器、Publications 的打开单篇）会往
- * `escapeStack` 里压一个消费者。不问这一句的话，在停靠状态按 ESC 会直接
- * 退出整个房间——实机相位序列是
- * `docked → undocking → undocking(exiting)`，收回被退场打断。
- */
-export function handleDoorEscape(
-  event: KeyboardEvent,
-  state: DoorEscapeState,
-  requestExit: () => void,
-): void {
-  if (event.key !== 'Escape') return
-  if (!state.isInsideRoom || state.isAnimating || state.isTeleporting) return
-  // 栈顶先消费；被消费掉就不再退房
-  if (consumeEscape()) return
-  requestExit()
-}
+  这里原先有 `handleDoorEscape` 与一个**每个门实例各挂一个**的 window keydown
+  监听：15 段走廊各一个，靠各自的 `isInsideRoom` 互斥。加上 `NavigationUI` 与
+  `LabTutorial` 各自的一个，一共 17 个监听在抢同一个键。后两者不走消费栈，
+  于是在房间里按一次 ESC 会同时关面板**并**让房间退场。
+
+  现在只有一个监听点。退房的守卫也不再重复一套——`requestExit()` 自己就守着
+  `phase === 'entered' && !isTeleporting`，比原来那三个每实例 state
+  （`isInsideRoom` / `isAnimating` / `isTeleporting`）少一套会漂移的并行判断。
+*/
 
 export function DoorSection({
   position,
@@ -124,6 +111,12 @@ export function DoorSection({
     requestExit,
   } = useScene()
   const { camera } = useThree()
+  /*
+    门牌字体按**文案内容**选，不按 locale：含汉字就换成有汉字字形的手写体。
+    写死拉丁体时中文门牌是空白的——CabinSketch 没有汉字字形，而 troika 缺字会去
+    jsDelivr 取兜底字体（大陆访客取不到）。见 `lib/lab/domain/labFonts.ts`。
+  */
+  const doorLabelFont = fontForText(label, LAB_FONT_LATIN_BOLD)
 
   // ─── Textures ───────────────────────────────────────────────────────────────
   const doorTex          = useTexture(`/textures/corridor/doors/drzwi${type}.webp`)
@@ -518,19 +511,6 @@ export function DoorSection({
     })
   }, [isEntryOwner, isInsideRoom, isAnimating, camera, closeDoorPanels, contextExitRoom, resetRoomLoad, setCameraOverride])
 
-  // ─── ESC key listener ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      handleDoorEscape(
-        e,
-        { isInsideRoom, isAnimating, isTeleporting },
-        requestExit,
-      )
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isAnimating, isInsideRoom, isTeleporting, requestExit])
-
   // ─── exitRequested listener ──────────────────────────────────────────────────
   useEffect(() => {
     if (
@@ -728,7 +708,7 @@ export function DoorSection({
             position={[0, 0, 0.01]}
             fontSize={0.11}
             color="#5c4a2a"
-            font="/fonts/CabinSketch-Bold.ttf"
+            font={doorLabelFont}
             anchorX="center"
             anchorY="middle"
             maxWidth={0.75}

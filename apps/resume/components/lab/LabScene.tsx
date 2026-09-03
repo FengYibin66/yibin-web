@@ -18,6 +18,7 @@ if (typeof window !== 'undefined') preloadCorridorTextures()
 import { PaperTransition } from './PaperTransition'
 import { TeleportRoom } from './TeleportRoom'
 import { LabTutorial } from './LabTutorial'
+import { useEscapeRouter } from './useEscapeRouter'
 import { RoomLoadingIndicator } from './RoomLoadingIndicator'
 import { NavigationUI } from '@/components/ui/NavigationUI'
 
@@ -59,6 +60,9 @@ function LabCanvas() {
     resetRoomLoad,
   } = useScene()
   const { unlockAchievement } = useAchievements()
+
+  // Lab 里唯一的 ESC 监听点（ADR 20260903211244）
+  useEscapeRouter()
 
   const [isTouch, setIsTouch] = useState(false)
   useEffect(() => {

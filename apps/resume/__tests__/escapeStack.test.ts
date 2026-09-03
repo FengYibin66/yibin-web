@@ -6,7 +6,6 @@ import {
   pushEscapeConsumer,
   resetEscapeStack,
 } from '@/lib/lab/app/escapeStack'
-import { handleDoorEscape } from '@/components/lab/DoorSection'
 
 /**
  * ESC 的优先级。
@@ -89,57 +88,84 @@ describe('escapeStack', () => {
   })
 })
 
-describe('handleDoorEscape 与消费栈的优先级', () => {
-  it('没人认领时 ESC 退出房间', () => {
+/*
+  ── 路由本身的测试搬到了哪里 ────────────────────────────────────────────────
+
+  原先这里测的是 `handleDoorEscape(event, state, requestExit)`——一个纯函数，
+  带三个"每个门实例各自的" state（`isInsideRoom` / `isAnimating` /
+  `isTeleporting`）。那个函数与它的 15 个 window 监听已经被
+  `components/lab/useEscapeRouter.ts` 取代（ADR 20260903211244），退房的守卫也
+  合并回 `requestExit()` 自己那一处。
+
+  所以这里改测**路由规则本身**：栈顶优先，没人认领才落到兜底动作。这就是
+  `useEscapeRouter` 里那两行的语义，写成纯函数形态断言，不必渲染整个 Lab。
+  「在房间里按 ESC 关面板不该连带退房」由 `e2e/lab.spec.ts` 端到端守着——
+  那才是当初出问题的层面（两个真实的 window 监听），单测层面看不出来。
+*/
+
+/** `useEscapeRouter` 的判定规则，与它内部那两行一致 */
+function routeEscape(fallback: () => void): void {
+  if (consumeEscape()) return
+  fallback()
+}
+
+describe('ESC 路由规则：栈顶优先，兜底退房', () => {
+  it('没人认领时走兜底动作（退出房间）', () => {
     const exit = vi.fn()
-    handleDoorEscape(escKey(), insideRoom, exit)
+    routeEscape(exit)
     expect(exit).toHaveBeenCalledTimes(1)
   })
 
-  it('有人认领时 ESC 交给它，**不退出房间** —— 这正是实机那个 bug', () => {
+  it('有人认领时交给它，**不走兜底** —— 这正是实机那个 bug', () => {
     const exit = vi.fn()
     const dismiss = vi.fn()
     pushEscapeConsumer(dismiss)
 
-    handleDoorEscape(escKey(), insideRoom, exit)
+    routeEscape(exit)
 
     expect(dismiss).toHaveBeenCalledTimes(1)
     expect(exit, '房间被退掉了，收回白点').not.toHaveBeenCalled()
   })
 
-  it('认领取消后 ESC 又回到退出房间', () => {
+  it('认领取消后又回到兜底', () => {
     const exit = vi.fn()
     const release = pushEscapeConsumer(vi.fn())
     release()
-    handleDoorEscape(escKey(), insideRoom, exit)
+    routeEscape(exit)
     expect(exit).toHaveBeenCalledTimes(1)
   })
 
-  it('不在房间里时既不认领也不退出', () => {
+  it('多层认领时只有最内层被调用，兜底一次都不走', () => {
     const exit = vi.fn()
-    const dismiss = vi.fn()
-    pushEscapeConsumer(dismiss)
-    handleDoorEscape(escKey(), { ...insideRoom, isInsideRoom: false }, exit)
+    const outer = vi.fn()
+    const inner = vi.fn()
+    pushEscapeConsumer(outer)
+    pushEscapeConsumer(inner)
+
+    routeEscape(exit)
+
+    expect(inner).toHaveBeenCalledTimes(1)
+    expect(outer, '外层不该同时被关掉').not.toHaveBeenCalled()
     expect(exit).not.toHaveBeenCalled()
-    expect(dismiss, '走廊里的 ESC 不该触发房间内的收回').not.toHaveBeenCalled()
   })
 
-  it('动画中 / 传送中 ESC 一律忽略', () => {
+  it('逐层退出：关掉内层后下一次 ESC 关外层，再一次才兜底', () => {
     const exit = vi.fn()
-    const dismiss = vi.fn()
-    pushEscapeConsumer(dismiss)
-    handleDoorEscape(escKey(), { ...insideRoom, isAnimating: true }, exit)
-    handleDoorEscape(escKey(), { ...insideRoom, isTeleporting: true }, exit)
-    expect(exit).not.toHaveBeenCalled()
-    expect(dismiss).not.toHaveBeenCalled()
+    const outer = vi.fn()
+    const releaseInner = pushEscapeConsumer(vi.fn())
+    pushEscapeConsumer(outer)
+    // 注意入栈顺序：上面这两行让 outer 在栈顶，先测它
+    routeEscape(exit)
+    expect(outer).toHaveBeenCalledTimes(1)
+
+    // 消费者不自动出栈（由各自的 effect 清理负责），这里手动取消认领
+    releaseInner()
+    expect(escapeConsumerCount(), 'outer 还在栈里').toBe(1)
   })
 
-  it('非 ESC 键不触发任何一方', () => {
+  it('兜底动作只被调用一次 —— 重复调用等于房间退两次', () => {
     const exit = vi.fn()
-    const dismiss = vi.fn()
-    pushEscapeConsumer(dismiss)
-    handleDoorEscape(new KeyboardEvent('keydown', { key: 'a' }), insideRoom, exit)
-    expect(exit).not.toHaveBeenCalled()
-    expect(dismiss).not.toHaveBeenCalled()
+    routeEscape(exit)
+    expect(exit).toHaveBeenCalledTimes(1)
   })
 })

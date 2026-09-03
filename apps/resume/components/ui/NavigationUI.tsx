@@ -9,6 +9,7 @@ import { AchievementPopup } from './AchievementPopup'
 import { AchievementsPanel } from './AchievementsPanel'
 import { TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 import { useLabLabels } from '@/hooks/useLabLabels'
+import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 
 /*
@@ -87,19 +88,6 @@ export function NavigationUI() {
     if (mapOpen) setTimeout(() => mapCloseRef.current?.focus(), 100)
   }, [mapOpen])
 
-  // ESC closes any open panel
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (mapOpen) setMapOpen(false)
-        if (audioOpen) setAudioOpen(false)
-        if (achievementsOpen) setAchievementsOpen(false)
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [mapOpen, audioOpen, achievementsOpen])
-
   // Focus trap for map panel
   const handleMapKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'Tab' || !mapPanelRef.current) return
@@ -135,6 +123,24 @@ export function NavigationUI() {
     setAudioOpen(false)
     setAchievementsOpen(false)
   }, [])
+
+  /*
+    ESC 关面板 —— 通过**认领消费栈**，而不是自己挂 window 监听。
+
+    自己挂监听时，在房间里按 ESC 会同时关面板 + 让房间退场（两个监听互不知情，
+    且这个监听的依赖是 `[mapOpen, audioOpen, achievementsOpen]`，每次开关面板都会
+    摘掉重挂，于是它在 window 监听队列里的位置随用户操作漂移——"谁先执行"变成了
+    不可预期的事）。认领之后 ESC 由 `useEscapeRouter` 统一路由：栈顶先消费，
+    消费掉就不再往下走到"退出房间"。
+
+    只在**有面板打开**时认领：常驻认领会把走廊里那次"没人认领 → 什么也不做"
+    的 ESC 也吞掉，将来加别的 ESC 语义时会撞。
+  */
+  const anyPanelOpen = mapOpen || audioOpen || achievementsOpen
+  useEffect(() => {
+    if (!anyPanelOpen) return
+    return pushEscapeConsumer(closeAll)
+  }, [anyPanelOpen, closeAll])
 
   if (!hasEntered) return null
 

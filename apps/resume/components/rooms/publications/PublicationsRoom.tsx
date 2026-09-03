@@ -25,6 +25,8 @@ import {
   type PublicationMotionEvent,
   type PublicationMotionState,
 } from './publicationMotionMachine'
+
+import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { PublicationsScenery } from './PublicationsScenery'
 import { usePaintMaterial } from './usePaintMaterial'
 import { usePublicationBrowseCamera } from './usePublicationBrowseCamera'
@@ -214,6 +216,23 @@ export function PublicationsRoom({
     showRoom,
     teleportActive,
   ])
+
+  /*
+    打开单篇时认领 ESC（ADR 20260903211244）。
+
+    `escapeStack` 的文档注释里一直写着「Publications 房间的『打开单篇』是同一类
+    冲突，可以直接复用」——但这一处从未接上，于是打开单篇后按 ESC 会**直接退出
+    整个房间**，而在 Projects 房间里同一个键是「先收回停靠」。同一个键在相邻两间
+    房里语义不同，且不是有意设计的。
+
+    只在 `open` 相位认领：`centering` / `hanging` 这些过渡相位里按 ESC 该照常退房，
+    否则动画期间这个键会变成没反应。
+  */
+  const isPublicationOpen = motion.phase === 'open'
+  useEffect(() => {
+    if (!isPublicationOpen) return
+    return pushEscapeConsumer(() => sendMotion({ type: 'CANCEL' }))
+  }, [isPublicationOpen, sendMotion])
 
   useEffect(() => {
     if (showRoom && !isExiting && !teleportActive) return

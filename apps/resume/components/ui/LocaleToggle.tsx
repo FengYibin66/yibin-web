@@ -2,6 +2,7 @@
 
 import { useLocale } from '../../hooks/useLocale'
 import { useLabLabels } from '@/hooks/useLabLabels'
+import { nextLocaleLabel } from '@/lib/content/localeToggle'
 
 export function LocaleToggle() {
   const { locale, toggle } = useLocale()
@@ -30,7 +31,7 @@ export function LocaleToggle() {
       */
       data-testid="locale-toggle"
     >
-      {locale === 'en' ? '中文' : 'EN'}
+      {nextLocaleLabel(locale)}
     </button>
   )
 }

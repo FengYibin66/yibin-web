@@ -9,6 +9,8 @@ import { AchievementPopup } from './AchievementPopup'
 import { AchievementsPanel } from './AchievementsPanel'
 import { TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 import { useLabLabels } from '@/hooks/useLabLabels'
+import { useLocale } from '@/hooks/useLocale'
+import { nextLocaleLabel } from '@/lib/content/localeToggle'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 
@@ -34,6 +36,7 @@ export function NavigationUI() {
   const { isMuted, toggleMute, sfxVolume, setSfxVolume, bgmVolume, setBgmVolume } = useAudio()
   const { showTutorial, unlockAchievement } = useAchievementActions()
   const labels = useLabLabels()
+  const { locale, toggle: toggleLocale } = useLocale()
 
   const [mapOpen, setMapOpen]               = useState(false)
   const [audioOpen, setAudioOpen]           = useState(false)
@@ -282,6 +285,23 @@ export function NavigationUI() {
             <path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .6-1.6 1.2-1.6 2.5" />
             <circle cx="12" cy="17.5" r="0.5" fill="currentColor" />
           </svg>
+        </NavButton>
+
+        {/*
+          语言切换。Lab 是全站唯一没有 Navbar 的视图，此前也是唯一切不了语言的
+          地方——用户进了走廊看到门牌才想换语言，却得退回入口页。
+          逻辑复用 `useLocale().toggle` 与 `nextLocaleLabel`（与 Classic 页的
+          `LocaleToggle` 同一份规则），这里只是换成顶栏的按钮样式。
+          文字与 aria-label 都随语言变，测试只能按 data-testid 定位。
+        */}
+        <NavButton
+          onClick={() => { closeAll(); toggleLocale() }}
+          aria-label={labels.panels.toggleLanguage}
+          data-testid="nav-locale"
+        >
+          <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', lineHeight: 1 }}>
+            {nextLocaleLabel(locale)}
+          </span>
         </NavButton>
       </div>
 

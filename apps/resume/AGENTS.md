@@ -235,6 +235,18 @@ ESC 已绑定「退出房间」。房间内的细节视图（Projects 的停靠�
 `lib/lab/app/escapeStack` 认领它——栈顶（最内层）先消费。自己挂 window
 监听会让两者同时触发，房间退场把收回打断。
 
+### 语言：一份偏好，两处按钮
+
+语言存在 `localStorage.resume-locale`，全站共享；默认 `en`，hydration 之后才读
+storage（SSR 与首屏必须一致）。切换按钮有两处，**逻辑只有一份**：Classic / 入口页的
+`LocaleToggle` 与 Lab 顶栏 `NavigationUI` 的 `nav-locale` 都调 `useLocale().toggle`，
+按钮文字都来自 `lib/content/localeToggle.ts` 的 `nextLocaleLabel`——显示**目标**语言的
+名字、用目标语言写（英文界面上是「中文」）。Lab 是全站唯一没有 Navbar 的视图，
+2026-09-04 之前它是唯一切不了语言的地方。
+
+按钮的可见文字与 aria-label 都随语言变，**测试只能按 `data-testid` 定位**
+（`locale-toggle` / `nav-locale`）。
+
 **加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
 
 ## 滚动卡顿的两个来源（2026-09-04 采样定位）
@@ -276,12 +288,12 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 122 个用例（61 条 spec × chromium / mobile-safari 两个形态），分两个文件：
+`e2e/` 下 126 个用例（63 条 spec × chromium / mobile-safari 两个形态），分两个文件：
 
 | 文件 | 覆盖 |
 |------|------|
 | `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化 |
-| `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 首访 / 无 JS 兜底 |
+| `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 首访 / 无 JS 兜底 |
 
 `lab.spec.ts` 是 ADR
 [20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)

@@ -669,6 +669,46 @@ test.describe('房间加载失败与重试', () => {
   })
 })
 
+test.describe('语言切换', () => {
+  /*
+    Lab 是全站唯一没有 Navbar 的视图，此前也是唯一切不了语言的地方。按钮复用
+    `useLocale().toggle`，这里验的是接线与持久化。
+
+    只按 `data-testid` 定位：按钮的可见文字与 aria-label **刻意**随语言变
+    （显示目标语言的名字），按文字找第二次点击必然失配——`LocaleToggle` 那次
+    三个 E2E 一起红就是这个原因。
+  */
+  test('顶栏能切到中文，其余按钮标签跟着变，刷新后保持', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    const toggle = page.getByTestId('nav-locale')
+    await expect(toggle).toHaveText('中文')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+
+    await toggle.click()
+    await expect(toggle).toHaveText('EN')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
+    // 不是只有这个按钮自己变了：地图按钮的无障碍名也切了
+    await expect(page.getByTestId('nav-map')).toHaveAttribute('aria-label', '打开地图')
+
+    // 持久化：刷新后仍是中文（hydration 真的恢复了，不只是写了 storage）
+    await page.reload()
+    await expect(page.getByTestId('lab-ui')).toBeAttached({ timeout: LAB_READY_TIMEOUT })
+    await expect(page.getByTestId('nav-locale')).toHaveText('EN')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
+  })
+
+  test('切回英文同样生效', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+    const toggle = page.getByTestId('nav-locale')
+    await toggle.click()
+    await expect(toggle).toHaveText('EN')
+    await toggle.click()
+    await expect(toggle).toHaveText('中文')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  })
+})
+
 test.describe('首访', () => {
   test('第一次进 Lab 会自动弹操作说明，点一下关掉且不再弹', async ({ page }) => {
     /*

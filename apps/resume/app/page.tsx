@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { ClassicPanel } from '@/components/entry/ClassicPanel'
 import { ExplorerBar } from '@/components/entry/ExplorerBar'
+import { EntryLocaleToggle } from '@/components/entry/EntryLocaleToggle'
 import { AudioProvider } from '@/context/AudioContext'
 import type { EntryPreviewSceneProps } from '@/components/entry/EntryPreviewScene'
 
@@ -290,6 +291,8 @@ export default function EntryPage() {
         </div>
       )}
     </div>
+    {/* 语言在门户定，进 Lab / Classic 都沿用（见 EntryLocaleToggle 的说明） */}
+    <EntryLocaleToggle />
     <ExplorerBar />
     </AudioProvider>
   )

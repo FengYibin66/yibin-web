@@ -254,6 +254,31 @@ test.describe('语言切换', () => {
     ).toBeGreaterThan(0)
   }
 
+  test('门户页右上角能切语言，进 Classic 后沿用', async ({ page }) => {
+    /*
+      门户（`/`）是全站唯一的入口，语言该在这里定。此前它只读语言、没有切换入口，
+      用户得先进 Classic 再在 Navbar 里切（2026-09-04 补）。
+
+      判别串：Classic 面板的眉题 'Classic Résumé' ↔ '常规简历'（labUi.entry.classicTitle），
+      两个语言包互斥。**不能用 Lab 面板的标题**：手机端 `EntryStage` 走静态首帧路径，
+      那块文案不渲染——第一版用 'The Lab' 在 mobile-safari 上直接找不到元素。
+      进 Classic 之后用本组共用的 expectLocale。
+    */
+    await page.goto('/')
+    const toggle = page.getByTestId('locale-toggle')
+    await expect(toggle).toBeVisible()
+    await expect(page.getByText('Classic Résumé', { exact: true })).toBeVisible()
+
+    await toggle.click()
+    await expect(page.getByText('常规简历', { exact: true })).toBeVisible()
+    await expect(page.getByText('Classic Résumé', { exact: true })).toHaveCount(0)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
+
+    // 同一份偏好：进 Classic 不用再切
+    await page.goto('/classic/')
+    await expectLocale(page, 'zh')
+  })
+
   test('判别串确实互斥（守住本组其余断言的前提）', async ({ page }) => {
     // 这条是元测试：若将来有人把 '关于我' 加进 en.ts（或反之），
     // 本组其余断言会重新退化为空测试。此处提前失败并指明原因。

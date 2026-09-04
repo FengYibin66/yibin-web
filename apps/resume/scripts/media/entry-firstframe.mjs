@@ -142,6 +142,7 @@ await page.addStyleTag({
   content: `
     a[href="/lab"] * { opacity: 0 !important; }
     [data-explorer-bar] { display: none !important; }
+    [data-entry-locale-toggle] { display: none !important; }
   `,
 })
 await page.waitForTimeout(300)

@@ -7,7 +7,8 @@ import * as THREE from 'three'
 import { LAB_FONT_DISPLAY, LAB_FONT_LATIN_BOLD, LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
 import { useScene } from '@/context/SceneContext'
-import { useAchievements } from '@/context/AchievementsContext'
+import { useRoomCamera } from '@/hooks/useRoomCamera'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { useLocale } from '@/hooks/useLocale'
 import { getAboutRoomCopy } from '@/lib/content/labAdapters'
@@ -219,7 +220,7 @@ function SkillsMilestone({ z, scrollProgressRef }: MilestoneProps) {
 export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const { camera }              = useThree()
   const { isTeleporting }       = useScene()
-  const { unlockAchievement }   = useAchievements()
+  const { unlockAchievement }   = useAchievementActions()
   const router = useWheelRouter()
   /*
     教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调
@@ -252,6 +253,14 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   const [activeChunks, setActiveChunks] = useState<number[]>([-1, 0, 1, 2])
   const [activeStoryCycles, setActiveStoryCycles] = useState<number[]>([-1, 0, 1])
   const worldRef = useRef<THREE.Group>(null)
+  /*
+    房间级相机（审计 A1）。`entryPose` 在 `lib/lab/domain/rooms/about.ts` 里声明了
+    一年，但**从没有人消费它**——只有 Projects 接了 `useRoomCamera`。相机一直停在
+    门口 25 单位外，整间房挤在屏幕中央一小块，天空平面的边缘直接露出（那个
+    "蓝框"）。接线并用截图标定过：见 PR 说明。
+  */
+  const rootRef = useRef<THREE.Group>(null)
+  useRoomCamera('about', rootRef, { showRoom, isExiting })
 
   useFrame((_, delta) => {
     if (isExiting || isTeleporting) return
@@ -344,14 +353,20 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
   if (!showRoom) return null
 
   return (
-    <group position={[0, 0, -25]}>
+    <group ref={rootRef} position={[0, 0, -25]}>
       {/* 环境音由 RoomAmbience + 房间声明负责（ADR 20260903140618）：
           原先这里是 drei 的 <PositionalAudio autoplay>，它走 useLoader 会
           Suspend，于是音频阻塞房间 READY（审计 A5），且与静音开关脱钩（A6）。 */}
 
-      {/* Sky backdrop */}
+      {/*
+        Sky backdrop。尺寸按视锥算，不是拍脑袋：相机 fov 60°、16:9 时水平半视角
+        ≈ 46°；平面在 200 单位远，半宽要 > 200·tan(46°) ≈ 207 才能填满——原来的
+        400×200（半宽 200）差一点点，站在门口更远时差得更多，于是屏幕四周露出
+        走廊的米白底色。放大到 1600×800 后从任何合理位置都填满，多出来的部分不花钱
+        （一个 quad）。
+      */}
       <mesh position={[0, 0, -200]}>
-        <planeGeometry args={[400, 200]} />
+        <planeGeometry args={[1600, 800]} />
         <meshBasicMaterial color="#d4e8f5" side={THREE.DoubleSide} />
       </mesh>
 

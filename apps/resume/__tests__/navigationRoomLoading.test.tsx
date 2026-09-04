@@ -46,6 +46,11 @@ vi.mock('@/context/AchievementsContext', () => ({
     showTutorial: vi.fn(),
     unlockAchievement: vi.fn(),
   }),
+  // NavigationUI 只用动作，走的是不随队列变化的那个 context
+  useAchievementActions: () => ({
+    showTutorial: vi.fn(),
+    unlockAchievement: vi.fn(),
+  }),
 }))
 
 vi.mock('@/components/ui/AchievementPopup', () => ({

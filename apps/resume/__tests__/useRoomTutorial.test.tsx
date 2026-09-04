@@ -13,12 +13,16 @@ vi.mock('@/context/SceneContext', () => ({
   }),
 }))
 
-vi.mock('@/context/AchievementsContext', () => ({
+vi.mock('@/context/AchievementsContext', () => {
+  const mocked = {
   useAchievements: () => ({
     showTutorial: tutorialMocks.showTutorial,
     dismissTutorial: tutorialMocks.dismissTutorial,
   }),
-}))
+  }
+  // 动作类消费方走 useAchievementActions（只含稳定回调的那半个 context），mock 同一份即可
+  return { ...mocked, useAchievementActions: mocked.useAchievements }
+})
 
 import { useRoomTutorial } from '@/hooks/useRoomTutorial'
 

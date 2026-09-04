@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-import { useAchievements } from '@/context/AchievementsContext'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
 
 const ROOM_TUTORIAL_DELAY_MS = 2000
@@ -34,7 +34,7 @@ const ROOM_TUTORIAL_DELAY_MS = 2000
  */
 export function useRoomTutorial(tutorialId: string | null, roomId: string): void {
   const { roomLoadState: { phase } } = useScene()
-  const { showTutorial, dismissTutorial } = useAchievements()
+  const { showTutorial, dismissTutorial } = useAchievementActions()
 
   useEffect(() => {
     // `null` = 这个房间没有教程（gallery 走独立路由，没有"房间内"这回事）

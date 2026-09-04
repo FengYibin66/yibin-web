@@ -55,13 +55,17 @@ vi.mock('@/context/AudioContext', () => ({
   useAudio: () => ({ playBgm: vi.fn(), stopBgm: vi.fn() }),
 }))
 
-vi.mock('@/context/AchievementsContext', () => ({
+vi.mock('@/context/AchievementsContext', () => {
+  const mocked = {
   AchievementsProvider: ({ children }: { children: ReactNode }) => children,
   // `enterScope` 是 LabScene 现在会调的（场景切换时清教程气泡，ADR 20260903211302）。
   // mock 里漏一个方法的表现是运行时 `x is not a function`，不是类型错误——
   // 因为 `vi.mock` 的工厂返回值不受接口约束。
   useAchievements: () => ({ unlockAchievement: vi.fn(), enterScope: vi.fn() }),
-}))
+  }
+  // 动作类消费方走 useAchievementActions（只含稳定回调的那半个 context），mock 同一份即可
+  return { ...mocked, useAchievementActions: mocked.useAchievements }
+})
 
 vi.mock('@/hooks/useWheelRouter', () => ({
   WheelRouterProvider: ({ children }: { children: ReactNode }) => children,

@@ -263,6 +263,15 @@ export class CameraDirector {
   private take(): void {
     this.ownership = 'director'
     this.syncControlsFromCamera()
+    /*
+      接管那一刻的位姿就是偏差检测的基线。
+
+      不记的话，`CameraRig` 在第一次 `update()` **之前**查偏差，拿到的是构造时
+      的全零——相机在 (5.7, 0.2, −6) 时偏差 72，直接抛；抛在 `update()` 之前，
+      `recordWritten` 永远跑不到，于是每帧重复。第一次开发态实机运行就是这么
+      死在 Projects 房间的（2026-09-04）。生产构建不抛，所以 E2E 全绿。
+    */
+    this.recordWritten()
   }
 
   /** 当前谁在写相机 */

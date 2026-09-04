@@ -79,6 +79,7 @@ async function openLab(
   { firstVisit = false }: { firstVisit?: boolean } = {},
 ): Promise<boolean> {
   if (!firstVisit) await skipFirstVisitTutorial(page)
+  await enableLabAsserts(page)
   await page.goto('/lab/')
 
   const fallback = page.getByTestId('lab-webgl-fallback')
@@ -120,6 +121,57 @@ async function skipFirstVisitTutorial(page: import('@playwright/test').Page) {
     }
   })
 }
+
+/**
+ * 打开运行时断言（`lib/lab/app/labAsserts.ts`）。
+ *
+ * 静态导出永远是 production，`CameraRig` 那条"相机被别人写过"的断言在此之前
+ * 从没在 E2E 里执行过——首帧假阳性在 122 个用例全绿的情况下漏到了实机
+ * （2026-09-04，进 Projects 每帧抛、交互全死）。开了它，再配合下面
+ * "pageerror 必须为空"的夹具，断言一抛这条用例就红。
+ */
+async function enableLabAsserts(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('lab_asserts', '1')
+    } catch {
+      // 隐私模式等，忽略
+    }
+  })
+}
+
+/*
+  每条用例：页面抛出的未捕获异常一律算失败。
+
+  没有这条时，`useFrame` 里抛出的错误只会进 console，E2E 照样绿——上面那条
+  相机断言就是这样在 122 个用例里静默失效的。`test.fail()` 标记的用例里若出现
+  pageerror，同样算作"如预期失败"，不会掩盖成通过。
+*/
+const pageErrors: string[] = []
+let allowedPageError: RegExp | null = null
+
+/**
+ * 本条用例里**预期**会出现的页面异常。
+ *
+ * 只给"模拟失败"的用例用：拦掉纹理请求后 three 的 loader 会抛
+ * `Could not load /textures/…`，那正是用例在制造的场景。白名单按用例声明、
+ * 用完即清，不是全局放行——否则夹具就形同虚设。
+ */
+function allowPageErrors(pattern: RegExp) {
+  allowedPageError = pattern
+}
+
+test.beforeEach(async ({ page }) => {
+  pageErrors.length = 0
+  allowedPageError = null
+  page.on('pageerror', error => { pageErrors.push(error.message) })
+})
+test.afterEach(async () => {
+  const unexpected = allowedPageError
+    ? pageErrors.filter(message => !allowedPageError!.test(message))
+    : pageErrors
+  expect(unexpected, '页面抛了未捕获异常').toEqual([])
+})
 
 /**
  * 按 ESC，直到断言成立。
@@ -510,6 +562,7 @@ test.describe('房间加载失败与重试', () => {
   test('纹理加载失败时给出错误与两个出口', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
+    allowPageErrors(/^Could not load \/textures\//)  // 下面这行就是在制造它
     await page.route(ROOM_TEXTURES, route => route.abort())
 
     await page.getByTestId('nav-map').click()
@@ -571,6 +624,7 @@ test.describe('房间加载失败与重试', () => {
   test.fail('（已知缺陷）「返回走廊」之后还能再进房', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
+    allowPageErrors(/^Could not load \/textures\//)  // 下面这行就是在制造它
     await page.route(ROOM_TEXTURES, route => route.abort())
     await page.getByTestId('nav-map').click()
     await page.getByTestId('map-room-about').click()
@@ -594,6 +648,7 @@ test.describe('房间加载失败与重试', () => {
   test('放开拦截后「重试」能真的进房', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
+    allowPageErrors(/^Could not load \/textures\//)  // 下面这行就是在制造它
     await page.route(ROOM_TEXTURES, route => route.abort())
     await page.getByTestId('nav-map').click()
     await page.getByTestId('map-room-about').click()

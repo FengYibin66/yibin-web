@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useMachine } from '@xstate/react'
 import * as THREE from 'three'
 
-import { useAchievements } from '@/context/AchievementsContext'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import { useLocale } from '@/hooks/useLocale'
 import { audioMixer } from '@/lib/lab/app/audio/AudioMixer'
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
@@ -57,7 +57,7 @@ interface ProjectsRoomProps {
 
 export function ProjectsRoom({ showRoom, isExiting }: ProjectsRoomProps) {
   const { locale } = useLocale()
-  const { unlockAchievement } = useAchievements()
+  const { unlockAchievement } = useAchievementActions()
   const rootRef = useRef<THREE.Group>(null)
   /*
     教程不在这里调了 —— `RoomInterior` 从注册表读 `RoomDefinition.tutorial` 并统一调

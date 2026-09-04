@@ -7,7 +7,7 @@ import {
   useReducer,
   useRef,
 } from 'react'
-import { useAchievements } from '@/context/AchievementsContext'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import { useScene } from '@/context/SceneContext'
 import { useLocale } from '@/hooks/useLocale'
 import { getPublicationRoomItems } from '@/lib/content/publications'
@@ -45,7 +45,7 @@ export function PublicationsRoom({
 }: PublicationsRoomProps) {
   const { locale } = useLocale()
   const { isTeleporting, teleportPhase, currentRoom } = useScene()
-  const { hidePopup, unlockAchievement } = useAchievements()
+  const { hidePopup, unlockAchievement } = useAchievementActions()
   const publications = useMemo(
     () => getPublicationRoomItems(locale),
     [locale],

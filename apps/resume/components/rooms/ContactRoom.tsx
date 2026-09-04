@@ -4,7 +4,8 @@ import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
-import { useAchievements } from '@/context/AchievementsContext'
+import { useRoomCamera } from '@/hooks/useRoomCamera'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import { useLocale } from '@/hooks/useLocale'
 import { getContactRoomLinks } from '@/lib/content/labAdapters'
 import { SocialBarrel } from './contact/SocialBarrel'
@@ -30,7 +31,13 @@ const STATEK_SETTINGS = {
 }
 
 export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
-  const { unlockAchievement } = useAchievements()
+  /*
+    房间级相机（审计 A3）：`contact.ts` 的 `entryPose` 此前无人消费，相机停在门口，
+    码头 / 留言纸 / 灯塔全挤在远处。与 About 一起接线，截图标定见 PR 说明。
+  */
+  const rootRef = useRef<THREE.Group>(null)
+  useRoomCamera('contact', rootRef, { showRoom, isExiting })
+  const { unlockAchievement } = useAchievementActions()
   const { locale } = useLocale()
   const links = getContactRoomLinks(locale)
   /*
@@ -98,7 +105,7 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   if (!showRoom) return null
 
   return (
-    <group position={[0, -0.7, -5]}>
+    <group ref={rootRef} position={[0, -0.7, -5]}>
       {/* 环境音见 AboutRoom 同处注释 */}
 
       {/*

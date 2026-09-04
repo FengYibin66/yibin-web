@@ -46,7 +46,8 @@ vi.mock('@/lib/lab/app/audio/AudioMixer', () => ({
   audioMixer: { play: mocks.play, ambience_: vi.fn(), syncListener: vi.fn() },
 }))
 
-vi.mock('@/context/AchievementsContext', () => ({
+vi.mock('@/context/AchievementsContext', () => {
+  const mocked = {
   useAchievements: () => ({
     unlockAchievement: mocks.unlockAchievement,
     showTutorial: mocks.showTutorial,
@@ -55,7 +56,10 @@ vi.mock('@/context/AchievementsContext', () => ({
     activePopup: null,
     hidePopup: vi.fn(),
   }),
-}))
+  }
+  // 动作类消费方走 useAchievementActions（只含稳定回调的那半个 context），mock 同一份即可
+  return { ...mocked, useAchievementActions: mocked.useAchievements }
+})
 
 vi.mock('@/hooks/useRoomTutorial', () => ({ useRoomTutorial: vi.fn() }))
 

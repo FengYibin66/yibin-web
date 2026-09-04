@@ -235,17 +235,28 @@ ESC 已绑定「退出房间」。房间内的细节视图（Projects 的停靠�
 `lib/lab/app/escapeStack` 认领它——栈顶（最内层）先消费。自己挂 window
 监听会让两者同时触发，房间退场把收回打断。
 
-### 语言：一份偏好，两处按钮
+### 语言：一份偏好，三处按钮
 
 语言存在 `localStorage.resume-locale`，全站共享；默认 `en`，hydration 之后才读
-storage（SSR 与首屏必须一致）。切换按钮有两处，**逻辑只有一份**：Classic / 入口页的
-`LocaleToggle` 与 Lab 顶栏 `NavigationUI` 的 `nav-locale` 都调 `useLocale().toggle`，
-按钮文字都来自 `lib/content/localeToggle.ts` 的 `nextLocaleLabel`——显示**目标**语言的
-名字、用目标语言写（英文界面上是「中文」）。Lab 是全站唯一没有 Navbar 的视图，
-2026-09-04 之前它是唯一切不了语言的地方。
+storage（SSR 与首屏必须一致）。**语言在门户定，进 Lab / Classic 都沿用**——门户
+（`/`，左 Lab 右 Classic 那一屏）是全站唯一的入口，2026-09-04 之前它只读语言、没有
+切换入口，用户得先进 Classic 再在 Navbar 里切。
 
-按钮的可见文字与 aria-label 都随语言变，**测试只能按 `data-testid` 定位**
-（`locale-toggle` / `nav-locale`）。
+三处按钮，**逻辑只有一份**：都调 `useLocale().toggle`，文字都来自
+`lib/content/localeToggle.ts` 的 `nextLocaleLabel`（显示**目标**语言的名字、用目标
+语言写，英文界面上是「中文」）。
+
+| 位置 | 组件 | testid |
+|------|------|--------|
+| 门户 `/` 右上角 | `components/entry/EntryLocaleToggle`（包一层固定定位的 `LocaleToggle`） | `locale-toggle` |
+| Classic 的 Navbar | `components/ui/LocaleToggle` | `locale-toggle` |
+| Lab 顶栏 | `NavigationUI` 第五个 `NavButton` | `nav-locale` |
+
+门户那个带 `data-entry-locale-toggle`：`scripts/media/entry-firstframe.mjs` 截 `/` 的
+首帧当手机端占位图，靠这个属性把按钮藏掉（同 `data-explorer-bar`），否则它会被烤进
+静态图里，而那张图桌面开发时看不到。
+
+按钮的可见文字与 aria-label 都随语言变，**测试只能按 `data-testid` 定位**。
 
 **加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
 
@@ -288,11 +299,11 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 126 个用例（63 条 spec × chromium / mobile-safari 两个形态），分两个文件：
+`e2e/` 下 128 个用例（64 条 spec × chromium / mobile-safari 两个形态），分两个文件：
 
 | 文件 | 覆盖 |
 |------|------|
-| `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化 |
+| `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化、门户页语言切换 |
 | `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 首访 / 无 JS 兜底 |
 
 `lab.spec.ts` 是 ADR

@@ -336,6 +336,26 @@ describe('CameraDirector —— 所有权偏差检测', () => {
     expect(director.ownershipDrift()).toBeNull()
   })
 
+  it('接管后的第一帧不报偏差 —— 基线必须在 take() 时取，不能等第一次 update()', () => {
+    /*
+      实机第一次开发态运行就在这里炸了（2026-09-04，Projects 房间每帧抛）：
+      `CameraRig` 在 `update()` **之前**查偏差，而 `lastWritten` 只在 `update()`
+      末尾才记——于是接管后的第一帧拿到的基线是构造时的全零，偏差 72（相机在
+      (5.7, 0.2, −6.0)，与原点的平方距离），抛了；抛在 `update()` 之前，
+      `recordWritten` 永远跑不到，每帧重复。
+
+      上面五条测试全都先 `update()` 再问偏差，所以一条都没抓到这个。
+      这是断言自己的假阳性，不是双写。
+    */
+    camera.position.set(5.7, 0.2, -6.0)
+    camera.lookAt(0, 0, -10)
+    director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 1 }, null, null)
+
+    const drift = director.ownershipDrift()
+    expect(drift, '持有中应当返回数值').not.toBeNull()
+    expect(drift!, '接管那一刻的相机位姿就是基线，偏差应为 0').toBeLessThan(1e-8)
+  })
+
   it('持有且只有自己写时偏差可忽略', () => {
     director.claim({ position: [0, 0, 6], target: [0, 0, 0], duration: 0 }, null, null)
     director.update(0.016)

@@ -208,16 +208,25 @@ interface AdaptiveMuralFrameProps {
 function AdaptiveMuralFrame({ mural, setCameraOverride }: AdaptiveMuralFrameProps) {
   const { camera, viewport } = useThree()
   const groupRef = useRef<THREE.Group>(null)
-  const tex = useTexture(mural.image)
+  /*
+    纹理参数在**加载回调里配一次**，不在 effect 里。
+
+    原先是 `useEffect(() => { …; tex.needsUpdate = true }, [tex])`。drei 的
+    `useTexture` 对同一 URL 返回同一个缓存的 Texture 对象，而 `needsUpdate = true`
+    会让 three 把整张图**重新上传 GPU**——于是每挂一段走廊、每个画框 mount 一次，
+    已经在显存里的 1703×1280 原图就再传一遍。滚过第 1/2 段交界时 CPU 采样到
+    7.5 秒里 54 次大纹理上传、合计 3.2 秒，这里是主因之一。
+
+    回调只在纹理真正首次加载时跑，之后复用缓存不再触发。
+  */
+  const tex = useTexture(mural.image, loaded => {
+    const t = Array.isArray(loaded) ? loaded[0]! : loaded
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+  })
 
   const [isHovered, setIsHovered] = useState(false)
   const [isInspected, setIsInspected] = useState(false)
-
-  useEffect(() => {
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.anisotropy = 4
-    tex.needsUpdate = true
-  }, [tex])
 
   const liveAspect = useMemo(() => {
     const iw = tex.image?.width

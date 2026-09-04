@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useScene } from '@/context/SceneContext'
 import { useAudio } from '@/context/AudioContext'
-import { useAchievements } from '@/context/AchievementsContext'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import { AchievementPopup } from './AchievementPopup'
 import { AchievementsPanel } from './AchievementsPanel'
@@ -32,7 +32,7 @@ export function NavigationUI() {
     teleportPhase,
   } = useScene()
   const { isMuted, toggleMute, sfxVolume, setSfxVolume, bgmVolume, setBgmVolume } = useAudio()
-  const { showTutorial, unlockAchievement } = useAchievements()
+  const { showTutorial, unlockAchievement } = useAchievementActions()
   const labels = useLabLabels()
 
   const [mapOpen, setMapOpen]               = useState(false)

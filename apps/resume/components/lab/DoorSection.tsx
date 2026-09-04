@@ -8,7 +8,7 @@ import gsap from 'gsap'
 import { useRouter } from 'next/navigation'
 import { useAudio } from '@/context/AudioContext'
 import { useScene } from '@/context/SceneContext'
-import { useAchievements } from '@/context/AchievementsContext'
+import { useAchievementActions } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import { isDoorEntryOwner } from '@/lib/lab/domain/machines/room.machine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
@@ -17,6 +17,12 @@ import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'
+
+/** 裁剪平面每帧重算用的临时量，避免每帧分配 */
+const _clipNormal = new THREE.Vector3()
+const _clipPoint  = new THREE.Vector3()
+/** 房间前墙与走廊墙共面，留一点容差别把它自己裁掉 */
+const WALL_CLIP_TOLERANCE = 0.03
 
 // ─── Geometry constants (itomdev DoorSection values) ──────────────────────────
 const WALL_X_OUTER    = 3.5
@@ -79,7 +85,7 @@ export function DoorSection({
   setCameraOverride,
 }: DoorSectionProps) {
   const { play } = useAudio()
-  const { unlockAchievement } = useAchievements()
+  const { unlockAchievement } = useAchievementActions()
   const router = useRouter()
 
   // Prefetch /gallery as soon as this door mounts (when roomId === 'gallery')
@@ -203,9 +209,59 @@ export function DoorSection({
   const wallOffsetX = side === 'left' ? WALL_LENGTH / 2 : -WALL_LENGTH / 2
 
   // ─── Per-frame: tilt, scale-compensation, glow, arrows ──────────────────────
+  /*
+    ── 房间不得越过走廊墙面 ──────────────────────────────────────────────
+
+    门段是一块"翻板"：相机靠近时整段绕外墙边缘朝你转最多 30°（`MAX_TILT`），
+    进房期间锁在最大角。房间是这块翻板的子节点——于是 11 单位宽的 Projects
+    房间也跟着转 30°，它那面深棕侧墙的一端就穿过静止的走廊墙，立在走廊里
+    （进房 / 退房期间门旁边那块竖直的深色板）。
+
+    不能把翻板扳直：相机对齐（`DOOR_LOOK_ANGLE` = 90° − 30°）与进房飞行
+    （沿相机朝向推进）都建立在倾斜的门面上。所以改为**裁剪**：以走廊墙所在的
+    平面为界，房间材质在墙外那一侧的片元一律丢弃。平面每帧从外层 group 的
+    世界矩阵算（走廊有整体摇摆，不能写死世界坐标）。
+
+    只挂到房间自己的材质上；`ShaderMaterial` 若没声明 `clipping: true` 会被
+    跳过——three 的裁剪要着色器配合，硬塞进去是黑屏而不是裁剪。
+  */
+  const outerGroupRef = useRef<THREE.Group>(null)
+  const roomRootRef   = useRef<THREE.Group>(null)
+  const wallClipPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(side === 'left' ? -1 : 1, 0, 0), 0), [side])
+  const clippedMaterials = useRef(new WeakSet<THREE.Material>())
+
+  const applyWallClip = useCallback(() => {
+    const root = roomRootRef.current
+    if (!root) return
+    root.traverse(obj => {
+      const mesh = obj as THREE.Mesh
+      if (!mesh.isMesh) return
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const m of mats) {
+        if (!m || clippedMaterials.current.has(m)) continue
+        if ((m as THREE.ShaderMaterial).isShaderMaterial && !(m as THREE.ShaderMaterial).clipping) continue
+        m.clippingPlanes = [wallClipPlane]
+        m.needsUpdate = true
+        clippedMaterials.current.add(m)
+      }
+    })
+  }, [wallClipPlane])
+
+  // 房间子树在 Suspense 解析后才有材质：相位每变一次就再扫一遍（扫的是这扇门自己的房间，量不大）
+  useEffect(() => { applyWallClip() }, [applyWallClip, roomLoadState.phase, showRoom])
+
   useFrame(() => {
     const inner = innerGroupRef.current
     if (!inner) return
+
+    // 裁剪平面：外层 group 的局部 x=0 平面（即走廊墙），法向朝房间那一侧
+    const outer = outerGroupRef.current
+    if (outer && roomRootRef.current) {
+      _clipNormal.set(side === 'left' ? -1 : 1, 0, 0).transformDirection(outer.matrixWorld)
+      _clipPoint.setFromMatrixPosition(outer.matrixWorld)
+      wallClipPlane.setFromNormalAndCoplanarPoint(_clipNormal, _clipPoint)
+      wallClipPlane.constant -= WALL_CLIP_TOLERANCE
+    }
 
     const dist = Math.abs(camera.position.z - position[2])
     if (roomId !== 'gallery' && !hasPreloadedNearbyRef.current && dist < TILT_START) {
@@ -660,7 +716,7 @@ export function DoorSection({
 
   return (
     // Outer group: pivot at outer wall edge — never rotates
-    <group position={[pivotX, position[1], position[2]]}>
+    <group ref={outerGroupRef} position={[pivotX, position[1], position[2]]}>
       {/* Inner group: rotates + scales in useFrame */}
       <group ref={innerGroupRef}>
 
@@ -692,14 +748,16 @@ export function DoorSection({
 
         {/* ── Room interior (lazy-mounted when showRoom = true) ────────────── */}
         {showRoom && (
-          <RoomInterior
-            roomId={roomId}
-            showRoom={showRoom}
-            onLoading={handleRoomLoading}
-            onReady={handleRoomReady}
-            onError={handleRoomError}
-            isExiting={isInsideRoom && isAnimating}
-          />
+          <group ref={roomRootRef}>
+            <RoomInterior
+              roomId={roomId}
+              showRoom={showRoom}
+              onLoading={handleRoomLoading}
+              onReady={handleRoomReady}
+              onError={handleRoomError}
+              isExiting={isInsideRoom && isAnimating}
+            />
+          </group>
         )}
 
         {/* ── Door panel (single, pivots at hinge edge) ── */}

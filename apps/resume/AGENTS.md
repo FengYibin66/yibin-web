@@ -92,7 +92,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 
 | ADR | 目标 | 实际状态 |
 |-----|------|-----------|
-| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已接线**（`20260903211338`）：`RoomInterior` 按 `components/rooms/registry.ts` 分发（`React.lazy`，没有 `switch`）、教程从 `RoomDefinition.tutorial` 读、预载走 `lib/lab/app/assets/preload.ts`（读生成物），手写的 `roomAssets.ts` 与 `texturePreload.ts` 的走廊部分已删。首屏壁画 3 段 → 1 段，**省 1466 KB**。`view` 已移出 domain（它曾让 domain import react）。<br>**仍未落地**：`entryPose` / `cameraFreedom` **只有 Projects 消费**——About / Contact 的房间级相机（审计 A1 / A3）需要一次带截图的取景标定，见下方相机一节第 5 条。<br>**已核实为误判**：PR #12 说「生成物未加入 hook 保护名单」是错的——`.claude/hooks/pre-generated-edit.sh` 按 `\.gen\.(ts|tsx|go|py)$` 匹配，`manifest.gen.ts` 天然受保护（实测被拦）。|
+| [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已接线**（`20260903211338`）：`RoomInterior` 按 `components/rooms/registry.ts` 分发（`React.lazy`，没有 `switch`）、教程从 `RoomDefinition.tutorial` 读、预载走 `lib/lab/app/assets/preload.ts`（读生成物），手写的 `roomAssets.ts` 与 `texturePreload.ts` 的走廊部分已删。首屏壁画 3 段 → 1 段，**省 1466 KB**。`view` 已移出 domain（它曾让 domain import react）。<br>`entryPose` / `cameraFreedom` 三间房（Projects / About / Contact）都已消费（2026-09-04 接上 About / Contact，带截图标定；门禁 `roomCameraWiring.test.ts`）。<br>**已核实为误判**：PR #12 说「生成物未加入 hook 保护名单」是错的——`.claude/hooks/pre-generated-edit.sh` 按 `\.gen\.(ts|tsx|go|py)$` 匹配，`manifest.gen.ts` 天然受保护（实测被拦）。|
 | [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **房间生命周期已接线**（`20260903211338`）：`SceneContext` 用 `useMachine(roomMachine)`，手写的 `roomLoadMachine.ts` + `doorEntryFlow.ts` 已删；8 秒超时是 `loading` 的一行 `after`（取代 `setTimeout` + 3 个互相看护的 ref），进房所有权从机器 context 派生，**审计 A8 的 `entered → failed` 边现在运行时真的存在**。`useDoorEntryOrchestrator` 从 5 个 effect / 4 个 ref 缩到 2 个 effect / 1 个 ref。`@xstate/graph` 已用于全路径覆盖（`roomMachineFlow.test.ts`）。<br>**仍未接线**：`corridor.machine` 运行时零引用（走廊传送仍是 `SceneContext` 里的手写 state + `cancelTeleport`，`teleporting.aborted` 那条边没有消费方）；`dockMachine` 只有 Projects 用，Publications 仍是 `publicationMotionMachine`。<br>**接线时发现的五个缺口**（机器定义好但从未被运行时走过，所以没人发现）：① `mounting` 缺 `READY` 边——纹理已缓存的房间不 Suspend、拿不到 `MOUNTED`，会永久卡住（即「第二次进同一间房」这条最常见路径）；② `tryRoom` 若读渲染快照而非 actor，同一 tick 内连点两下门会两次都判合法；③ **`MOUNTED` 没有发送方**（`RoomInterior.onLoading` 默认 NOOP、`DoorSection` 没传）→ `loading` 生产不可达 → **8 秒加载超时永远不启动**；④ **`EXIT_DONE` 没有发送方**——退场收尾复用了 `RESET`，现已拆成 `finishRoomExit()`；⑤ **`BACK` 4 条边全是死的**——目标与动作和 `RESET` 逐字相同且无人发送，已删。③④⑤ 由新门禁 `__tests__/machineEventWiring.test.ts` 抓出：**图上有边 ≠ 运行时有人发**，而机器测试与全路径覆盖都会自己 `send()`，照样全绿 |
 | [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **部分落地，且所有权形态已被 [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md) 修订**：`suspended` 布尔让三处出错——进房时导演与 DoorSection 的 gsap **同帧双写约 2 秒**（靠 rAF 顺序侥幸不出事）、传送的 `moveToWorld({duration:0})` 在挂起态是**空操作**、About 的 `setLean` 是**死代码**。手势未迁移，`@use-gesture` 未安装 |
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |
@@ -122,6 +122,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | `labContrast.test.ts` | `KNOWN_LOW_CONTRAST`（同上） | **空** |
 | `labFonts.test.ts` | 无棘轮（全禁写死路径） | 0 |
 | `machineEventWiring.test.ts` | 无棘轮（全禁孤儿事件） | 0 |
+| `roomCameraWiring.test.ts` | 无棘轮（全禁死声明 entryPose） | 0 |
 
 漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
 **换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
@@ -188,17 +189,31 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
    **开发态每帧断言**保证（持有期间相机被别人写过就抛）。那条断言比写点棘轮强：
    棘轮守的是"谁写了相机"这个静态事实，守不住"在错误的时刻写"。
 
-5. **About / Contact 仍然没有房间级相机**（审计 A1 / A3 未修）。它们的
-   `RoomDefinition.entryPose` 是**声明了但没被消费**的数据——ADR 20260903140615
-   说「A1/A3 由 entryPose 修复」，而运行时从来只有 Projects 消费它。
-   接上去不是加一行 `useRoomCamera` 那么简单：About 的坐标系是混着的
-   （根 group 在 `position={[0,0,-25]}`，而里程碑又各自算 `ROOM_Z + scrollProgress + z`，
-   `ROOM_Z` 也是 −25），那些 `entryPose` 数值**从未被应用过、因此从未被验证**。
-   在没有视觉验证回路的情况下套上去，正是 ADR 615 已经犯过的那个错的重演。
-   要做这件事得先有一次带截图的取景标定。
+5. **About / Contact 的房间级相机已接线**（审计 A1 / A3，2026-09-04）。此前它们的
+   `RoomDefinition.entryPose` 是**声明了但没被消费**的数据——运行时只有 Projects 调
+   `useRoomCamera`。表现：About 的天空平面（原 400×200，从门口看只覆盖 41.6°
+   而相机水平半视角是 46°）四周露出走廊底色，即"蓝框"；Contact 那组数值从未被
+   应用，接上时发现相机站在走廊墙里（root z = −5，pose z = +5.6 → 门系 +0.6）。
+   两间房都用截图标定过取景；数值旁写了推导。门禁 `roomCameraWiring.test.ts`
+   守住"声明了 entryPose 就得有人消费"，豁免（Publications 自有 gsap 相机、Gallery
+   是路由）要写理由。
+   **仍有一条已知不足**：About 的构图略偏右（约 12%），来源待查，不影响功能。
 6. **不要用内部 `snapshot()` 断言相机行为**：传送失效那条就是这么漏过去的
    ——`snapshot()` 是导演**想要**的位姿，不是相机**实际**的位姿，而那个 bug 下两者
    恰好不一致。断言对象必须是 `camera.position`。
+
+### 房间不得越过走廊墙面（DoorSection 的裁剪平面）
+
+门段是一块"翻板"：相机靠近时整段绕外墙边缘朝你转最多 30°（`MAX_TILT`），进房
+期间锁在最大角。房间是翻板的子节点——11 单位宽的 Projects 房间跟着转 30°，深棕
+侧墙的一端就穿过静止的走廊墙，立在走廊里（进房 / 退房期间门旁那块竖直深色板，
+2026-09-04 实机抓到）。
+
+**不能把翻板扳直**：相机对齐（`DOOR_LOOK_ANGLE` = 90° − 30°）与进房飞行（沿相机
+朝向推进）都建立在倾斜的门面上。修法是**裁剪**：`DoorSection` 每帧从外层 group 的
+世界矩阵算出走廊墙平面，挂到房间全部材质的 `clippingPlanes` 上；`LabScene` 的
+Canvas 开了 `localClippingEnabled`。`ShaderMaterial` 若没声明 `clipping: true`
+会被跳过（硬塞进去是黑屏而不是裁剪）。
 
 ### 入口页的两条路径
 
@@ -221,6 +236,22 @@ ESC 已绑定「退出房间」。房间内的细节视图（Projects 的停靠�
 监听会让两者同时触发，房间退场把收回打断。
 
 **加载态**：`ssr: false` 的 dynamic import **必须**配 `loading`。缺它时 chunk 到位前整页只剩背景色；而路由级导航还要额外的 `loading.tsx`——两个时机不同，只补一个仍会白屏。
+
+## 滚动卡顿的两个来源（2026-09-04 采样定位）
+
+滚过第 1/2 段交界时 CPU 采样到两个 >1.2 秒的长任务，0 次着色器编译、0 次网络：
+
+1. **壁画是 `public/gallery/` 的原图**（1703×1280 JPEG，单张最大 959 KB），每挂一段
+   走廊就整批解码 + 上传。`AdaptiveMuralFrame` 原先在 `useEffect` 里对 drei 缓存的
+   纹理 `needsUpdate = true`，让**已在显存里的图再传一遍**——7.5 秒滚动里 54 次大
+   纹理上传、3.2 秒。现在参数在 `useTexture` 的加载回调里配一次。上传 109 → 14 次。
+   **仍未做**：壁画只需要 ~1.6 世界单位宽，用原图是浪费；应走 `scripts/media/`
+   出一份 768px 的壁画专用 webp。
+2. **成就气泡的 `TICK`（100ms）让所有 `useAchievements()` 订阅者重渲染**——15 个
+   `DoorSection` 每秒渲染 10 次。现在只用动作的组件改走 `useAchievementActions()`
+   （value 永不变化）。测试里 mock 这个 context 时两个 hook 都要给。
+
+长任务峰值 1454ms → 281ms；剩下的是段落挂载本身的 React 成本。
 
 ## 测试环境的两个坑（都栽过）
 
@@ -279,6 +310,18 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
    `expect().toPass()` 重试），不要用 `waitForTimeout` 猜延迟。
 5. **退房要 2–3 秒**（两段各 1 秒的 gsap 加关门）。断言「没有退房」必须先等，
    否则查得太早会假绿——「ESC 关面板不该连带退房」那条第一版就是这么"通过"的。
+
+6. **运行时断言在 E2E 里是开着的，且任何 `pageerror` 都算失败。** 静态导出永远是
+   production，`CameraRig` 的相机所有权断言原先只看 `NODE_ENV`，于是 122 个用例
+   一次都没执行过它——首帧假阳性（`take()` 没记基线）在全绿的情况下漏到实机，
+   进 Projects 每帧抛、交互全死（2026-09-04）。现在 `openLab()` 通过
+   `localStorage.lab_asserts` 打开断言（`lib/lab/app/labAsserts.ts`），
+   `beforeEach/afterEach` 夹具收集 `pageerror` 并要求为空。
+
+**E2E 看不见画面。** 2026-09-04 实机验收抓到的四个缺陷里三个是纯视觉的（About
+的蓝框、Projects 门口的深棕色块、滚动卡顿），`data-*` 属性断言对它们全部失明。
+排查时用的是 Playwright 截图 + CDP CPU 采样 + WebGL 调用打桩（脚本形态见 PR #21
+说明）。**改 Lab 的视觉或性能之前，先跑一遍这种带截图的复现，再看 E2E。**
 
 **已知缺陷用 `test.fail()` / `test.fixme()` 固化，不用 TODO 注释。**
 `test.fail()` 在缺陷修好时会报错，强迫人回来把标记去掉；TODO 不会提醒任何人。

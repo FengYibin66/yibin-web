@@ -30,7 +30,7 @@ import {
 import { PerformanceProvider, usePerformance } from '@/context/PerformanceContext'
 import { AudioProvider, useAudio } from '@/context/AudioContext'
 import { SceneProvider, useScene } from '@/context/SceneContext'
-import { AchievementsProvider, useAchievements } from '@/context/AchievementsContext'
+import { AchievementsProvider, useAchievementActions } from '@/context/AchievementsContext'
 import { WheelRouterProvider } from '@/hooks/useWheelRouter'
 import { useLabLabels } from '@/hooks/useLabLabels'
 
@@ -68,7 +68,7 @@ function LabCanvas() {
     retryRoomLoad,
     resetRoomLoad,
   } = useScene()
-  const { unlockAchievement, enterScope } = useAchievements()
+  const { unlockAchievement, enterScope } = useAchievementActions()
 
   /*
     场景切换时清掉不属于当前场景的气泡（ADR 20260903211302）。
@@ -161,7 +161,11 @@ function LabCanvas() {
       <Canvas
         camera={{ position: [0, 0.2, 28], fov: 60, near: 0.1, far: 400 }}
         style={{ position: 'absolute', inset: 0 }}
-        gl={{ antialias: settings.antialias }}
+        /*
+          `localClippingEnabled`：房间材质要按走廊墙面裁剪（见 DoorSection 的
+          `RoomWallClip`）。不开这个，材质上的 `clippingPlanes` 静默无效。
+        */
+        gl={{ antialias: settings.antialias, localClippingEnabled: true }}
         dpr={settings.dpr}
       >
         <Suspense fallback={null}>

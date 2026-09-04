@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import type * as THREE from 'three'
 
 import { cameraDirector } from '@/lib/lab/app/camera/CameraDirector'
+import { labAssertsEnabled } from '@/lib/lab/app/labAsserts'
 
 /**
  * 把 `CameraDirector` 接进 R3F 的渲染循环。
@@ -49,7 +50,12 @@ export function CameraRig() {
 
       有了这条，同一类问题在**第一次实机运行**时就抛。
     */
-    if (process.env.NODE_ENV !== 'production') {
+    /*
+      不是 `NODE_ENV !== 'production'`：本应用静态导出，E2E 打的是生产构建，
+      那个条件让这条断言在全部 E2E 里一次都没跑过（首帧假阳性就是这么漏到实机的）。
+      E2E 通过 `localStorage.lab_asserts` 把它打开——见 `labAsserts.ts`。
+    */
+    if (labAssertsEnabled()) {
       const drift = cameraDirector.ownershipDrift()
       if (drift !== null && drift > OWNERSHIP_DRIFT_EPSILON) {
         throw new Error(

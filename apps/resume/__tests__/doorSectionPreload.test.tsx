@@ -48,6 +48,7 @@ vi.mock('@/context/AudioContext', () => ({
 
 vi.mock('@/context/AchievementsContext', () => ({
   useAchievements: () => ({ unlockAchievement: vi.fn() }),
+  useAchievementActions: () => ({ unlockAchievement: vi.fn() }),
 }))
 
 vi.mock('@/context/SceneContext', () => ({

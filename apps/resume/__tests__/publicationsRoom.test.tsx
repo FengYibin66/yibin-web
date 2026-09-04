@@ -90,12 +90,16 @@ vi.mock('@/context/SceneContext', () => ({
   useScene: () => mocks.scene,
 }))
 
-vi.mock('@/context/AchievementsContext', () => ({
+vi.mock('@/context/AchievementsContext', () => {
+  const mocked = {
   useAchievements: () => ({
     hidePopup: mocks.hidePopup,
     unlockAchievement: mocks.unlockAchievement,
   }),
-}))
+  }
+  // 动作类消费方走 useAchievementActions（只含稳定回调的那半个 context），mock 同一份即可
+  return { ...mocked, useAchievementActions: mocked.useAchievements }
+})
 
 vi.mock('@/hooks/useLocale', () => ({
   useLocale: () => ({ locale: 'en' }),

@@ -89,6 +89,33 @@ export function useAchievements(): AchievementsState {
   return context
 }
 
+/** 只有动作、没有状态的那一半：值永远不变，订阅它的组件不会因为队列变化重渲染 */
+export type AchievementActions = Pick<
+  AchievementsState,
+  'unlockAchievement' | 'showTutorial' | 'dismissTutorial' | 'enterScope' | 'hidePopup'
+>
+
+const AchievementActionsCtx = createContext<AchievementActions | null>(null)
+
+/**
+ * 给只需要**触发**成就 / 教程、不需要读队列的组件用。
+ *
+ * ## 为什么要拆
+ *
+ * 气泡在屏幕上时，`TICK` 每 100ms 派发一次推进 `elapsed`，`AchievementsCtx` 的
+ * value 随之变化——**所有** `useAchievements()` 的订阅者都重渲染。走廊有 15 个
+ * `DoorSection` 实例，每个只用 `unlockAchievement`（一个 `[]` 依赖的稳定回调），
+ * 却被拖着每秒渲染 10 次；2026-09-04 滚过第 1/2 段交界时 CPU 采样到 1.4 秒纯
+ * React 元素创建，`DoorSection` 一项 1.2 秒。
+ *
+ * 五个动作回调的依赖全是 `[]`，所以这个 context 的 value 在整个生命周期只创建一次。
+ */
+export function useAchievementActions(): AchievementActions {
+  const context = useContext(AchievementActionsCtx)
+  if (!context) throw new Error('useAchievementActions must be used within an AchievementsProvider')
+  return context
+}
+
 /**
  * 解锁提示音。
  *
@@ -233,10 +260,20 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     isUnlocked,
   ])
 
+  const actions = useMemo<AchievementActions>(() => ({
+    unlockAchievement,
+    showTutorial,
+    dismissTutorial,
+    enterScope,
+    hidePopup,
+  }), [unlockAchievement, showTutorial, dismissTutorial, enterScope, hidePopup])
+
   return (
-    <AchievementsCtx.Provider value={value}>
-      {children}
-    </AchievementsCtx.Provider>
+    <AchievementActionsCtx.Provider value={actions}>
+      <AchievementsCtx.Provider value={value}>
+        {children}
+      </AchievementsCtx.Provider>
+    </AchievementActionsCtx.Provider>
   )
 }
 

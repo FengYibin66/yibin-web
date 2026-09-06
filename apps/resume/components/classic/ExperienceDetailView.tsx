@@ -66,15 +66,43 @@ export function ExperienceDetailView({ item }: { item: ExperienceItem }) {
       <ClassicBackLink href="/classic/#experience" />
 
       <header className="mb-10">
-        <h1 className="font-display text-3xl md:text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          {item.role}
-        </h1>
-        <p className="mt-2 text-lg" style={{ color: 'var(--accent-primary)' }}>
-          {item.company} · {item.period}
-        </p>
-        <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {item.location}
-        </p>
+        <div className="flex items-start gap-4">
+          {/*
+            公司 logo 按 logo 呈现：定死 56×56、`object-contain`、留白 + 底板，
+            与 `TimelineItem.tsx` 的品牌标同一套处理。
+
+            此前它走的是下面的 `heroImage` 照片位（`w-full` + `object-cover`），
+            225×225 的方形 logo 被放大约 4 倍再横向裁成一条，圆环上下全切没了。
+            logo 是有边界的图形，任何裁切都是破坏；它的信息量也和占多大面积无关。
+          */}
+          {item.logo ? (
+            <img
+              src={item.logo}
+              alt=""
+              data-testid="experience-detail-logo"
+              className="h-14 w-14 rounded-xl object-contain flex-shrink-0 mt-1 p-1.5"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--bg-border)',
+              }}
+              loading="lazy"
+            />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <h1
+              className="font-display text-3xl md:text-4xl font-bold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {item.role}
+            </h1>
+            <p className="mt-2 text-lg" style={{ color: 'var(--accent-primary)' }}>
+              {item.company} · {item.period}
+            </p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {item.location}
+            </p>
+          </div>
+        </div>
         {detail.intro ? (
           <p className="mt-4 text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
             {detail.intro}

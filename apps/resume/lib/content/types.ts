@@ -63,6 +63,15 @@ export interface MediaImage {
 
 export interface ExperienceDetail {
   intro?: string
+  /**
+   * 详情页顶部的**横幅照片**，按 `object-cover` 铺满整行裁切显示。
+   *
+   * 只放**宽幅实景照**，且短边应 ≥ 1200px：容器最宽 896px，再窄的图会被放大到糊。
+   * **不要放 logo** —— logo 是有边界的图形，`object-cover` 裁一刀就毁了；
+   * 品牌标识走 `ExperienceItem.logo`（定死尺寸 + `object-contain`）。
+   * McAllister 曾把一张 225×225 的方形 logo 放在这里，被放大约 4 倍再横向裁成
+   * 一条，圆环上下全没了（2026-09-06 修）。
+   */
   heroImage?: string
   video?: { title: string; youtubeId: string }
   sections: { title: string; bullets: string[] }[]

@@ -354,6 +354,7 @@ export const en: SiteContent = {
         role: 'Graduate Engineer (Structural)',
         period: 'Oct 2022 – Jun 2023',
         location: 'London, UK',
+        logo: '/gallery/mcallister/company.jpg',
         bullets: [
           "Delivered lining design and construction packages for HS2 — Europe's largest infrastructure project",
           'Performed FEA and geotechnical assessment with Python per Eurocode standards',

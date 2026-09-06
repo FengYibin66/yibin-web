@@ -1,11 +1,29 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
 import { SectionTitle, ProjectCard } from '@/components/ui'
-import type { ProjectCategory } from '@/lib/content/types'
+import { projectCategoryDetailHref } from '@/lib/content/projectCategoryDetail'
+import type { ExperienceItem, ProjectCategory } from '@/lib/content/types'
 
-function CategoryBlock({ category }: { category: ProjectCategory }) {
+function CategoryBlock({
+  category,
+  experience,
+}: {
+  category: ProjectCategory
+  experience: readonly ExperienceItem[]
+}) {
+  /*
+    分类标题在对应经历写了 `detail` 时变成链接。
+
+    做在标题上而不是卡片上，是因为跳去「工作经历」属于**组级导航**：一张项目卡
+    把人送去经历详情页，语义上是拧的。McAllister 的 summary 本来就写着
+    「详情见工作经历」——那是给读者的指路，指路牌该自己可点。
+  */
+  const detailHref = projectCategoryDetailHref(category.id, experience)
+
   return (
     <div className="mb-14 last:mb-0">
       <div className="mb-6">
@@ -13,7 +31,20 @@ function CategoryBlock({ category }: { category: ProjectCategory }) {
           className="font-display font-bold text-xl md:text-2xl"
           style={{ color: 'var(--text-primary)' }}
         >
-          {category.title}
+          {detailHref ? (
+            <Link
+              href={detailHref}
+              className="no-underline transition-colors hover:opacity-80"
+              style={{ color: 'inherit' }}
+            >
+              {category.title}
+              <span aria-hidden className="ml-2 text-base" style={{ color: 'var(--accent-primary)' }}>
+                →
+              </span>
+            </Link>
+          ) : (
+            category.title
+          )}
         </h3>
         {category.summary ? (
           <p className="mt-2 text-sm md:text-base max-w-3xl" style={{ color: 'var(--text-secondary)' }}>
@@ -70,7 +101,7 @@ export function ProjectsSection() {
         <SectionTitle title={c.projects.title} />
 
         {c.projects.categories.map((category) => (
-          <CategoryBlock key={category.id} category={category} />
+          <CategoryBlock key={category.id} category={category} experience={c.experience.items} />
         ))}
       </div>
     </section>

@@ -2,7 +2,6 @@ import type { ExperienceDetail } from './types'
 
 export const mcallisterDetailZh: ExperienceDetail = {
   intro: '参与欧洲最大基础设施项目 HS2，在伦敦从事衬砌设计、临建与现场交付。',
-  heroImage: '/gallery/mcallister/company.jpg',
   video: { title: '什么是 HS2？', youtubeId: 'm0-A5hXFMKk' },
   sections: [
     {
@@ -117,7 +116,6 @@ export const mcallisterDetailZh: ExperienceDetail = {
 export const mcallisterDetailEn: ExperienceDetail = {
   intro:
     "Engaged in HS2 — Europe's largest infrastructure project — delivering lining design, temporary works, and on-site packages in London.",
-  heroImage: '/gallery/mcallister/company.jpg',
   video: { title: 'What is HS2?', youtubeId: 'm0-A5hXFMKk' },
   sections: [
     {

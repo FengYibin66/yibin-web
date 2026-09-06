@@ -352,6 +352,7 @@ export const zh: SiteContent = {
         role: 'Graduate Engineer（结构）',
         period: '2022 年 10 月 – 2023 年 6 月',
         location: 'London, UK',
+        logo: '/gallery/mcallister/company.jpg',
         bullets: [
           '参与欧洲最大基础设施项目 HS2 的衬砌设计与施工方案交付',
           '依据欧洲规范，运用有限元分析与 Python 开展岩土与结构评估',

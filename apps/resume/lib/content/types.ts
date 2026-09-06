@@ -298,6 +298,14 @@ export interface LabUiLabels {
     previewImage: string
     /** 「预览 {name}」——`{name}` 是图片的 alt */
     previewNamed: string
+    /**
+     * Projects 房间停靠后，屏幕底部的「访问 →」。只在项目有 `url` 时出现。
+     *
+     * ADR 20260903140616 把「点一下」统一成停靠（原实现是 `window.open`），
+     * 但 `ProjectRoomItem.url` 一路带到房间却没人消费——有链接的项目停靠后
+     * 也无路可去（2026-09-06 实机反馈）。这一条是那个缺口的出口。
+     */
+    visitProject: string
     /** 教程卡片底部的两个按钮 */
     skipTutorial: string
     startExploring: string

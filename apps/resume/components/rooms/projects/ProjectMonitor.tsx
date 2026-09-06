@@ -6,6 +6,7 @@ import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 
 import { audioMixer } from '@/lib/lab/app/audio/AudioMixer'
+import { useLabLabels } from '@/hooks/useLabLabels'
 import { HAND_FONT, HAND_FONT_FILE, INK } from '@/lib/lab/domain/sketch/types'
 import { MONITOR_RING, monitorTransform, SCREEN_GLOW } from '@/lib/lab/domain/rooms/projects/scene'
 import type { ProjectRoomItem } from '@/lib/content/projectsRoom'
@@ -64,6 +65,7 @@ export function ProjectMonitor({
   onSelect,
 }: ProjectMonitorProps) {
   const maps = useTexture([...FACE_TEXTURES])
+  const labels = useLabLabels()
   const [hovered, setHovered] = useState(false)
   const groupRef = useRef<THREE.Group>(null)
   const paintedRef = useRef<THREE.MeshStandardMaterial[]>([])
@@ -194,6 +196,41 @@ export function ProjectMonitor({
       >
         {item.sub}
       </Text>
+
+      {/*
+        停靠后的出口：只在有 `url` 时出现。
+
+        ADR 20260903140616 把「点一下」统一成停靠，原实现的 `window.open` 被替掉
+        ——那一步是对的。但 `url` 一路带到这里却没人消费，有链接的项目停靠后也
+        无路可去（2026-09-06 实机反馈「点了没跳转」）。出口放在屏幕底部、
+        停靠态才出现：浏览态点一下仍是停靠，语义不变；没有 url 就不画，
+        不做没有目的地的承诺（与 Classic 项目卡同一条原则）。
+        `stopPropagation` 是必须的：不拦的话冒泡到房间根会触发 `dismiss` 收回。
+      */}
+      {isSelected && item.url ? (
+        <Text
+          data-testid="monitor-visit"
+          position={[0, -0.24, MONITOR_RING.depth / 2 + 0.008]}
+          fontSize={0.05}
+          anchorX="center"
+          anchorY="middle"
+          color="#1f6f8b"
+          font={HAND_FONT_FILE}
+          onClick={(e: { stopPropagation: () => void }) => {
+            e.stopPropagation()
+            window.open(item.url, '_blank', 'noopener,noreferrer')
+          }}
+          onPointerOver={(e: { stopPropagation: () => void }) => {
+            e.stopPropagation()
+            document.body.style.cursor = 'pointer'
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = 'auto'
+          }}
+        >
+          {labels.hints.visitProject}
+        </Text>
+      ) : null}
     </group>
   )
 }

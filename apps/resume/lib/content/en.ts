@@ -76,6 +76,7 @@ export const en: SiteContent = {
       imagePreview: 'Image preview',
       previewImage: 'Preview image',
       previewNamed: 'Preview {name}',
+      visitProject: 'Visit →',
       skipTutorial: 'Skip',
       startExploring: 'Start exploring',
       back: 'Back',
@@ -121,7 +122,7 @@ export const en: SiteContent = {
       'Civil Engineering (Structural Engineer)',
     ],
     tagline:
-      'Building intelligent systems that understand and shape human behavior. London · Beijing · Silicon Valley',
+      'Building intelligent systems that understand and shape human behavior. London · Singapore · Beijing · Silicon Valley',
     cta: 'View My Work',
     scrollHint: 'Scroll to explore',
   },

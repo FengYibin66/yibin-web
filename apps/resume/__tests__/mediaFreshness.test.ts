@@ -62,6 +62,19 @@ const PIPELINES = [
       A('scripts/media/optimize-textures.mjs'),
     ],
   },
+  {
+    name: 'optimize-credentials',
+    hint: 'node scripts/media/optimize-credentials.mjs',
+    // 源是 jpg / png（不是 webp），按组、按文件名排序，与脚本的 listSources 一致
+    inputs: () => [
+      ...['awards', 'certificates'].flatMap(group =>
+        readdirSync(A('media-src/credentials', group))
+          .filter(f => /\.(jpe?g|png)$/i.test(f))
+          .sort()
+          .map(f => A('media-src/credentials', group, f))),
+      A('scripts/media/optimize-credentials.mjs'),
+    ],
+  },
 ] as const
 
 describe('素材产物与源同步', () => {
@@ -96,6 +109,7 @@ describe('素材产物与源同步', () => {
     expect(stamps).toEqual([
       'encode-audio.json',
       'gallery-door.json',
+      'optimize-credentials.json',
       'optimize-textures.json',
       'subset-fonts.json',
     ])

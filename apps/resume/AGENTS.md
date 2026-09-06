@@ -276,6 +276,17 @@ storage（SSR 与首屏必须一致）。**语言在门户定，进 Lab / Classi
 
 长任务峰值 1454ms → 281ms；剩下的是段落挂载本身的 React 成本。
 
+## `next dev` 跑着的时候不要 `pnpm build`（栽过）
+
+两者共用 `.next/`。`next build` 会覆盖 dev server 的产物，dev 之后发出的 HTML 引用的
+`layout.css` / `main-app.js` / `app-pages-internals.js` 已经不存在 → 全部 404，页面变成
+**没有任何 CSS 的裸 HTML**：图片按原始像素堆、横向溢出到 3000px、导航散成一行链接。
+换 `?v=` 重新加载也救不回来，只能重启 dev（`rm -rf .next` 后再起）。
+
+2026-09-06 实机就是这样：一边跑 E2E 前的 `pnpm build`，一边用户在 dev 上打开
+`/classic/credentials/`，看到一页「大 bug」——而那页在 `out/` 里完全正常。
+**要 build 就先停 dev**；或者反过来，验收视觉时只看 dev，不在同一时间 build。
+
 ## 测试环境的两个坑（都栽过）
 
 **1. 渲染任何读 locale 的组件必须包 `LocaleProvider`。**
@@ -384,6 +395,7 @@ node scripts/lab/gen-asset-manifest.mjs      # 纹理预载表（派生生成物
 node scripts/media/encode-audio.mjs          # 音频重编码
 node scripts/media/gallery-door.mjs          # Gallery 门贴纸
 node scripts/media/optimize-textures.mjs     # 入口页纹理
+node scripts/media/optimize-credentials.mjs  # 荣誉与证书页图片（原图 7 MB → webp）
 python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
 pnpm build && node scripts/media/entry-firstframe.mjs   # 手机端入口的静态首帧
 ```

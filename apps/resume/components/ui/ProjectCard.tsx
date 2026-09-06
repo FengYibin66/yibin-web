@@ -17,9 +17,21 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
 export function ProjectCard({ item }: ProjectCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
+  /*
+    这张卡到底能不能点。只有 `url` 存在时下面才会包一层 `<a>`，所以手型光标与
+    hover 特效必须跟着同一个判据走。
+
+    改之前它俩是脱钩的：`cursor-pointer` 和 3D 倾斜无条件挂着，而全站 16 张项目卡
+    只有 3 张有 url——剩下 13 张摆着手型光标、hover 还会翘起来，点下去什么都不发生。
+    用户当场以为页面卡死了（2026-09-06 实机发现）。
+
+    手型光标是一个承诺。没有目的地就不要做出这个承诺。
+  */
+  const actionable = Boolean(item.url)
+
   useEffect(() => {
     const card = cardRef.current
-    if (!card) return
+    if (!card || !actionable) return
 
     const handleMove = (e: MouseEvent) => {
       const rect = card.getBoundingClientRect()
@@ -54,7 +66,7 @@ export function ProjectCard({ item }: ProjectCardProps) {
       card.removeEventListener('mouseenter', handleEnter)
       card.removeEventListener('mouseleave', handleLeave)
     }
-  }, [])
+  }, [actionable])
 
   const status = item.status
 
@@ -70,7 +82,7 @@ export function ProjectCard({ item }: ProjectCardProps) {
   const cardContent = (
     <div
       ref={cardRef}
-      className="glass-card rounded-xl p-5 cursor-pointer h-full"
+      className={`glass-card rounded-xl p-5 h-full${actionable ? ' cursor-pointer' : ''}`}
       style={{
         transition: 'transform 0.1s ease, background 0.2s ease, border-top-color 0.2s ease, box-shadow 0.2s ease',
       }}

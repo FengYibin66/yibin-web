@@ -22,13 +22,15 @@ fonts/             原始 TTF（未子集化，共 2.9MB）
                    → scripts/media/subset-fonts.py
 textures/entrance/ 入口页纹理原图（砖墙一张 604KB）
                    → scripts/media/optimize-textures.mjs
+credentials/       荣誉与证书页的原图（jpg / png，12 张共 7 MB）
+                   → scripts/media/optimize-credentials.mjs
 ```
 
 ```
 .stamps/           内容指纹（跟着源一起提交，不部署）
 ```
 
-四条流水线的产物都在 `public/` 下，四个脚本都支持 `--check`（只报告不写），
+五条流水线的产物都在 `public/` 下，五个脚本都支持 `--check`（只报告不写），
 CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**——这是这类生成物
 的共同失败模式：
 
@@ -38,6 +40,7 @@ CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**�
 | 门贴图 | 摄影相册的门上还是 HTML5 / TikTok |
 | 字体 | 新加的汉字落到兜底字体（一句话里蹦出一个不同字形的字） |
 | 纹理 | 入口页多下 900KB |
+| 证书图片 | 新加的证书那张卡是空的（数据引用 `.webp`，产物不存在） |
 
 `doors/` 里是**原始**门板：Classic 页那两扇贴着 HTML5 / JS / React /
 node.js / CSS3，走廊侧那两扇贴着 Instagram / TikTok / YouTube。它们与
@@ -61,6 +64,10 @@ node scripts/media/gallery-door.mjs
 
 # 入口页纹理（上限在脚本的 PLAN 里逐个声明，不是一刀切）
 node scripts/media/optimize-textures.mjs
+
+# 荣誉与证书页图片（PLAN 里每张声明是「文件」还是「照片」，两档上限；
+#                   数据未引用的标 unused 不发）
+node scripts/media/optimize-credentials.mjs
 
 # 字体子集 + woff2（需要 fonttools 与 brotli）
 python3 -m pip install fonttools brotli

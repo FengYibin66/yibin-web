@@ -161,6 +161,10 @@ jobs:
       - name: 校验入口页纹理
         working-directory: apps/resume
         run: node scripts/media/optimize-textures.mjs --check
+      # 荣誉与证书页的图片：原图 7 MB 直接发过一年，卡片只有 368px 宽。
+      - name: 校验证书图片产物
+        working-directory: apps/resume
+        run: node scripts/media/optimize-credentials.mjs --check
       # 手机端入口的静态首帧。它不存在的话手机端是一块空白——而那条路径
       # 桌面开发时看不到（判据是 coarse pointer + 窄屏）。
       - name: 校验入口页静态首帧存在

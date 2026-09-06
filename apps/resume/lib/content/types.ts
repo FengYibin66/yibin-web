@@ -177,7 +177,14 @@ export interface CredentialItem {
   title: string
   level?: string
   note?: string
+  /** `scripts/media/optimize-credentials.mjs` 出的 webp 产物，原图在 `media-src/credentials/` */
   image?: string
+  /**
+   * 竖版文件标 `'contain'`：4:3 卡片默认 `object-cover`，竖版证书会被裁掉近一半，
+   * 底部的印章 / 签名正好在被切的那段。证书是文件不是照片，裁一刀就毁了。
+   * 不标就是 cover。哪些该标由 `__tests__/credentialsAssets.test.ts` 按原图尺寸对账。
+   */
+  fit?: 'contain'
 }
 
 export interface CredentialsContent {

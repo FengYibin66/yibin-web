@@ -15,7 +15,12 @@ function CredentialCard({ item }: { item: CredentialItem }) {
           alt={item.title}
           caption={item.title}
           className="aspect-[4/3] w-full"
-          imgClassName="object-cover"
+          /*
+            竖版文件 contain 加底板，其余 cover。证书是文件，cover 会把竖版裁掉
+            近一半，底部的印章 / 签名正好在被切的那段。哪些是竖版由数据的 `fit` 说，
+            `credentialsAssets.test.ts` 按原图尺寸对账。
+          */
+          imgClassName={item.fit === 'contain' ? 'object-contain bg-[var(--bg-elevated)]' : 'object-cover'}
           rounded="rounded-none"
         />
       ) : null}
@@ -57,7 +62,7 @@ export function CredentialsSection() {
                   alt={item.title}
                   caption={item.title}
                   className="aspect-[4/3] w-full"
-                  imgClassName="object-cover"
+                  imgClassName={item.fit === 'contain' ? 'object-contain bg-[var(--bg-elevated)]' : 'object-cover'}
                   rounded="rounded-none"
                 />
               ) : null}

@@ -101,7 +101,7 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 | 位置 | 数量 | 内容 |
 |------|------|------|
-| `apps/resume/__tests__/` | 1212（76 文件） | 组件与逻辑单测（vitest） |
+| `apps/resume/__tests__/` | 1215（77 文件） | 组件与逻辑单测（vitest） |
 | `apps/resume/e2e/` | 128（64 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换）。Lab 那批的五个坑见 `apps/resume/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |

@@ -20,17 +20,29 @@ export default function SmoothScrollProvider({ children }: { children: ReactNode
 
     lenis.on('scroll', ScrollTrigger.update)
 
-    lenis.on('scroll', ({ velocity }: { velocity: number }) => {
-      gsap.to('[data-skew]', {
-        skewY: velocity * 0.35,
-        ease: 'power3',
-        overwrite: 'auto',
-        duration: 0.6,
+    /*
+      滚动倾斜的 tween 归本组件所有，收在 context 里，cleanup 只 revert 自己的。
+      前身 cleanup 是 `ScrollTrigger.getAll().forEach(t => t.kill())`——清全局，会把
+      别的组件（Classic 页的滚动显形）的触发器与播放中的 tween 一起杀掉
+      （ADR 20260907120701；门禁 `noGlobalScrollTriggerKill`）。
+
+      `[data-skew]` 只在 Classic 页存在。别的页面（Lab / Gallery）每次滚动对空目标
+      发 tween，dev 下每次都是一条 "GSAP target not found" 警告；没有目标就不发。
+    */
+    const ctx = gsap.context(() => {
+      lenis.on('scroll', ({ velocity }: { velocity: number }) => {
+        if (!document.querySelector('[data-skew]')) return
+        gsap.to('[data-skew]', {
+          skewY: velocity * 0.35,
+          ease: 'power3',
+          overwrite: 'auto',
+          duration: 0.6,
+        })
       })
     })
 
     return () => {
-      ScrollTrigger.getAll().forEach(t => t.kill())
+      ctx.revert()
       lenis.off('scroll', ScrollTrigger.update)
       lenis.destroy()
       gsap.ticker.remove(tickerFn)

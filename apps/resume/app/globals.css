@@ -149,7 +149,15 @@
 html {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  scroll-behavior: smooth;
+  /*
+    不要 `scroll-behavior: smooth`。全站由 Lenis 做平滑滚动；CSS 的 smooth 会让浏览器 /
+    Next 的 hash 跳转变成一段原生动画，Lenis 把中途的原生 scroll 事件当成外部滚动、
+    把目标改成当前值再写回——跳转被掐断在半路（2026-09-07 实测：`/classic/#publications`
+    生产停在 scrollY 30、dev 停在 1744，目标在 8500px 下方）。Lenis 旧版官方 CSS 里
+    `.lenis.lenis-smooth { scroll-behavior: auto !important }` 就是防这个。
+    程序化滚动一律 `behavior: 'instant'` 或交给 `lenis.scrollTo`。
+  */
+  scroll-behavior: auto;
 }
 
 body {

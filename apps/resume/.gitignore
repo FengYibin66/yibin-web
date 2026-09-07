@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 用户路径巡检的截图（scripts/qa/walkthrough.mjs），给人看，不入库
+.qa/

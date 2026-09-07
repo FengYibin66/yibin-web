@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { registerScrollAnimations } from '@/lib/animations/scrollAnimations'
+import { mountScrollReveal } from '@/lib/animations/scrollReveal'
 import { Navbar, Footer } from '@/components/layout'
 import {
   HeroSection,
@@ -19,21 +17,24 @@ import {
 import { CredentialsSection } from '@/components/classic/CredentialsViews'
 
 export default function ClassicPage() {
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger)
+  /*
+    滚动显形的生命周期归本组件所有：只撤销自己挂的（`handle.revert()`），
+    **不**清全局——前身的 `ScrollTrigger.getAll().forEach(t => t.kill())` 会连带杀掉
+    播放中的 tween 与别人的触发器，StrictMode 双跑 effect 时把卡片留在半透明
+    （2026-09-07 实机；细节见 lib/animations/scrollReveal.ts 顶部与 ADR 20260907120701）。
 
-    const onLoad = () => {
-      registerScrollAnimations()
-      ScrollTrigger.refresh()
-    }
-    if (document.readyState === 'complete') {
-      onLoad()
-    } else {
-      window.addEventListener('load', onLoad, { once: true })
-    }
+    放在 rAF 里：客户端导航带 hash 进来时，让 Next 的 hash 滚动与 Lenis 先就位，
+    挂载时才知道哪些区已经在视口上方、该直接呈现而不是补播。
+    ScrollTrigger 自己监听 load / resize 并 refresh，不需要再等 `load`。
+  */
+  useEffect(() => {
+    let handle: ReturnType<typeof mountScrollReveal> | null = null
+    const raf = requestAnimationFrame(() => {
+      handle = mountScrollReveal()
+    })
     return () => {
-      window.removeEventListener('load', onLoad)
-      ScrollTrigger.getAll().forEach(t => t.kill())
+      cancelAnimationFrame(raf)
+      handle?.revert()
     }
   }, [])
 

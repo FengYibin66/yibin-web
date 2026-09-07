@@ -51,8 +51,9 @@ context/                 # React Context（Scene / Performance / Achievements）
 hooks/                   # 通用 hooks
 scripts/
 ├── lab/                 # 预载表生成器
-└── media/               # 四条素材流水线：音频 / 门贴纸 / 纹理 / 字体子集
-                         # 都支持 --check，CI 会跑（见 media-src/AGENTS.md）
+├── media/               # 五条素材流水线：音频 / 门贴纸 / 纹理 / 证书图片 / 字体子集
+│                        # 都支持 --check，CI 会跑（见 media-src/AGENTS.md）
+└── qa/                  # 用户路径巡检：每步一张整屏截图，**给人看、不断言**（见该目录 AGENTS.md）
 __tests__/               # vitest
 ```
 
@@ -123,6 +124,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | `labFonts.test.ts` | 无棘轮（全禁写死路径） | 0 |
 | `machineEventWiring.test.ts` | 无棘轮（全禁孤儿事件） | 0 |
 | `roomCameraWiring.test.ts` | 无棘轮（全禁死声明 entryPose） | 0 |
+| `noGlobalScrollTriggerKill.test.ts` | 无棘轮（全禁 `ScrollTrigger.getAll()`） | 0 |
 
 漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
 **换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
@@ -276,6 +278,41 @@ storage（SSR 与首屏必须一致）。**语言在门户定，进 Lab / Classi
 
 长任务峰值 1454ms → 281ms；剩下的是段落挂载本身的 React 成本。
 
+## GSAP：谁创建，谁撤销，且只撤销自己的（ADR 20260907120701）
+
+Classic 页的滚动显形在「详情页 → 返回简历（客户端导航 + hash）→ 上滚」这条路上把卡片
+留在 3%–83% 透明度（2026-09-07 实机；dev 必现，线上不出现）。三件事叠加：
+`ClassicPage` 与 `SmoothScrollProvider` 都在 cleanup 里 `ScrollTrigger.getAll().forEach(t => t.kill())`
+——不分归属、连带杀播放中的 tween；StrictMode 双跑 effect 把第一次的 tween 杀在半路；
+第二次注册用 `gsap.from`（终点 = 元素**当前值**）把残值当了终点。
+
+规则与机制：
+
+- **一切创建物在 `gsap.context()` 里，cleanup 只 `ctx.revert()`。** `getAll()` 全仓零调用，
+  AST 门禁 `noGlobalScrollTriggerKill.test.ts` 守着（`getAll()` 唯一合理用途是读，仓库里没有）。
+- **显形声明是数据**：`lib/animations/revealSpecs.ts`（纯数据，E2E 也 import）。运行时
+  `scrollReveal.ts` 用 `fromTo`（终点是常量 `REVEAL_END`，不读 DOM）+ `clearProps`；
+  带 hash 进入时已在 end 之后的触发器在 `onEnter` 里快进到终点（必须在回调里做：
+  `once: true` 的触发器在同一次 update 就自杀）；`prefers-reduced-motion` 下不注册。
+- **每条声明的 `targets` / `trigger` 必须匹配到元素**（`scrollReveal.test.tsx`）。前身有三条
+  是死的（`#about .edu-card`、`#contact .contact-item`）——教育卡翻转、联系区渐入从来没跑过，
+  线上每次进 Classic 打 3 条 gsap 空目标警告。
+- **平滑滚动只有 Lenis 一个主人**：`html` 是 `scroll-behavior: auto`，程序化滚动一律
+  `behavior: 'instant'` 或 `lenis.scrollTo`。此前 `scroll-behavior: smooth` 让 hash 跳转变成原生
+  动画、被 Lenis 掐断在半路——`/classic/#publications` 生产停在 scrollY 30（线上也在），
+  旧的 `gsap.from` 不动未触发的元素所以看不出。Lenis 官方基础 CSS 现在在 `layout.tsx` 引入。
+- **滚动倾斜（`[data-skew]`）是 Lenis 状态的纯函数，每帧派生**（`lib/animations/scrollSkew.ts`）：
+  只在 `isScrolling === 'smooth'` 时非零、夹在 ±8°，Lenis 一停自然归零。前身在 `scroll`
+  事件里 `gsap.to(skewY: velocity * 0.35)`：详情返回的 hash 跳转那一帧速度极大，项目卡被推到
+  skewY ≈ 88° 后**再没有事件把它拉回**（dev 必现）。事件驱动的值停下就冻住，这是结构问题。
+- **E2E 走全部进入路径**（`classicReveal.spec.ts`）：此前只从顶部进过 `/classic/`。
+  hash 用例必须断言目标**落在视口顶部**——只断言"在 DOM 里"时跳转没发生也是绿的。
+  **断言要量几何，不只量 opacity**：那次 88° 的倾斜下 opacity 是 1，只看透明度全绿。
+  `expectAllRevealed` 同时断言 computed transform 恒等。
+
+两条测试都做过变异验证：塞回一个 `getAll()` 门禁红；把 `revert` 换成 `kill`，
+StrictMode 残值那条红。
+
 ## `next dev` 跑着的时候不要 `pnpm build`（栽过）
 
 两者共用 `.next/`。`next build` 会覆盖 dev server 的产物，dev 之后发出的 HTML 引用的
@@ -316,6 +353,7 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 |------|------|
 | `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化、门户页语言切换 |
 | `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 首访 / 无 JS 兜底 |
+| `classicReveal.spec.ts` | Classic 滚动显形的**全部进入路径**：四个 hash 直达、详情 → 返回 → 上滚（原始事故路径）、浏览器后退、切语言、reduced-motion、顶部滚到底。断言对象是每个显形目标的 computed opacity，选择器从 `lib/animations/revealSpecs.ts` 导入 |
 
 `lab.spec.ts` 是 ADR
 [20260903211338](../../docs/adr/20260903211338-finish-wiring-lab-registry-and-machines.md)
@@ -356,6 +394,12 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 的蓝框、Projects 门口的深棕色块、滚动卡顿），`data-*` 属性断言对它们全部失明。
 排查时用的是 Playwright 截图 + CDP CPU 采样 + WebGL 调用打桩（脚本形态见 PR #21
 说明）。**改 Lab 的视觉或性能之前，先跑一遍这种带截图的复现，再看 E2E。**
+
+**Classic 同理，而且有现成工具**：`node scripts/qa/walkthrough.mjs` 像用户一样把门户 →
+Classic → 三种详情页 → 返回 → 上下滚全走一遍，每步一张整屏（`scripts/qa/AGENTS.md`）。
+2026-09-07 滚动显形那次，E2E 与复现脚本全绿，截图里卡片半透明、hash 落在半路、卡片扭成
+88°——都是看一眼就能发现的。改了视觉，**提 PR 前跑一遍并逐张看完**；断言守已知的坏法，
+巡检抓没想到的坏法。
 
 **已知缺陷用 `test.fail()` / `test.fixme()` 固化，不用 TODO 注释。**
 `test.fail()` 在缺陷修好时会报错，强迫人回来把标记去掉；TODO 不会提醒任何人。
@@ -398,6 +442,9 @@ node scripts/media/optimize-textures.mjs     # 入口页纹理
 node scripts/media/optimize-credentials.mjs  # 荣誉与证书页图片（原图 7 MB → webp）
 python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
 pnpm build && node scripts/media/entry-firstframe.mjs   # 手机端入口的静态首帧
+
+# 验收（给人看，不断言）：像用户一样走一遍 Classic，每步一张截图到 .qa/walk，然后逐张看
+node scripts/qa/walkthrough.mjs
 ```
 
 > `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D

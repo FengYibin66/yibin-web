@@ -3,12 +3,15 @@
 import { useLabLabels } from '@/hooks/useLabLabels'
 import { useLocale } from '@/hooks/useLocale'
 import { content } from '@/lib/content'
+import { heroNames } from '@/lib/content/heroName'
 import { ENTRY_COLORS } from '@/lib/lab/domain/overlayColors'
 
 export function ClassicPanel() {
   const { locale } = useLocale()
   const hero = content[locale].hero
   const labels = useLabLabels()
+  // 名字按语言分主次（zh 主中文）：规则在 heroName.ts，与 Classic 首屏共用
+  const names = heroNames(hero, locale)
 
   /*
     标签文案本来就是中英分支，只是**硬编码在组件里**而不是 content 里。搬进
@@ -55,8 +58,22 @@ export function ClassicPanel() {
         lineHeight: 1.1,
         textAlign: 'center',
       }}>
-        {hero.name}
+        {names.primary}
       </h1>
+      <p
+        data-testid="classic-panel-secondary-name"
+        style={{
+          fontFamily: 'var(--font-gallery, "Cormorant Garamond", serif)',
+          fontSize: 'clamp(0.85rem, 1.3vw, 1.1rem)',
+          // 与头衔行同色：#8a7560 在 #f5f2ed 上只有 3.86，对比度门禁要 4.5
+          color: '#6b5744',
+          letterSpacing: '0.12em',
+          margin: '10px 0 0',
+          textAlign: 'center',
+        }}
+      >
+        {names.secondary}
+      </p>
 
       <div style={{
         width: '48px',

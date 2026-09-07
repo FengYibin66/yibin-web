@@ -719,3 +719,38 @@ export function importsModule(source: string, moduleName: string, fileName = 'in
   visit(sf)
   return found
 }
+
+/**
+ * 文件里所有 `<object>.<method>(` 形态的调用（如 `ScrollTrigger.getAll(`）。
+ *
+ * 给「每个 GSAP 使用方只撤销自己创建的东西，全仓禁止 `ScrollTrigger.getAll().kill()`」
+ * 那条门禁用（`__tests__/noGlobalScrollTriggerKill.test.ts`，ADR 见该文件头）。
+ *
+ * 只认**调用表达式**：注释、字符串、类型里的同形文本不算——理由与本文件其余查询
+ * 相同（ADR 20260903211320）。链式 `ScrollTrigger.getAll().forEach(...)` 命中的是
+ * 内层的 `getAll()` 调用。
+ */
+export function memberCalls(
+  source: string,
+  object: string,
+  method: string,
+  fileName = 'input.ts',
+): Hit[] {
+  const sf = parse(source, fileName)
+  const out: Hit[] = []
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === object &&
+      node.expression.name.text === method
+    ) {
+      const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf))
+      out.push({ file: fileName, line: line + 1, text: node.getText(sf).slice(0, 80) })
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}

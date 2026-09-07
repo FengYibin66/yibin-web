@@ -72,6 +72,12 @@ export function GalleryTrack() {
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
+    /*
+      横向滚动的 tween 与 pin 触发器归本组件所有，收在 context 里，cleanup 只 revert
+      自己的。前身是 `ScrollTrigger.getAll().forEach(t => t.kill())`——清全局
+      （ADR 20260907120701；门禁 `noGlobalScrollTriggerKill`）。
+    */
+    let ctx: gsap.Context | null = null
     // Short delay to ensure DOM is laid out
     const timer = setTimeout(() => {
       const container = containerRef.current
@@ -80,6 +86,7 @@ export function GalleryTrack() {
 
       const totalWidth = track.scrollWidth - window.innerWidth
 
+      ctx = gsap.context(() => {
       gsap.to(track, {
         x: -totalWidth,
         ease: 'none',
@@ -100,11 +107,12 @@ export function GalleryTrack() {
           },
         },
       })
+      })
     }, 500)
 
     return () => {
       clearTimeout(timer)
-      ScrollTrigger.getAll().forEach(t => t.kill())
+      ctx?.revert()
     }
   }, [])
 

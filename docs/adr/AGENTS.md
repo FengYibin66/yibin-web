@@ -16,7 +16,7 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 
 <!-- BEGIN:adr-index (生成物，勿手改；见 scripts/docs/gen_docs_index.py) -->
 
-共 19 份。按 ID（创建时间）升序。
+共 20 份。按 ID（创建时间）升序。
 
 | ID | 结论 | 状态 | 索引 |
 |----|------|------|------|
@@ -39,5 +39,6 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 | [`20260903211302`](./20260903211302-lab-tutorial-popups-carry-scope.md) | 教程气泡带作用域，离开作用域即消失；成就解锁的判定基线在存储恢复之后建立 | 已接受 | resume 的 Lab 教程气泡从「只能由队首 DISMISS 关掉」改为**声明作用域**（`corridor` / `room:<id>`），离开作用域时按作用域批量出队；`corridor_explore` 的解锁点从 `wheel`/`touchmove` 事件移到走廊导轨位移（键盘用户此前永远拿不到）；解锁音的比较基线改在存储 HYDRATE 之后建立，修掉回访用户每次进 Lab 都响一声的问题 |
 | [`20260903211320`](./20260903211320-source-gates-use-ts-ast-not-regex.md) | 源码门禁改用 TypeScript AST 扫描，不用正则；产物指纹同时覆盖输出 | 已接受 | resume 的三条源码门禁（相机所有权、Lab 漏译、覆盖层对比度）从「grep + 手写字符串剥离器」改为共用一个基于 `typescript` 编译器 API 的扫描器（`__tests__/helpers/sourceScan.ts`）；变异测试证明正则版对 20 个变异漏掉 10 个，其中包括仓库自己白名单里登记过的写法；素材指纹从「只算输入」改为「输入 + 输出」，让手改派生产物也能被 `--check` 抓到 |
 | [`20260903211338`](./20260903211338-finish-wiring-lab-registry-and-machines.md) | 已定义未接线的三条路径：接线，不删除；接线完成前文档一律标「未接线」 | 已接受 | ADR 20260903140615 的房间注册表（渲染 / 教程 / 预载三条消费路径）与 20260903140616 的 `room`/`corridor` 状态图，实现后**从未接入运行时**——运行时仍是 `RoomInterior` 的 `switch`、手写预载表与旧的 `doorEntryFlow`/`roomLoadMachine` 三件套，而两份 ADR 与 `AGENTS.md` 把它们描述为「已落地 / 已用」；本 ADR 决定补完接线（而非删除新代码回退），并立一条规则：未接线的实现在文档里一律标「已定义、未接线」，测试覆盖它不算落地 |
+| [`20260907120701`](./20260907120701-gsap-lifecycle-owned-by-context.md) | GSAP 的创建物归创建者所有：一律 `gsap.context()` 持有、只 `revert()` 自己的；全仓禁止 `ScrollTrigger.getAll()` | 已接受 | Classic 页滚动显形在「详情页 → 返回简历（客户端导航 + hash）→ 上滚」路径上把卡片留在 3%–83% 透明度（dev 必现，线上不出现）。根因是 `ClassicPage` 与 `SmoothScrollProvider` 都用 `ScrollTrigger.getAll().forEach(t => t.kill())` 清全局——不分归属、连带杀播放中的 tween——叠加 StrictMode 双跑 effect 与 `gsap.from` 以当前值为终点。决定：每个 GSAP 使用方用 `gsap.context()` 持有自己创建的一切，cleanup 只 `revert()` 自己的；显形用 `fromTo` 显式终点 + `clearProps`；已滚过的触发器快进到终点；尊重 `prefers-reduced-motion`；AST 门禁禁止 `ScrollTrigger.getAll()`；显形声明的每条选择器必须在渲染出的页面上匹配到元素（此前三条是死的）；顺带修掉线上也在的 hash 跳转半路被掐断（`html { scroll-behavior: smooth }` 与 Lenis 互抢），平滑滚动只有 Lenis 一个主人 |
 
 <!-- END:adr-index -->

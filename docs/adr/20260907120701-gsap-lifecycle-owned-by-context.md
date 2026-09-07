@@ -72,6 +72,13 @@
    基础 CSS（此前从未引入）。E2E 断言 hash 目标真的落在视口顶部——第一版只断言"目标在
    DOM 里"，跳转没发生时照样绿，是这次漏网的直接原因。
 
+6. **滚动倾斜是 Lenis 状态的纯函数，每帧派生，不靶向事件**（`lib/animations/scrollSkew.ts`）。
+   评审期间（PR #27）实机又抓到第二种形态：详情返回后项目卡 opacity 1 却被扭成 skewY ≈ 88°
+   ——前身在 `scroll` 事件里 `gsap.to(skewY: velocity * 0.35)`，hash 跳转那一帧速度极大、
+   之后再没有事件把它拉回。事件驱动的值停下就冻住，且不设上限。改为在 gsap ticker 里每帧读
+   `lenis.velocity` / `isScrolling`：只在用户平滑滚动时非零、夹在 ±8°，停下自然归零。
+   E2E 从此**同时断言 opacity 与 transform 恒等**——只量透明度是这条漏网的直接原因。
+
 **判定原则：谁创建，谁撤销，且只撤销自己的。** 任何"清全局"的写法（`getAll().kill()`、
 `gsap.killTweensOf('*')`、`gsap.globalTimeline.clear()`）都是同一类错误。
 
@@ -84,7 +91,7 @@
   的入场动画第一次真的跑起来；reduced-motion 用户不再被强制看动画。
 - 负面：显形逻辑多了约 40 行（context、快进、reduced-motion 分支）；E2E 多 9 条用例
   （约 +1 分钟）。
-- 影响面：`lib/animations/{revealSpecs,scrollReveal}.ts`（取代 `scrollAnimations.ts`）、
+- 影响面：`lib/animations/{revealSpecs,scrollReveal,scrollSkew}.ts`（取代 `scrollAnimations.ts`）、
   `app/classic/page.tsx`、`app/globals.css`（`scroll-behavior`）、`app/layout.tsx`（Lenis CSS）、
   `components/providers/SmoothScrollProvider.tsx`、`components/gallery/GalleryTrack.tsx`、
   `components/classic/ClassicBackLink.tsx`（testid）、

@@ -72,8 +72,39 @@ async function sweep(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 }
 
+/**
+ * 停下后 transform 不是恒等的元素（显形目标 + `[data-skew]`）。
+ *
+ * 只量 opacity 是我第一版的盲区：详情返回后项目卡 opacity 1、却被 Lenis 滚动倾斜
+ * 扭成 skewY ≈ 88°（`matrix(1, 35.26, 0, 1)`），所有断言照样绿。几何也要断言。
+ * 用 computed matrix 判：a、d ≈ 1，b、c ≈ 0。
+ */
+async function distorted(page: Page): Promise<string[]> {
+  return page.evaluate(sels => {
+    const out: string[] = []
+    const seen = new Set<Element>()
+    for (const s of [...sels, '[data-skew]']) {
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>(s))) {
+        if (seen.has(el)) continue
+        seen.add(el)
+        const t = getComputedStyle(el).transform
+        if (!t || t === 'none') continue
+        const m = t.match(/matrix\(([^)]+)\)/)
+        if (!m) { out.push(`${s}: ${t}`); continue }
+        const [a, b, c, d] = m[1]!.split(',').map(Number) as [number, number, number, number]
+        if (Math.abs(a - 1) > 0.01 || Math.abs(d - 1) > 0.01 || Math.abs(b) > 0.01 || Math.abs(c) > 0.01) {
+          out.push(`${s}: ${t}`)
+        }
+      }
+    }
+    return out
+  }, SELECTORS)
+}
+
+/** 显形到位 **且** 几何恒等 */
 async function expectAllRevealed(page: Page, note: string): Promise<void> {
   await expect.poll(() => unrevealed(page), { timeout: 8000, message: `${note}：这些目标没显形` }).toEqual([])
+  await expect.poll(() => distorted(page), { timeout: 4000, message: `${note}：这些元素停下后 transform 不是恒等（残留 skew / scale）` }).toEqual([])
 }
 
 /**
@@ -122,6 +153,8 @@ test.describe('Classic 滚动显形的进入路径', () => {
     // Next 的客户端导航会把 `/classic/#publications` 归一化成 `/classic#publications`（尾斜杠不保留）
     await expect(page).toHaveURL(/\/classic\/?#publications$/)
     await expectHashInView(page, 'publications')
+    // 落地那一刻的几何：hash 跳转那一帧的速度不许把项目卡扭斜（原始事故的第二种形态：skewY ≈ 88°）
+    await expect.poll(() => distorted(page), { timeout: 4000, message: '返回落地后有元素带着残留 transform' }).toEqual([])
     await page.evaluate(() => document.querySelector('#projects')!.scrollIntoView({ behavior: 'instant' as ScrollBehavior }))
     await expect.poll(
       () => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('#projects .project-card, #experience .timeline-item, #skills .skill-badge'))

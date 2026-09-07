@@ -300,8 +300,14 @@ Classic 页的滚动显形在「详情页 → 返回简历（客户端导航 + h
   `behavior: 'instant'` 或 `lenis.scrollTo`。此前 `scroll-behavior: smooth` 让 hash 跳转变成原生
   动画、被 Lenis 掐断在半路——`/classic/#publications` 生产停在 scrollY 30（线上也在），
   旧的 `gsap.from` 不动未触发的元素所以看不出。Lenis 官方基础 CSS 现在在 `layout.tsx` 引入。
+- **滚动倾斜（`[data-skew]`）是 Lenis 状态的纯函数，每帧派生**（`lib/animations/scrollSkew.ts`）：
+  只在 `isScrolling === 'smooth'` 时非零、夹在 ±8°，Lenis 一停自然归零。前身在 `scroll`
+  事件里 `gsap.to(skewY: velocity * 0.35)`：详情返回的 hash 跳转那一帧速度极大，项目卡被推到
+  skewY ≈ 88° 后**再没有事件把它拉回**（dev 必现）。事件驱动的值停下就冻住，这是结构问题。
 - **E2E 走全部进入路径**（`classicReveal.spec.ts`）：此前只从顶部进过 `/classic/`。
   hash 用例必须断言目标**落在视口顶部**——只断言"在 DOM 里"时跳转没发生也是绿的。
+  **断言要量几何，不只量 opacity**：那次 88° 的倾斜下 opacity 是 1，只看透明度全绿。
+  `expectAllRevealed` 同时断言 computed transform 恒等。
 
 两条测试都做过变异验证：塞回一个 `getAll()` 门禁红；把 `revert` 换成 `kill`，
 StrictMode 残值那条红。

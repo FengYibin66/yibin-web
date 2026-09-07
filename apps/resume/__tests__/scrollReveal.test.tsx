@@ -200,6 +200,27 @@ describe('挂载生命周期', () => {
     }
   })
 
+  it('到达方式写在 <html data-reveal-arrival> 上，撤销后删掉 —— E2E 断言它而不是断言时间窗', async () => {
+    await renderClassicSections()
+    const first = mountScrollReveal()
+    expect(document.documentElement.dataset.revealArrival, 'jsdom 里 scrollY 是 0，算从顶部进').toBe('top')
+    first.revert()
+    expect(document.documentElement.dataset.revealArrival).toBeUndefined()
+
+    // 中途到达：scrollY > 0
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    Object.defineProperty(window, 'scrollY', { value: 1200, configurable: true })
+    try {
+      const second = mountScrollReveal()
+      expect(document.documentElement.dataset.revealArrival).toBe('mid-page')
+      second.revert()
+      expect(document.documentElement.dataset.revealArrival).toBeUndefined()
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'scrollY', descriptor)
+      else Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true })
+    }
+  })
+
   it('prefers-reduced-motion 下不注册任何动画，DOM 原样', async () => {
     reducedMotion = true
     stubMatchMedia()

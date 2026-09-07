@@ -104,8 +104,13 @@ test.describe('Classic 滚动显形的进入路径', () => {
     test(`直接进 /classic/#${hash}：落在目标上，视口上方的内容立刻可见，滚一遍后全部可见`, async ({ page }) => {
       await page.goto(`/classic/#${hash}`)
       await expectHashInView(page, hash)
-      // 中途到达：已滚过的内容不补播入场动画 —— 800ms 内就该在终点（动画本身要 0.6–1.7s）
-      await expect.poll(() => unrevealed(page, true), { timeout: 800, message: '视口上方的目标应直接呈现' }).toEqual([])
+      /*
+        中途到达：已滚过的内容不补播入场动画，直接呈现。断言的是挂载**模式**
+        （`<html data-reveal-arrival>`），不是"800ms 内到终点"——时间窗在负载重的 CI 上
+        flaky 过（chromium，重试即过），而模式是确定的事实。
+      */
+      await expect(page.locator('html')).toHaveAttribute('data-reveal-arrival', 'mid-page', { timeout: 15000 })
+      await expect.poll(() => unrevealed(page, true), { timeout: 3000, message: '视口上方的目标应直接呈现' }).toEqual([])
       await sweep(page)
       await expectAllRevealed(page, `#${hash} 进入后滚一遍`)
     })
@@ -157,6 +162,7 @@ test.describe('Classic 滚动显形的进入路径', () => {
     await expect(page.locator('#publications')).toBeAttached()
     // 显形在 hydration 之后的 rAF 里注册；并行跑 Lab 用例时 chromium 负载重，hydration 可能要几秒
     await waitHydrated(page)
+    await expect(page.locator('html')).toHaveAttribute('data-reveal-arrival', 'top', { timeout: 15000 })
     /*
       这条是对"全部可见"那些断言的变异防护：如果显形根本没注册（或被改成一律
       可见），上面所有用例照样绿。所以先证明它确实把折叠线下的东西藏起来了。
@@ -178,6 +184,7 @@ test.describe('Classic 滚动显形的进入路径', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/classic/')
     await expect(page.locator('#contact')).toBeAttached()
+    await expect(page.locator('html')).toHaveAttribute('data-reveal-arrival', 'reduced', { timeout: 15000 })
     await page.waitForTimeout(400)
     expect(await unrevealed(page)).toEqual([])
     const inline = await page.evaluate(sels => sels.flatMap(s => Array.from(document.querySelectorAll<HTMLElement>(s))).filter(e => e.style.opacity !== '' || e.style.transform !== '').length, SELECTORS)

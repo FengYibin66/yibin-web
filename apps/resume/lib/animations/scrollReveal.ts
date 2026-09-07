@@ -52,7 +52,12 @@ export function mountScrollReveal(): ScrollRevealHandle {
 
   if (prefersReducedMotion()) {
     // 不注册就是最好的动画：内容保持原样，没有内联样式、没有触发器
-    return { revert() {} }
+    document.documentElement.dataset.revealArrival = 'reduced'
+    return {
+      revert() {
+        delete document.documentElement.dataset.revealArrival
+      },
+    }
   }
 
   /*
@@ -65,6 +70,12 @@ export function mountScrollReveal(): ScrollRevealHandle {
   */
   const arrivedMidPage = typeof window !== 'undefined' && window.scrollY > 0
   let settling = true
+  /*
+    把到达方式写到 <html> 上（`data-reveal-arrival`）。E2E 断言它而不是断言"800ms 内
+    到终点"——时间窗在负载重的 CI 上天生不稳（chromium 上 flaky 过一次），
+    而"以哪种模式挂载"是确定的事实。
+  */
+  document.documentElement.dataset.revealArrival = arrivedMidPage ? 'mid-page' : 'top'
 
   const ctx = gsap.context(() => {
     for (const spec of REVEALS) {
@@ -125,6 +136,7 @@ export function mountScrollReveal(): ScrollRevealHandle {
       reverted = true
       observer?.disconnect()
       cancelAnimationFrame(refreshRaf)
+      delete document.documentElement.dataset.revealArrival
       ctx.revert()
     },
   }

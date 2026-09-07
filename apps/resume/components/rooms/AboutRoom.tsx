@@ -364,10 +364,14 @@ export function AboutRoom({ showRoom, isExiting }: AboutRoomProps) {
         400×200（半宽 200）差一点点，站在门口更远时差得更多，于是屏幕四周露出
         走廊的米白底色。放大到 1600×800 后从任何合理位置都填满，多出来的部分不花钱
         （一个 quad）。
+
+        颜色与房间雾、走廊底色同一米白（#f0ece4，见 domain/rooms/about.ts 的 fog）。
+        PR #11 曾改成浅蓝，用户拍板回米色（2026-09-07）。三处必须同色：
+        天空与雾不同色会在远端云层处露出一圈色差。
       */}
       <mesh position={[0, 0, -200]}>
         <planeGeometry args={[1600, 800]} />
-        <meshBasicMaterial color="#d4e8f5" side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#f0ece4" side={THREE.DoubleSide} />
       </mesh>
 
       {/* Paper airplane (bank/pitch from flight effect applied via camera, airplane mirrors it) */}

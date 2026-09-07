@@ -36,8 +36,10 @@ export const aboutRoom: RoomDefinition = {
     distance: [10, 16],
   },
 
-  // 自己的天空雾：浅蓝、远端起雾，让云层有纵深；不是走廊那种 15 单位就洗白的米白
-  fog: { color: '#d4e8f5', near: 60, far: 220 },
+  // 自己的天空雾：远端才起雾（60–220），让云层有纵深；不像走廊那样 15 单位就洗白。
+  // 颜色与走廊同一米白（#f0ece4）：PR #11 曾改成浅蓝 #d4e8f5，用户看到后认为
+  // 「整间房都变蓝了」，2026-09-07 拍板回米色。天空平面（AboutRoom.tsx）同色。
+  fog: { color: '#f0ece4', near: 60, far: 220 },
 
   ambience: {
     soundId: 'amb_about',

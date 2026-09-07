@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLocale } from '@/hooks/useLocale'
+import { heroNames } from '@/lib/content/heroName'
 import { content } from '@/lib/content'
 import { GlowButton } from '@/components/ui'
 
@@ -28,6 +29,8 @@ function ScrollHint({ text }: { text: string }) {
 export function HeroSection() {
   const { locale } = useLocale()
   const c = content[locale].hero
+  // 名字按语言分主次（zh 主中文）：规则在 heroName.ts，与门户的 Classic 面板共用
+  const names = heroNames(c, locale)
 
   const [roleIndex, setRoleIndex] = useState(0)
   const [showScroll, setShowScroll] = useState(true)
@@ -68,7 +71,7 @@ export function HeroSection() {
           transition={{ delay: 0.4 }}
           className="font-display text-5xl md:text-7xl font-bold mb-2 bg-gradient-to-r from-[#00d4ff] to-[#6366f1] bg-clip-text text-transparent"
         >
-          {c.name}
+          {names.primary}
         </motion.h1>
 
         <motion.p
@@ -78,7 +81,7 @@ export function HeroSection() {
           className="font-display text-xl mb-6"
           style={{ color: 'var(--text-secondary)' }}
         >
-          {c.nameZh}
+          {names.secondary}
         </motion.p>
 
         <motion.div

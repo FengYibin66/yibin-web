@@ -24,7 +24,9 @@ export function EducationSection() {
             <Link
               key={item.id}
               href={`/classic/education/${item.id}/`}
-              className="glass-card rounded-xl p-5 block no-underline group transition-transform duration-200 hover:-translate-y-0.5"
+              // edu-card：滚动显形的目标（lib/animations/scrollReveal.ts 的 education:cards）。
+              // 此前声明写的是 `#about .edu-card`，而这里没有这个类——翻转入场从来没跑过
+              className="edu-card glass-card rounded-xl p-5 block no-underline group transition-transform duration-200 hover:-translate-y-0.5"
             >
               <div className="flex items-start gap-4">
                 {item.qsRank ? (

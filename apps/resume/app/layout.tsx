@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Space_Grotesk, Inter, JetBrains_Mono, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
+// Lenis 官方基础样式（html.lenis 高度、lenis-stopped 的 overflow 等）。此前从未引入
+import 'lenis/dist/lenis.css'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import SmoothScrollProvider from '@/components/providers/SmoothScrollProvider'
 

@@ -45,7 +45,8 @@ export function ContactSection() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-start">
-          <div className="text-center md:text-right md:pr-8 md:border-r md:border-white/15">
+          {/* contact-item：滚动显形目标（scrollReveal.ts 的 contact:columns）。此前声明有、类没有，渐入从来没跑过 */}
+          <div className="contact-item text-center md:text-right md:pr-8 md:border-r md:border-white/15">
             <h3
               className="font-display font-bold text-lg mb-4"
               style={{ color: 'var(--text-primary)' }}
@@ -67,7 +68,7 @@ export function ContactSection() {
             </div>
           </div>
 
-          <div className="text-center md:text-left md:pl-2">
+          <div className="contact-item text-center md:text-left md:pl-2">
             <h3
               className="font-display font-bold text-lg mb-4"
               style={{ color: 'var(--text-primary)' }}

@@ -35,9 +35,14 @@ export const zh: SiteContent = {
       contact_found:     { title: '社交家',   label: '找到一种联系方式' },
       publications_read: { title: '学者',     label: '读一篇论文' },
       pet_cat:           { title: '好奇',     label: '走廊尽头有只猫在打盹' },
+      dog_companion:     { title: '有伴',     label: '继续走，小狗会跟着你' },
     },
     companions: {
       catStretch: '……喵',
+      catAgain: '又是你。',
+      dogGreet: '回来啦！',
+      dogWait: '进这里？',
+      dogLap: '第二圈！',
     },
     loading: {
       preparing: '正在准备房间',

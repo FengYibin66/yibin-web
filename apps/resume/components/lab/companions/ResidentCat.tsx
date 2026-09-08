@@ -1,21 +1,22 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Text, useTexture } from '@react-three/drei'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
 
-import { getRail } from '@/lib/lab/app/stores/corridorStore'
-import { nextCatState, type CatState } from '@/lib/lab/domain/corridor/companion'
-import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
+import { useAudio } from '@/context/AudioContext'
+import { getRail, useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { say } from '@/lib/lab/app/stores/speechStore'
+import { CAT_WAKE_DISTANCE, nextCatState, type CatState } from '@/lib/lab/domain/corridor/companion'
 import { useAchievementActions } from '@/context/AchievementsContext'
-import { useLabLabels } from '@/hooks/useLabLabels'
 import { useMotionScale } from '@/hooks/useMotionScale'
+import { SpeechBubble } from './SpeechBubble'
 import { useCatEyes } from './useCatEyes'
 
 /**
- * 守相框的猫（ADR 20260908160918 的第一只活物）。
+ * 走廊尽头打盹的猫（ADR 20260908160918 的第一只活物）。
  *
  * ## 它在哪、为什么在那
  *
@@ -40,8 +41,13 @@ import { useCatEyes } from './useCatEyes'
  *
  * ## 距离判断带滞回
  *
- * 8 单位内醒、12 单位外睡。两个阈值不同是刻意的：单阈值会让人站在临界点上
- * 时猫反复睁眼闭眼。
+ * 8 单位内醒、12 单位外睡（`domain/corridor/companion.ts`）。两个阈值不同是
+ * 刻意的：单阈值会让人站在临界点上时猫反复睁眼闭眼。
+ *
+ * ## 第二圈
+ *
+ * lap ≥ 1 时它一开始就是醒的，玩家走进 8 单位说一句"又是你"（每圈一次）——
+ * 走廊记得你来过（规格 lab-corridor-story.md §4）。
  */
 
 /**
@@ -71,48 +77,12 @@ const LANE_X = 1.9
 const FOOT_OFFSET = CAT_SIZE * 0.5 - CAT_SIZE * 0.15
 
 const STRETCH_DURATION = 0.8
-const SPEECH_VISIBLE_MS = 1800
 
 /**
- * 头顶气泡。
- *
- * 字号 0.06 试过：6 单位外只有约 8 像素高，根本读不出来。0.2 在同距离约 26 像素，
- * 和 UI 面板的小字一个量级。字后面垫一块纸片：白色线稿的猫头顶飘一行灰字，
- * 在白墙前是看不见的——Bruno 的车顶那句 "THIS IS SO NICE!" 也是先有气泡再有字。
- */
-const SPEECH_FONT_SIZE = 0.2
-/** 按最长的那句（"...meow"，约 0.75 宽）留两边各 0.17 的边距 */
-const BUBBLE_WIDTH = 1.1
-const BUBBLE_HEIGHT = 0.45
-const BUBBLE_RADIUS = 0.16
-/** 气泡尾巴（指向猫头的小三角） */
-const BUBBLE_TAIL = 0.14
-/**
- * 尾巴尖所在的高度。猫的线稿在 1.15 见方的平面里只占中下部，耳朵尖大约在
+ * 气泡尾巴尖所在的高度。猫的线稿在 1.15 见方的平面里只占中下部，耳朵尖大约在
  * 中心往上 0.4 × 边长处——按平面顶边（0.5）放会让气泡悬在半空（实机截图）。
  */
 const BUBBLE_ANCHOR_Y = CAT_SIZE * 0.4
-
-/** 圆角矩形 + 底部小三角，一笔画成一个 Shape，出一块气泡纸片 */
-function makeBubbleShape(w: number, h: number, r: number, tail: number): THREE.Shape {
-  const shape = new THREE.Shape()
-  const hw = w / 2
-  const hh = h / 2
-  shape.moveTo(-hw + r, -hh)
-  // 底边左半 → 尾巴 → 底边右半
-  shape.lineTo(-tail * 0.6, -hh)
-  shape.lineTo(0, -hh - tail)
-  shape.lineTo(tail * 0.6, -hh)
-  shape.lineTo(hw - r, -hh)
-  shape.quadraticCurveTo(hw, -hh, hw, -hh + r)
-  shape.lineTo(hw, hh - r)
-  shape.quadraticCurveTo(hw, hh, hw - r, hh)
-  shape.lineTo(-hw + r, hh)
-  shape.quadraticCurveTo(-hw, hh, -hw, hh - r)
-  shape.lineTo(-hw, -hh + r)
-  shape.quadraticCurveTo(-hw, -hh, -hw + r, -hh)
-  return shape
-}
 
 /* CatState 与三态的切换规则都在 domain（`corridor/companion.ts`），这里只渲染 */
 
@@ -124,8 +94,8 @@ interface ResidentCatProps {
 }
 
 export function ResidentCat({ z, side }: ResidentCatProps) {
-  const labels = useLabLabels()
   const { unlockAchievement } = useAchievementActions()
+  const { play } = useAudio()
   const motionScale = useMotionScale()
 
   const bodyTex = useTexture('/textures/corridor/cat_body.webp')
@@ -134,17 +104,21 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
   const leftPupilRef = useRef<THREE.Mesh>(null)
   const rightPupilRef = useRef<THREE.Mesh>(null)
 
-  const [state, setState] = useState<CatState>('sleep')
-  const [speaking, setSpeaking] = useState(false)
-  const stateRef = useRef<CatState>('sleep')
+  // 第二圈起它是醒着的（挂载时读一次；圈数在猫可见期间不会变）
+  const [state, setState] = useState<CatState>(() =>
+    useCorridorStore.getState().lap >= 1 ? 'awake' : 'sleep',
+  )
+  const stateRef = useRef<CatState>(state)
   stateRef.current = state
+  /** 这一圈打过招呼了吗（每圈一次） */
+  const greetedLap = useRef(-1)
 
   /*
     把状态写到根元素上（`html[data-lab-cat]`）。
 
     猫是 R3F 的 mesh，**不在 DOM 里** —— 没有这个属性，"靠近它会醒吗"就只能靠
-    在截图里找一只 0.45 单位宽的猫，而它在正对柜子时恰好落在视野边缘外
-    （fov 60、横向 3.24 单位）。实测排查这件事时就卡在这里。
+    在截图里找一只猫，而它在正对柜子时恰好落在视野边缘外。实测排查这件事时就
+    卡在这里。
 
     用 dataset 而不是往 store 加字段：`lib/animations/scrollReveal.ts` 的
     `data-reveal-arrival` 是同一个先例，E2E 与巡检都能直接读，且不给世界状态
@@ -176,8 +150,16 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
     （ADR 20260908172231）。
   */
   useFrame(state3 => {
-    const next = nextCatState(stateRef.current, getRail().z - z)
+    const distance = getRail().z - z
+    const next = nextCatState(stateRef.current, distance)
     if (next !== stateRef.current) setState(next)
+
+    // 第二圈：走近时说一句"又是你"（每圈一次；规则层会再按冷却与互斥过滤）
+    const lap = useCorridorStore.getState().lap
+    if (lap >= 1 && greetedLap.current !== lap && Math.abs(distance) <= CAT_WAKE_DISTANCE) {
+      greetedLap.current = lap
+      say({ speaker: 'cat', key: 'catAgain', priority: 2 })
+    }
 
     // 睡着时的呼吸起伏。伸懒腰期间不要碰 scale —— 那是 gsap 在写
     const body = bodyRef.current
@@ -202,14 +184,17 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
     }
   }, [])
 
+  const x = side === 'left' ? -LANE_X : LANE_X
+
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
       event.stopPropagation()
       if (stateRef.current === 'stretch') return
 
       unlockAchievement('pet_cat')
-      setSpeaking(true)
-      window.setTimeout(() => setSpeaking(false), SPEECH_VISIBLE_MS)
+      // 一句"……喵"走统一的气泡规则（互斥 / 冷却 / 优先级）；叫声从猫的位置发出
+      say({ speaker: 'cat', key: 'catStretch', priority: 3 })
+      play('cat_meow', { position: [x, FLOOR_Y + FOOT_OFFSET, z] })
 
       /*
         `prefers-reduced-motion` 下**跳过动画但保留反馈**：成就照解、字照冒。
@@ -243,18 +228,11 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
         )
       })
     },
-    [motionScale, unlockAchievement],
+    [motionScale, unlockAchievement, play, x, z],
   )
 
-  const bubbleShape = useMemo(
-    () => makeBubbleShape(BUBBLE_WIDTH, BUBBLE_HEIGHT, BUBBLE_RADIUS, BUBBLE_TAIL),
-    [],
-  )
-
-  const x = side === 'left' ? -LANE_X : LANE_X
   /** 稍微转向走廊中央，别让猫的侧面正对着墙 */
   const rotationY = side === 'left' ? -0.35 : 0.35
-  const speechText = labels.companions.catStretch
 
   return (
     <group
@@ -306,35 +284,8 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
         </mesh>
       </group>
 
-      {/*
-        头顶那一行字。只有一个发言者，所以不抽 speech 模块——等狗来了再抽
-        （那时才有"同时只一个气泡""每人一个冷却"这类需要一处统一的规则）。
-        字体必须走 fontForText：写死路径会让中文落到 jsDelivr 的兜底字体，
-        大陆访客看到空白（`labFonts.test.ts` 全禁）。
-      */}
-      {speaking && (
-        <group position={[0, BUBBLE_ANCHOR_Y + BUBBLE_TAIL + BUBBLE_HEIGHT / 2, 0.02]}>
-          {/* 墨线描边：同一形状放大一点垫在底下 */}
-          <mesh position={[0, 0, -0.002]} scale={[1.03, 1.05, 1]}>
-            <shapeGeometry args={[bubbleShape]} />
-            <meshBasicMaterial color="#3a3a3a" depthWrite={false} />
-          </mesh>
-          <mesh>
-            <shapeGeometry args={[bubbleShape]} />
-            <meshBasicMaterial color="#fffdf7" depthWrite={false} />
-          </mesh>
-          <Text
-            position={[0, 0, 0.004]}
-            fontSize={SPEECH_FONT_SIZE}
-            color="#3a3a3a"
-            anchorX="center"
-            anchorY="middle"
-            font={fontForText(speechText, LAB_FONT_LATIN_REGULAR)}
-          >
-            {speechText}
-          </Text>
-        </group>
-      )}
+      {/* 头顶那一行字：规则在 speech.ts，画在 SpeechBubble */}
+      <SpeechBubble speaker="cat" anchorY={BUBBLE_ANCHOR_Y} />
     </group>
   )
 }

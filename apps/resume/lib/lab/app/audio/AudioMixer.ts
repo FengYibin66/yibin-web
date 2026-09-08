@@ -134,12 +134,34 @@ export class AudioMixer {
    * 「无视用户的音量设置」。原实现把它当绝对值传给 `audio.volume`，于是
    * 用户调低 SFX 音量后这两声反而相对变大。
    */
-  play(name: SoundName, opts?: { volume?: number }): number | null {
+  /**
+   * 一次性音效。`position` 只对声明了 `spatial` 的音有效：叫声从猫 / 狗所在的
+   * 位置发出（ADR 20260908204304）；没声明 spatial 的音传了 position 也当 2D 播——
+   * 脚步是玩家自己的，不该有方位。
+   */
+  play(
+    name: SoundName,
+    opts?: { volume?: number; position?: readonly [number, number, number] },
+  ): number | null {
+    const def = soundDef(name)
     const howl = this.loadedHowlFor(name)
     const id = howl.play()
+    if (def.spatial && opts?.position) {
+      howl.pos(opts.position[0], opts.position[1], opts.position[2], id)
+      howl.pannerAttr(
+        {
+          panningModel: 'HRTF',
+          distanceModel: def.spatial.distanceModel as 'linear' | 'inverse',
+          refDistance: def.spatial.refDistance,
+          rolloffFactor: def.spatial.rolloffFactor,
+          maxDistance: 10000,
+        },
+        id,
+      )
+    }
     if (opts?.volume !== undefined) {
       const scale = Math.min(1, Math.max(0, opts.volume))
-      howl.volume(this.busVolume(soundDef(name).bus) * scale, id)
+      howl.volume(this.busVolume(def.bus) * scale, id)
     }
     this.armUnlockIfBlocked(howl, id)
     return id

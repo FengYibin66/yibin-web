@@ -94,3 +94,34 @@ describe('入口页纹理', () => {
     }
   })
 })
+
+/*
+  活物纸偶（规格 lab-companions.md §5）：狗 5 个部件 + 坐姿 1 张，合计 < 200 KB、
+  单张 < 60 KB。部件是 512 见方、大面积透明的线稿，正常在 2–10 KB；超了说明
+  有人把它当照片编码了。
+*/
+const COMPANION = join(ROOT, 'public/textures/corridor/companion')
+const COMPANION_TOTAL_KB = 200
+const COMPANION_PER_FILE_KB = 60
+
+describe('活物纸偶纹理', () => {
+  const files = () => readdirSync(COMPANION).filter(f => f.endsWith('.webp')).sort()
+
+  it('狗的六张部件都在（少一张那个部件就不渲染）', () => {
+    expect(files()).toEqual([
+      'dog_body.webp', 'dog_head.webp', 'dog_leg_back.webp',
+      'dog_leg_front.webp', 'dog_sit.webp', 'dog_tail.webp',
+    ])
+  })
+
+  it(`合计不超过 ${COMPANION_TOTAL_KB} KB`, () => {
+    const total = files().reduce((s, f) => s + sizeKb(join(COMPANION, f)), 0)
+    expect(total).toBeLessThan(COMPANION_TOTAL_KB)
+  })
+
+  it(`单张不超过 ${COMPANION_PER_FILE_KB} KB`, () => {
+    for (const f of files()) {
+      expect(sizeKb(join(COMPANION, f)), f).toBeLessThan(COMPANION_PER_FILE_KB)
+    }
+  })
+})

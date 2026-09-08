@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    引路小狗 · 坐姿正面（头朝相机）。一张整图，不分部件。
+    脚底 / 臀在 v ≈ 0.83（dogParts.mjs 的 DOG_SIT_FOOT_V）。
+  -->
+  <defs>
+    <style>
+      .ink { fill: #ffffff; stroke: #2b2b2b; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+      .ink-thin { fill: none; stroke: #2b2b2b; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+      .dot { fill: #2b2b2b; stroke: none; }
+    </style>
+  </defs>
+
+  <!-- 尾巴从右后探出一小卷 -->
+  <path d="M 660 760 C 700 748, 730 712, 716 676 C 706 650, 674 660, 682 686" fill="none" stroke="#2b2b2b" stroke-width="44" stroke-linecap="round"/>
+  <path d="M 660 760 C 700 748, 730 712, 716 676 C 706 650, 674 660, 682 686" fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- 身体：坐着的梨形 -->
+  <path class="ink" d="M 392 440 C 344 520, 330 690, 356 800 C 372 846, 652 848, 668 800 C 694 690, 680 520, 632 440 Z"/>
+  <!-- 胸口白毛的两笔 -->
+  <path class="ink-thin" d="M 468 560 C 480 600, 480 640, 470 680 M 556 560 C 544 600, 544 640, 554 680"/>
+
+  <!-- 前爪 -->
+  <path class="ink" d="M 404 770 C 396 800, 400 836, 420 846 C 446 856, 478 848, 484 826 C 490 800, 484 772, 470 764 Z"/>
+  <path class="ink" d="M 554 764 C 540 772, 534 800, 540 826 C 546 848, 578 856, 604 846 C 624 836, 628 800, 620 770 Z"/>
+  <path class="ink-thin" d="M 424 836 L 424 846 M 446 838 L 446 848 M 578 838 L 578 848 M 600 836 L 600 846"/>
+
+  <!-- 耳朵 -->
+  <path class="ink" d="M 398 322 L 372 196 L 472 292 Z"/>
+  <path class="ink" d="M 626 322 L 652 196 L 552 292 Z"/>
+
+  <!-- 头 -->
+  <path class="ink" d="M 512 226 C 596 224, 656 288, 654 366 C 652 446, 592 496, 512 496 C 432 496, 372 446, 370 366 C 368 288, 428 226, 512 226 Z"/>
+  <!-- 吻 -->
+  <path class="ink" d="M 512 386 C 552 384, 576 410, 570 440 C 564 468, 534 480, 512 480 C 490 480, 460 468, 454 440 C 448 410, 472 384, 512 386 Z"/>
+  <circle class="dot" cx="512" cy="410" r="11"/>
+  <path class="ink-thin" d="M 512 422 L 512 448 M 486 456 Q 512 476, 538 456"/>
+  <!-- 眼睛 -->
+  <circle class="dot" cx="466" cy="344" r="11"/>
+  <circle class="dot" cx="558" cy="344" r="11"/>
+  <path class="ink-thin" d="M 448 312 C 460 304, 474 306, 482 314 M 542 314 C 550 306, 564 304, 576 312"/>
+</svg>

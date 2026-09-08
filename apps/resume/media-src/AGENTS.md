@@ -24,13 +24,19 @@ textures/entrance/ 入口页纹理原图（砖墙一张 604KB）
                    → scripts/media/optimize-textures.mjs
 credentials/       荣誉与证书页的原图（jpg / png，12 张共 7 MB）
                    → scripts/media/optimize-credentials.mjs
+sounds/synth/      活物与脚步的合成音 WAV（ADR 20260908204304）——**由脚本生成**，
+                   不是手工素材：scripts/media/synth-sounds.mjs 写出它们，
+                   再由 encode-audio.mjs 编成 m4a + ogg
+textures/companion/ 活物纸偶的手写 SVG（狗：侧面分部件、坐姿整图）
+                   → scripts/media/companion-parts.mjs（逐组栅格化 + 枢轴校验）
 ```
 
 ```
 .stamps/           内容指纹（跟着源一起提交，不部署）
 ```
 
-五条流水线的产物都在 `public/` 下，五个脚本都支持 `--check`（只报告不写），
+七条流水线的产物都在 `public/` 下（合成音是两级：synth-sounds 出 WAV 进本目录，
+encode-audio 再出 m4a/ogg 进 public），七个脚本都支持 `--check`（只报告不写），
 CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**——这是这类生成物
 的共同失败模式：
 
@@ -41,6 +47,8 @@ CI 会跑。**改了源忘了重跑，线上就是旧文件，而且不报错**�
 | 字体 | 新加的汉字落到兜底字体（一句话里蹦出一个不同字形的字） |
 | 纹理 | 入口页多下 900KB |
 | 证书图片 | 新加的证书那张卡是空的（数据引用 `.webp`，产物不存在） |
+| 合成音 | 改了参数没重跑：听到的还是旧音；只跑了 synth 没跑 encode：public 里是旧的 m4a |
+| 活物部件 | 改了 SVG 没重跑：狗还是旧画稿；改了枢轴声明没重跑：腿绕着空气转（脚本会在重跑时报错） |
 
 `doors/` 里是**原始**门板：Classic 页那两扇贴着 HTML5 / JS / React /
 node.js / CSS3，走廊侧那两扇贴着 Instagram / TikTok / YouTube。它们与
@@ -128,6 +136,12 @@ CSS 用 woff2、3D 文字用 TTF，**两份都要发**——drei 的 `<Text>`（
 `bg_corridor.ogg` 仍住在 `public/sounds/`，因为它是 `lib/lab/domain/audio/manifest.ts`
 里声明的 fallback 源（`__tests__/soundManifest.test.ts` 断言清单里每个候选文件
 真实可达）。它不是"忘了搬"。
+
+## 自有素材
+
+`textures/companion/*.svg` 与 `sounds/synth/*.wav`（及其产物）是本仓库自己画 / 合成的，
+不涉及外部许可，不进 ADR 20260903140619 的许可登记。狗的形象与风格约束见
+`docs/specs/lab-companions.md` §6 / §10。
 
 ## 素材许可
 

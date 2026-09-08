@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    引路小狗 · 侧面站姿（朝 −x）。柴犬式轮廓：立耳、卷尾、短吻，无项圈。
+    每个部件一个顶层 <g id>，切层脚本按 id 单独栅格化（其余组隐藏）。
+    枢轴在 lib/lab/domain/corridor/dogParts.mjs：
+      body 0.53,0.55 · head 0.40,0.49 · leg-front 0.395,0.62 · leg-back 0.67,0.62 · tail 0.73,0.49
+    风格与 cat_body 一致：细墨线、白填充、透明底。线条刻意不对称，是手画的意思。
+  -->
+  <defs>
+    <style>
+      .ink { fill: #ffffff; stroke: #2b2b2b; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+      .ink-thin { fill: none; stroke: #2b2b2b; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+      .dot { fill: #2b2b2b; stroke: none; }
+    </style>
+  </defs>
+
+  <!-- 后腿先画，被身体压住一半 -->
+  <g id="leg-back">
+    <path class="ink" d="M 646 612 C 640 668, 642 728, 647 796 C 648 818, 658 830, 690 831 C 722 832, 732 822, 730 800 C 726 740, 726 675, 724 618 Z"/>
+    <path class="ink-thin" d="M 664 812 C 676 806, 700 806, 714 812"/>
+  </g>
+
+  <g id="tail">
+    <!-- 卷尾：先粗墨线做描边，再细一档的白线覆盖，得到一条有轮廓的卷 -->
+    <path d="M 742 500 C 792 472, 842 418, 826 360 C 812 316, 758 328, 764 372 C 768 400, 802 402, 810 376" fill="none" stroke="#2b2b2b" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 742 500 C 792 472, 842 418, 826 360 C 812 316, 758 328, 764 372 C 768 400, 802 402, 810 376" fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="ink-thin" d="M 778 458 C 800 440, 812 418, 808 396"/>
+  </g>
+
+  <g id="body">
+    <path class="ink" d="M 336 566 C 330 476, 424 428, 546 430 C 662 432, 764 474, 772 562 C 778 642, 706 690, 566 690 C 436 690, 340 654, 336 566 Z"/>
+    <!-- 背线与腹线的两笔补描，纸偶感 -->
+    <path class="ink-thin" d="M 400 468 C 470 444, 560 440, 640 456"/>
+    <path class="ink-thin" d="M 420 664 C 470 678, 560 682, 640 672"/>
+    <!-- 胸口一小片竖毛 -->
+    <path class="ink-thin" d="M 364 600 C 372 612, 372 624, 366 636 M 386 606 C 392 618, 392 630, 388 640"/>
+  </g>
+
+  <g id="leg-front">
+    <path class="ink" d="M 366 612 C 362 668, 362 728, 366 796 C 367 818, 377 830, 407 831 C 437 832, 449 822, 447 800 C 444 740, 443 675, 440 618 Z"/>
+    <path class="ink-thin" d="M 384 812 C 396 806, 420 806, 432 812"/>
+  </g>
+
+  <g id="head">
+    <!-- 立耳 -->
+    <path class="ink" d="M 238 354 L 214 236 L 308 324 Z"/>
+    <path class="ink" d="M 328 322 L 372 224 L 398 334 Z"/>
+    <!-- 头 -->
+    <path class="ink" d="M 300 326 C 372 324, 424 384, 418 452 C 412 520, 360 556, 296 554 C 232 552, 186 502, 190 440 C 194 380, 236 328, 300 326 Z"/>
+    <!-- 短吻 -->
+    <path class="ink" d="M 214 452 C 168 452, 146 486, 174 510 C 204 530, 254 508, 248 476 C 244 458, 230 452, 214 452 Z"/>
+    <circle class="dot" cx="166" cy="480" r="10"/>
+    <path class="ink-thin" d="M 182 516 Q 204 532, 232 520"/>
+    <!-- 眼睛 -->
+    <circle class="dot" cx="276" cy="428" r="10"/>
+    <!-- 眉心一小撮 -->
+    <path class="ink-thin" d="M 300 372 C 312 364, 326 366, 334 376"/>
+  </g>
+</svg>

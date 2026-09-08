@@ -68,16 +68,28 @@ const MUSIC = [
   { from: 'bg_corridor.ogg', to: 'bg_corridor.m4a', bitrate: '64k', channels: 2 },
 ]
 
+/**
+ * 合成音效（ADR 20260908204304）：源是 `synth-sounds.mjs` 写出的 WAV，
+ * 住 `media-src/sounds/synth/`。每个出 m4a（WebKit）+ ogg（Firefox / Chromium
+ * 的兜底），清单里两个都列。都是几十毫秒的短音，64k 单声道绰绰有余。
+ */
+const SYNTH_NAMES = ['footstep_a', 'footstep_b', 'paw_a', 'paw_b', 'dog_bark', 'cat_meow', 'bubble_pop']
+const SYNTH = SYNTH_NAMES.flatMap(name => [
+  { from: `synth/${name}.wav`, to: `${name}.m4a`, bitrate: '64k', channels: 1 },
+  { from: `synth/${name}.wav`, to: `${name}.ogg`, bitrate: '64k', channels: 1, codec: 'libvorbis' },
+])
+
 const force = process.argv.includes('--force')
 const checkOnly = process.argv.includes('--check')
 
 /** 参与指纹的：全部源文件 + 本脚本自身（改了码率也算过期） */
 const STAMP_NAME = 'encode-audio'
+const JOBS = [...AMBIENCE, ...MUSIC, ...SYNTH]
 const stampInputs = [
-  ...[...AMBIENCE, ...MUSIC].map(job => join(srcDirFor(job.from), job.from)),
+  ...new Set(JOBS.map(job => join(srcDirFor(job.from), job.from))),
   fileURLToPath(import.meta.url),
 ]
-const stampOutputs = [...AMBIENCE, ...MUSIC].map(job => join(OUT, job.to))
+const stampOutputs = JOBS.map(job => join(OUT, job.to))
 
 /**
  * `bg_corridor.ogg` 仍住在 `public/`——它是音频清单里声明的 fallback 源，
@@ -134,8 +146,8 @@ let encoded = 0
 let savedKb = 0
 let problems = 0
 
-for (const job of [...AMBIENCE, ...MUSIC]) {
-  const { from, to, bitrate, channels } = job
+for (const job of JOBS) {
+  const { from, to, bitrate, channels, codec } = job
   const src = join(srcDirFor(from), from)
   const dst = join(OUT, to)
   const state = needsWork(job)
@@ -161,7 +173,7 @@ for (const job of [...AMBIENCE, ...MUSIC]) {
   execFileSync('ffmpeg', [
     '-y', '-loglevel', 'error',
     '-i', src,
-    '-c:a', 'aac',
+    '-c:a', codec ?? 'aac',
     '-b:a', bitrate,
     '-ac', String(channels),
     dst,

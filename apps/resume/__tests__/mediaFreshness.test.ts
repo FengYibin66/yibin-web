@@ -29,6 +29,9 @@ function webpsIn(dir: string): string[] {
   return readdirSync(dir).filter(f => f.endsWith('.webp')).sort()
 }
 
+/** 与 `encode-audio.mjs` / `synth-sounds.mjs` 里的 SYNTH_NAMES 一致 */
+const SYNTH_NAMES = ['footstep_a', 'footstep_b', 'paw_a', 'paw_b', 'dog_bark', 'cat_meow', 'bubble_pop']
+
 /** 与各脚本里 `stampInputs` 的构成保持一致 */
 const PIPELINES = [
   {
@@ -40,7 +43,24 @@ const PIPELINES = [
       A('media-src/sounds/szummorza.mp3'),
       A('media-src/sounds/szummiasta.mp3'),
       A('public/sounds/bg_corridor.ogg'),
+      ...SYNTH_NAMES.map(n => A('media-src/sounds/synth', `${n}.wav`)),
       A('scripts/media/encode-audio.mjs'),
+    ],
+  },
+  {
+    name: 'synth-sounds',
+    hint: 'node scripts/media/synth-sounds.mjs',
+    // 源只有脚本本身：参数与种子都写死，改脚本 = 改声音
+    inputs: () => [A('scripts/media/synth-sounds.mjs')],
+  },
+  {
+    name: 'companion-parts',
+    hint: 'node scripts/media/companion-parts.mjs',
+    inputs: () => [
+      A('media-src/textures/companion/dog.svg'),
+      A('media-src/textures/companion/dog_sit.svg'),
+      A('lib/lab/domain/corridor/dogParts.mjs'),
+      A('scripts/media/companion-parts.mjs'),
     ],
   },
   {
@@ -107,11 +127,13 @@ describe('素材产物与源同步', () => {
     expect(existsSync(dir)).toBe(true)
     const stamps = readdirSync(dir).filter(f => f.endsWith('.json')).sort()
     expect(stamps).toEqual([
+      'companion-parts.json',
       'encode-audio.json',
       'gallery-door.json',
       'optimize-credentials.json',
       'optimize-textures.json',
       'subset-fonts.json',
+      'synth-sounds.json',
     ])
   })
 

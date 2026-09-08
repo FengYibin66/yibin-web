@@ -35,9 +35,14 @@ export const en: SiteContent = {
       contact_found:     { title: 'Sociable',    label: 'Find a contact method' },
       publications_read: { title: 'Scholar',     label: 'Read a publication' },
       pet_cat:           { title: 'Curious',     label: 'A cat naps at the end of the hall' },
+      dog_companion:     { title: 'Good Company', label: 'Keep walking, the dog will follow' },
     },
     companions: {
       catStretch: '...meow',
+      catAgain: 'You again.',
+      dogGreet: 'Welcome back!',
+      dogWait: 'In here?',
+      dogLap: 'Round two!',
     },
     loading: {
       preparing: 'Preparing the room',

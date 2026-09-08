@@ -38,8 +38,8 @@ export interface AudioState {
   setBgmVolume: (v: number) => void
   setAmbienceVolume: (v: number) => void
 
-  /** `opts.volume` 是相对总线音量的倍数，不是绝对值 */
-  play: (name: SoundName, opts?: { volume?: number }) => void
+  /** `opts.volume` 是相对总线音量的倍数，不是绝对值；`position` 只对 spatial 音有效 */
+  play: (name: SoundName, opts?: { volume?: number; position?: readonly [number, number, number] }) => void
   playBgm: (name: SoundName) => void
   stopBgm: () => void
   playAmbience: (name: SoundName, position?: readonly [number, number, number]) => void
@@ -54,7 +54,9 @@ export function useAudio(): AudioState {
 
   // 这四个回调的依赖里**没有音量**——identity 必须恒定，见文件顶部第 2 点
   const play = useCallback(
-    (name: SoundName, opts?: { volume?: number }) => { audioMixer.play(name, opts) },
+    (name: SoundName, opts?: { volume?: number; position?: readonly [number, number, number] }) => {
+      audioMixer.play(name, opts)
+    },
     [],
   )
   const playBgm = useCallback((name: SoundName) => { audioMixer.music_(name) }, [])

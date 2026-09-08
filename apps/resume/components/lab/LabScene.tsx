@@ -9,6 +9,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 import { CameraRig } from './CameraRig'
 import { InfiniteCorridorManager } from './InfiniteCorridorManager'
+import { GuideDog } from './companions/GuideDog'
+import { Footsteps } from './Footsteps'
 import { SceneFog } from './SceneFog'
 
 // Kick off all texture requests in ONE LoadingManager wave as soon as this
@@ -211,6 +213,9 @@ function LabCanvas() {
           <CameraRig />
           <CameraController onSetOverride={handleSetOverride} onExplored={handleExplored} />
           <InfiniteCorridorManager setCameraOverride={setCameraOverride} />
+          {/* 走廊层的活物与声音：跟着玩家、不属于任何一段（ADR 20260908160918 / 204304） */}
+          <GuideDog />
+          <Footsteps />
 
           <TeleportRoom />
         </Suspense>

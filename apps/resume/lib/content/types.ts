@@ -240,13 +240,21 @@ export interface LabUiLabels {
   /** 教程气泡：{标题, 说明} */
   tutorials: Record<
     'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
-    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat',
+    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat' | 'dog_companion',
     { title: string; label: string }
   >
-  /** 活物冒的一行字（ADR 20260908160918） */
+  /** 活物冒的一行字（ADR 20260908160918；规则见 domain/corridor/speech.ts） */
   companions: {
     /** 猫伸懒腰时头顶那句 */
     catStretch: string
+    /** 第二圈再见到猫 */
+    catAgain: string
+    /** 狗在门旁等你出来，见到你 */
+    dogGreet: string
+    /** 狗跑到门口坐下 */
+    dogWait: string
+    /** 走进第二圈 */
+    dogLap: string
   }
   /** 加载与失败态 */
   loading: {

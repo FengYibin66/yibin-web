@@ -56,8 +56,9 @@
 
 ### 2.3 侧道与视野中央禁区
 
-- `lane` ∈ {+1.4, −1.4}。默认取 **下一扇门的对侧**（门在左墙则狗走右道），保证狗不挡门。
-- 换道只在两门之间的空档做，而且**必须在相机后方完成**：狗先落后到 `camZ + 2`（相机看不见），换 x，再追上。任何时刻 |x| ≥ 0.6 ——这是不变量，reducer 单测用 2000 步随机输入序列断言，任何一步违反即失败。
+- `lane` ∈ {+1.4, −1.4}。**登场时**按第一扇门选对侧（第一扇门 About 在左墙 → 狗走右道），之后**不换道**。
+- **换道已取消（2026-09-08 实现时）**：初稿要求「走下一扇门的对侧、换道在相机后方完成」。实机发现门每 12 单位左右交替，狗就得每 12 单位落到相机后方换一次道——每过一扇门消失两秒。而几何上侧道 x = 1.4（狗身宽 1.15，外缘 1.97）离墙 3.5 上的门够远，门翻板转 30° 后内缘也在 2.25 以外：狗**从不挡门**，换道解决的是一个不存在的问题。
+- 任何时刻 |x| ≥ 0.6 ——这是不变量，reducer 单测用 2000 步随机输入序列断言，任何一步违反即失败。等门（§2.2 `wait-at-door`）时贴**自己这一侧**的墙，不穿过中线。
 - 与家具冲突：`CORRIDOR_FURNITURE` 在 −27（左）/ −49（右）/ −63（左）；狗侧道 x=1.4 与家具贴墙 x≈±3 不相交，不需要避让。
 
 ### 2.4 朝向与镜像
@@ -128,7 +129,7 @@
 | 项 | 内容 |
 |----|------|
 | 成就 `pet_cat` | 点猫一次。`unlockedBy: { kind: 'corridor-interaction', target: 'cat' }`（新 trigger 类型），persisted |
-| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-interaction', landmarkId: 'guide-dog' }`（与 `pet_cat` 同一 trigger 类型；累计计时在 reducer 里，满 30 s 输出一次事件），persisted |
+| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-companion', companion: 'dog' }`——狗跟着玩家走、不在地标表里，所以不能像 `pet_cat` 那样用 landmarkId 引用；累计计时在 reducer 里，满 30 s 输出一次事件，persisted |
 | 教程气泡 | `labUi.tutorials.pet_cat`（作用域 `corridor`）：en "Curious" / "A cat naps at the end of the hall"；zh "好奇" / "走廊尽头有只猫在打盹"（已随猫的位置改）。`dog_companion`：en "Good Company" / "Keep walking, the dog will follow"；zh "有伴" / "继续走，小狗会跟着你" |
 | 音效 | **改为仓库内脚本离线合成，不用外部 CC0**（ADR 20260908204304，参数与触发规则见 `lab-corridor-story.md` §6）：`cat_meow`（`stretch` 进入帧）、`dog_bark`（`greet` 进入帧）、`paw_a/b`（狗 `trot`/`run` 每 0.9 单位一声，spatial 在狗）、`footstep_a/b`（玩家每 1.8 单位一步、a/b 交替、音量按速度分档）、`bubble_pop`（气泡出现）。全部 sfx 总线、经既有 3D 定位、尊重静音；reduced motion 不影响声音 |
 

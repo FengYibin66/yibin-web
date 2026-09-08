@@ -1,58 +1,111 @@
 'use client'
 
-import { useRef } from 'react'
-import { useTexture } from '@react-three/drei'
-import type * as THREE from 'three'
-import gsap from 'gsap'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Text, useTexture } from '@react-three/drei'
+import * as THREE from 'three'
+
+import { useLabLabels } from '@/hooks/useLabLabels'
+import { WALL_X } from '@/lib/lab/domain/corridor/layout'
+import {
+  CITY_TIME_ZONE,
+  localHourIn,
+  localTimeLabel,
+  skyColorAt,
+  type WindowCity,
+} from '@/lib/lab/domain/corridor/worldClock'
+import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
+import type { SkylineSpec } from '@/lib/lab/domain/sketch/types'
+import { sketchTexture } from '@/lib/lab/infra/sketch/textureCache'
 
 /**
- * ⚠️ 当前**未被任何地方挂载**（审计 H3）。
+ * 走廊的窗（ADR 20260908204303，规格 lab-corridor-story.md §3）。
  *
- * 保留而不删除，是因为 ADR 20260903140619 的 Projects 房间重做要用它做左墙的
- * 夜窗。但它的纹理（`corridor/window_sketch`、`corridor/avatar_window`）已从
- * `lib/lab/texturePreload.ts` 移除——为一个不渲染的组件预载两张图是纯浪费。
- * 重新挂载时把纹理加进那个房间的 `assets` 声明里。
+ * 窗外是三座城市**此刻**的天色：伦敦的夜、新加坡的午后、北京的清晨同时出现在
+ * 一条走廊里。天色按当地小时分段（`worldClock.ts`，纯函数），每 60 秒重算一次
+ * ——用 `setInterval` 不用 `useFrame`：一分钟变一次的东西不该每帧算。
  *
- * 若 ADR 20260903140619 最终决定另写一个组件，本文件应当删除而不是继续留着。
+ * 这个文件原先是零引用的死代码（头像从窗外探头，纹理路径也不存在）；ADR 定的是
+ * "重写复活或删掉，取其短"——重写。
  */
-export function CorridorWindow() {
-  const avatarRef = useRef<THREE.Mesh>(null)
-  const windowTex = useTexture('/textures/corridor/window_sketch.webp')
-  const avatarTex = useTexture('/textures/corridor/avatar_window.webp')
 
-  const handlePointerEnter = () => {
-    if (!avatarRef.current) return
-    // After rotation=[0,-π/2,0], local +Z points into the corridor; avatar slides in along Z
-    gsap.to(avatarRef.current.position, { z: 0.1, duration: 0.5, ease: 'back.out(1.7)', overwrite: true })
-    gsap.to(avatarRef.current.rotation, { z: 0.1, duration: 0.5, ease: 'power2.out', overwrite: true })
-  }
+const FRAME_SIZE = 1.5
+const SKY_W = 1.3
+const SKY_H = 1.1
+const Y = 0.3
+const TEX_W = 320
+const TEX_H = 130
+const CLOCK_MS = 60_000
 
-  const handlePointerLeave = () => {
-    if (!avatarRef.current) return
-    gsap.to(avatarRef.current.position, { z: 2.0, duration: 0.4, ease: 'power2.in', overwrite: true })
-    gsap.to(avatarRef.current.rotation, { z: 0, duration: 0.4, ease: 'power2.in', overwrite: true })
-  }
+interface CorridorWindowProps {
+  city: WindowCity
+  z: number
+  side: 'left' | 'right'
+}
+
+export function CorridorWindow({ city, z, side }: CorridorWindowProps) {
+  const labels = useLabLabels()
+  const frameTex = useTexture('/textures/entrance/window_sketch.webp')
+
+  const skylineSpec = useMemo<SkylineSpec>(
+    () => ({ kind: 'skyline', id: city, size: { width: TEX_W, height: TEX_H }, city }),
+    [city],
+  )
+  const skylineTex = useMemo(() => sketchTexture(skylineSpec), [skylineSpec])
+
+  const tz = CITY_TIME_ZONE[city]
+  const [clock, setClock] = useState(() => ({ hour: localHourIn(tz, new Date()), label: localTimeLabel(tz, new Date()) }))
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date()
+      setClock({ hour: localHourIn(tz, now), label: localTimeLabel(tz, now) })
+    }
+    tick()
+    const id = window.setInterval(tick, CLOCK_MS)
+    return () => window.clearInterval(id)
+  }, [tz])
+
+  const skyMat = useRef<THREE.MeshBasicMaterial>(null)
+  useEffect(() => {
+    skyMat.current?.color.set(skyColorAt(clock.hour))
+  }, [clock.hour])
+
+  const x = side === 'left' ? -WALL_X + 0.01 : WALL_X - 0.01
+  const rotationY = side === 'left' ? Math.PI / 2 : -Math.PI / 2
+  const caption = `${labels.cities[city]} · ${clock.label}`
 
   return (
-    // position.x = 3.49 (flush with right wall), rotation.y = -π/2 so face points inward (-X)
-    <group position={[3.49, 0.3, -30]} rotation={[0, -Math.PI / 2, 0]}>
-      {/* 窗外背景 — behind window frame */}
-      <mesh position={[0, 0, -0.1]}>
-        <planeGeometry args={[1.3, 1.1]} />
-        <meshBasicMaterial color="#d6e4f0" />
+    <group position={[x, Y, z]} rotation={[0, rotationY, 0]}>
+      {/*
+        层次（沿墙面法线，离墙由近到远）：天色 → 剪影 → 窗框。
+        天色不能放到墙**后面**去——墙是实心平面，后面的东西会被深度测试吃掉
+        （第一版就是这样：窗框里一片空白，实机截图抓到）。窗框线稿的窗格是透明的，
+        所以把天色贴在墙前一点、窗框再前一点，从窗格里看出去正好是天。
+      */}
+      <mesh position={[0, 0, 0.002]}>
+        <planeGeometry args={[SKY_W, SKY_H]} />
+        <meshBasicMaterial ref={skyMat} color={skyColorAt(clock.hour)} />
       </mesh>
-
-      {/* Avatar — starts fully outside wall (local z=2.0), slides in to z=0.1 on hover */}
-      <mesh ref={avatarRef} position={[0, 0, 2.0]}>
-        <planeGeometry args={[1.5, 1.5]} />
-        <meshBasicMaterial map={avatarTex} transparent alphaTest={0.01} depthWrite={false} />
+      {/* 城市剪影：贴在天色前、窗框后 */}
+      <mesh position={[0, -SKY_H / 2 + (SKY_W * TEX_H) / TEX_W / 2, 0.005]}>
+        <planeGeometry args={[SKY_W, (SKY_W * TEX_H) / TEX_W]} />
+        <meshBasicMaterial map={skylineTex} transparent alphaTest={0.02} depthWrite={false} />
       </mesh>
-
-      {/* Window frame — hover trigger, sits on wall face (z=0) */}
-      <mesh onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}>
-        <planeGeometry args={[1.5, 1.5]} />
-        <meshBasicMaterial map={windowTex} transparent alphaTest={0.05} depthWrite={false} />
+      {/* 窗框（入口页那张线稿，复用），最靠观者 */}
+      <mesh position={[0, 0, 0.008]}>
+        <planeGeometry args={[FRAME_SIZE, FRAME_SIZE]} />
+        <meshBasicMaterial map={frameTex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>
+      {/* 窗下一行小字：城市 · 当地时间 */}
+      <Text
+        position={[0, -FRAME_SIZE / 2 - 0.1, 0.012]}
+        fontSize={0.12}
+        color="#5a4a32"
+        anchorX="center"
+        anchorY="top"
+        font={fontForText(caption, LAB_FONT_LATIN_REGULAR)}
+      >
+        {caption}
+      </Text>
     </group>
   )
 }

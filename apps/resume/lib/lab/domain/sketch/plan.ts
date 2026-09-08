@@ -22,8 +22,12 @@ import {
   type OpStyle,
   type SketchOp,
   type SketchSpec,
+  type SkylineSpec,
   type StickySpec,
+  type TallySpec,
   type TapeSpec,
+  type TimelineNoteSpec,
+  type YearMarkSpec,
 } from './types'
 
 /** 铅笔线：Lab 的默认笔法 */
@@ -584,5 +588,193 @@ export function planSketch(spec: SketchSpec): SketchOp[] {
     case 'dial': return planDial(spec)
     case 'tape': return planTape(spec)
     case 'cable': return planCable(spec)
+    case 'yearMark': return planYearMark(spec)
+    case 'timelineNote': return planTimelineNote(spec)
+    case 'skyline': return planSkyline(spec)
+    case 'tally': return planTally(spec)
   }
+}
+
+// ── 走廊时间线（ADR 20260908204303）────────────────────────────────────────
+
+const CHAR_WIDTH_RATIO = 0.52
+
+/** 按可用宽度反解字号（sketch/AGENTS.md 第三条：fillText 不折行，超出就画到纸外） */
+function fitSize(text: string, available: number, preferred: number, min: number): number {
+  const fit = text.length > 0 ? available / (text.length * CHAR_WIDTH_RATIO) : Infinity
+  return Math.max(min, Math.round(Math.min(preferred, fit)))
+}
+
+/** 年份刻度：左侧一小段竖线，右侧手写年份；整体略微倾斜像是蹲下来写的 */
+function planYearMark(spec: YearMarkSpec): SketchOp[] {
+  const { width: w, height: h } = spec.size
+  const seed = seedFrom(specKey(spec))
+  const ops: SketchOp[] = []
+  const tickX = Math.round(w * 0.12)
+  ops.push({
+    kind: 'line',
+    x1: tickX, y1: Math.round(h * 0.15),
+    x2: tickX, y2: Math.round(h * 0.85),
+    style: pencil(seed, { strokeWidth: 2.6 }),
+  })
+  const text = String(spec.year)
+  const size = fitSize(text, w - tickX - w * 0.2, h * 0.62, 8)
+  ops.push({
+    kind: 'text',
+    x: Math.round(tickX + w * 0.1),
+    y: Math.round(h * 0.5 + size * 0.36),
+    text,
+    size,
+    color: INK,
+    align: 'left',
+    rotate: -0.02,
+  })
+  return ops
+}
+
+/** 履历便签：一片纸 + 顶上一条胶带 + 三行字 */
+function planTimelineNote(spec: TimelineNoteSpec): SketchOp[] {
+  const { width: w, height: h } = spec.size
+  const seed = seedFrom(specKey(spec))
+  const paper = spec.paper ?? STICKY_PAPER
+  const pad = Math.round(w * 0.08)
+  const ops: SketchOp[] = []
+
+  // 纸面：四角略不齐，多边形比矩形像手撕的
+  ops.push({
+    kind: 'polygon',
+    points: [
+      [2, 4], [w - 3, 1], [w - 1, h - 3], [1, h - 1],
+    ],
+    style: pencil(seed, { fill: paper, fillStyle: 'solid', strokeWidth: 2.2 }),
+  })
+  // 顶上一条胶带（半透明浅色，斜一点）
+  const tapeW = Math.round(w * 0.28)
+  const tapeH = Math.round(h * 0.11)
+  ops.push({
+    kind: 'polygon',
+    points: [
+      [w / 2 - tapeW / 2, -tapeH * 0.3],
+      [w / 2 + tapeW / 2, -tapeH * 0.1],
+      [w / 2 + tapeW / 2 - 2, tapeH * 0.7],
+      [w / 2 - tapeW / 2 + 2, tapeH * 0.5],
+    ],
+    style: pencil(seed + 1, { fill: '#e9e2cf', fillStyle: 'solid', strokeWidth: 1.4 }),
+  })
+
+  const available = w - pad * 2
+  const titleSize = fitSize(spec.title, available, h * 0.2, 9)
+  const subSize = fitSize(spec.subtitle, available, h * 0.14, 8)
+  const footSize = fitSize(spec.footer, available, h * 0.13, 8)
+
+  let y = pad + tapeH * 0.4 + titleSize
+  ops.push({ kind: 'text', x: pad, y, text: spec.title, size: titleSize, color: INK, align: 'left', rotate: -0.01 })
+  y += Math.round(titleSize * 0.3)
+  ops.push({
+    kind: 'line', x1: pad, y1: y,
+    x2: Math.min(w - pad, pad + spec.title.length * titleSize * CHAR_WIDTH_RATIO), y2: y,
+    style: pencil(seed + 2, { strokeWidth: 1.6 }),
+  })
+  y += Math.round(subSize * 1.45)
+  ops.push({ kind: 'text', x: pad, y, text: spec.subtitle, size: subSize, color: INK, align: 'left', rotate: 0.006 })
+  y += Math.round(footSize * 1.55)
+  ops.push({ kind: 'text', x: pad, y, text: spec.footer, size: footSize, color: INK, align: 'left', rotate: -0.006 })
+  return ops
+}
+
+/**
+ * 城市剪影：每座城 6–9 个矩形轮廓，归一化 [x, w, h]（h 是相对画布高的比例）。
+ * 伦敦：一座细高钟楼 + 一个圆顶；新加坡：三座塔顶上一条横板（Marina Bay Sands）；
+ * 北京：一座带层的塔 + 一个方环。刻意简陋——是纸剪的。
+ */
+const SKYLINES: Readonly<Record<SkylineSpec['city'], readonly (readonly [number, number, number])[]>> = {
+  london: [
+    [0.02, 0.10, 0.28], [0.14, 0.06, 0.62], [0.22, 0.12, 0.34], [0.36, 0.16, 0.30],
+    [0.55, 0.10, 0.42], [0.67, 0.14, 0.26], [0.83, 0.15, 0.36],
+  ],
+  singapore: [
+    [0.03, 0.10, 0.40], [0.15, 0.09, 0.55], [0.27, 0.08, 0.48], [0.40, 0.07, 0.62],
+    [0.50, 0.07, 0.62], [0.60, 0.07, 0.62], [0.72, 0.10, 0.36], [0.85, 0.12, 0.30],
+  ],
+  beijing: [
+    [0.02, 0.14, 0.26], [0.19, 0.10, 0.50], [0.31, 0.12, 0.36], [0.47, 0.20, 0.32],
+    [0.70, 0.09, 0.58], [0.81, 0.09, 0.58], [0.92, 0.07, 0.30],
+  ],
+}
+
+function planSkyline(spec: SkylineSpec): SketchOp[] {
+  const { width: w, height: h } = spec.size
+  const seed = seedFrom(specKey(spec))
+  const ops: SketchOp[] = []
+  const blocks = SKYLINES[spec.city]
+  blocks.forEach(([x, bw, bh], i) => {
+    // 先取整高度再算 y，保证 y + h == 画布高（分别取整会多出 1 px 画到画布外）
+    const bhPx = Math.round(bh * h)
+    ops.push({
+      kind: 'rect',
+      x: Math.round(x * w), y: h - bhPx,
+      w: Math.round(bw * w), h: bhPx,
+      style: pencil(seed + i, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.6, roughness: 0.8 }),
+    })
+  })
+  // 新加坡：三塔顶上那条横板
+  if (spec.city === 'singapore') {
+    ops.push({
+      kind: 'rect',
+      x: Math.round(0.38 * w), y: h - Math.round(0.66 * h),
+      w: Math.round(0.31 * w), h: Math.round(0.05 * h),
+      style: pencil(seed + 20, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.6 }),
+    })
+  }
+  // 伦敦：钟楼顶尖
+  if (spec.city === 'london') {
+    ops.push({
+      kind: 'polygon',
+      points: [[0.14 * w, h - 0.62 * h], [0.17 * w, h - 0.74 * h], [0.20 * w, h - 0.62 * h]],
+      style: pencil(seed + 21, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.4 }),
+    })
+  }
+  // 地平线
+  ops.push({ kind: 'line', x1: 0, y1: h - 1, x2: w, y2: h - 1, style: pencil(seed + 30, { strokeWidth: 2 }) })
+  return ops
+}
+
+/** 正字计数：四竖一斜，每组五画；超过 10 圈直接写数字 */
+function planTally(spec: TallySpec): SketchOp[] {
+  const { width: w, height: h } = spec.size
+  const seed = seedFrom(specKey(spec))
+  const ops: SketchOp[] = []
+  const count = Math.max(0, Math.floor(spec.count))
+  if (count === 0) return ops
+  if (count > 10) {
+    const text = `×${count}`
+    ops.push({
+      kind: 'text', x: Math.round(w / 2), y: Math.round(h * 0.7),
+      text, size: fitSize(text, w * 0.9, h * 0.6, 8), color: INK, align: 'center', rotate: -0.03,
+    })
+    return ops
+  }
+  const groups = Math.ceil(count / 5)
+  const groupW = w / Math.max(2, groups)
+  for (let g = 0; g < groups; g += 1) {
+    const inGroup = Math.min(5, count - g * 5)
+    const x0 = g * groupW + groupW * 0.15
+    const gap = groupW * 0.16
+    for (let i = 0; i < Math.min(4, inGroup); i += 1) {
+      const x = Math.round(x0 + i * gap)
+      ops.push({
+        kind: 'line', x1: x, y1: Math.round(h * 0.2), x2: x, y2: Math.round(h * 0.85),
+        style: pencil(seed + g * 10 + i, { strokeWidth: 2.4 }),
+      })
+    }
+    if (inGroup === 5) {
+      ops.push({
+        kind: 'line',
+        x1: Math.round(x0 - gap * 0.3), y1: Math.round(h * 0.8),
+        x2: Math.round(x0 + gap * 3.3), y2: Math.round(h * 0.25),
+        style: pencil(seed + g * 10 + 5, { strokeWidth: 2.4 }),
+      })
+    }
+  }
+  return ops
 }

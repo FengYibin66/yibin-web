@@ -102,7 +102,7 @@ export const landmarkSchema = z.discriminatedUnion('kind', [
     ...landmarkCommonShape,
     kind: z.literal('window'),
     side: wallSide,
-    city: z.string().min(1),
+    city: z.enum(['london', 'singapore', 'beijing']),
   }),
   z.object({
     ...landmarkCommonShape,

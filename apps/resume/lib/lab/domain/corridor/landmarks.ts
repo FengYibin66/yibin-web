@@ -3,9 +3,11 @@ import {
   BUG_RELATIVE_Z,
   CORRIDOR_DOORS,
   CORRIDOR_FURNITURE,
+  CORRIDOR_WINDOWS,
   HERO_RELATIVE_Z,
   SEGMENT_DOOR_RELATIVE_Z,
 } from './layout'
+import { placeYearMarks } from './timeline'
 
 /**
  * 走廊地标表 —— **一切有位置的东西**的唯一来源（ADR 20260908172231）。
@@ -108,7 +110,7 @@ export type Landmark =
   | (LandmarkCommon & {
       readonly kind: 'window'
       readonly side: WallSide
-      readonly city: string
+      readonly city: 'london' | 'singapore' | 'beijing'
     })
   /** 年份刻度（第 3 期：时间线墙） */
   | (LandmarkCommon & {
@@ -173,6 +175,36 @@ const FURNITURE_LANDMARKS: readonly Landmark[] = CORRIDOR_FURNITURE.map(item => 
  * 门与家具从 `layout.ts` 的两张表映射而来（见文件头「与 layout.ts 的分工」），
  * 其余三个原先是裸常量。
  */
+/**
+ * 三扇窗（ADR 20260908204303）。壁画要避开窗：半径 1.5 = 窗半宽 0.75 + 壁画留缝。
+ * 只在第 0 段——履历讲一遍就够，后续段的墙只有壁画。
+ */
+const WINDOW_LANDMARKS: readonly Landmark[] = CORRIDOR_WINDOWS.map(w => ({
+  kind: 'window' as const,
+  id: w.id,
+  city: w.city,
+  side: w.side,
+  relativeZ: w.relativeZ,
+  segments: [0] as const,
+  inkable: false,
+  keepOut: { side: w.side, radius: 1.5 },
+}))
+
+/**
+ * 年份刻度（ADR 20260908204303）：由 `timeline.ts` 的声明**派生**，不手写坐标。
+ * 在墙脚（y ≈ −1.45），与壁画（y 0.1–0.2 一带）不同高度，所以不声明 keepOut——
+ * 声明了会白白挤掉壁画槽位。只在第 0 段。
+ */
+const YEAR_MARK_LANDMARKS: readonly Landmark[] = placeYearMarks().map(m => ({
+  kind: 'year-mark' as const,
+  id: `year-${m.year}`,
+  year: m.year,
+  side: m.side,
+  relativeZ: m.relativeZ,
+  segments: [0] as const,
+  inkable: false,
+}))
+
 export const CORRIDOR_LANDMARKS: readonly Landmark[] = [
   {
     kind: 'hero',
@@ -184,6 +216,8 @@ export const CORRIDOR_LANDMARKS: readonly Landmark[] = [
   },
   ...DOOR_LANDMARKS,
   ...FURNITURE_LANDMARKS,
+  ...WINDOW_LANDMARKS,
+  ...YEAR_MARK_LANDMARKS,
   {
     kind: 'easter',
     id: 'bug',

@@ -35,14 +35,14 @@ relativeZOfYear(y) = fromRelativeZ + (y − startYear) / (endYear − startYear)
 
 - 位置：墙脚 y = **−1.45**，宽 0.5、高 0.18 的手写年份（`SketchSpec: yearMark`，字体走 `fontForText`）+ 一小段 0.3 的竖线刻度。
 - 侧别：**优先左墙**；同侧 3.5 单位内有门或家具 → 换右墙；两侧都有 → 取距离更远的一侧。落进段末门 `keepOut`（−95 ± 5.5）→ z 贴到 −89。
-- 派生：`placeYearMarks()` 生成，进 `CORRIDOR_LANDMARKS`（`inkable: false`，`keepOut` 半径 0.6 只对壁画生效）。
-- 结果（按规则算出，门禁校验）：2017 右 −6 · 2018 左 −15.3 · 2019 右 −24.7（左有书桌）· 2020 右 −34（左有出版物门）· 2021 左 −43.3（右有画廊门）· 2022 左 −52.7 · 2023 右 −62（左有盆栽）· 2024 左 −71.3 · 2025 左 −80.7 · 2026 左 −89。
+- 派生：`placeYearMarks()` 生成，进 `CORRIDOR_LANDMARKS`（`inkable: false`，**不声明 `keepOut`**——刻度在墙脚、壁画在墙中，不同高度不相交，声明了只会白白挤掉壁画槽位）。
+- 结果（按规则算出，门禁校验）：2017 右 −6 · 2018 左 −15.3 · 2019 右 −24.7（左有书桌）· 2020 右 −34（左有出版物门）· 2021 左 −43.3（右有画廊门）· 2022 右 −52.7（左有联系门：3.3 < 3.5，第一版规格手算成了左）· 2023 右 −62（左有盆栽）· 2024 左 −71.3 · 2025 左 −80.7 · 2026 左 −89。
 
 ### 2.3 履历便签（`SketchSpec: timelineNote`，每条经历 / 教育一张）
 
 - 内容：第一行 机构（`company` / `school`）、第二行 角色或学位、第三行 城市 · 年份区间（`years` 渲染，`Present` 按语言）。文字按可用宽度反解字号（sketch 三条规则）。
-- 尺寸：便签 1.4 × 0.9 世界单位（纹理 448 × 288，宽高比一致），带折角与一枚胶带。
-- 位置：z = `relativeZOfYear(start + min(end − start, 1) / 2)`；y = **1.15**；侧别取**没有门在 6.5 单位内**的那面墙，两面都没有 → 与上一张相反；同侧间距 < 2.4 → 沿 −z 推到满足。`placeTimelineNotes(entries)` 纯函数。
+- 尺寸：便签 1.4 × 0.9 世界单位（纹理 448 × 288，宽高比一致），四角略不齐的纸 + 顶上一枚胶带。
+- 位置：z = `relativeZOfYear(start + min(end − start, 1) / 2)`；y = **1.25**（壁画顶约 0.8，便签 0.8–1.7）；侧别取**没有门在 6.5 单位内**的那面墙，两面都没有 → 与上一张相反；同侧间距 < 2.4 → 沿 −z 推到满足。`placeTimelineNotes(entries)` 纯函数。
 - 数据：`lib/content/{en,zh}.ts` 每条加 `years: { start, end? }` 与 `cityId`。当前条目：
 
 | id | years | cityId |
@@ -69,7 +69,7 @@ relativeZOfYear(y) = fromRelativeZ + (y − startYear) / (endYear − startYear)
 | C | 右 | −62 | 北京 | Asia/Shanghai |
 
 - 几何：窗框 1.5 × 1.5（复用 `window_sketch.webp`），y = 0.3；窗外一块 1.3 × 1.1 的天色平面，再往外一层 0.9 的城市剪影（`SketchSpec: skyline`，三座城各一组 6–9 个矩形轮廓，罐头味刻意——是纸剪的）。
-- 天色：`worldClock.ts`：`localHourIn(tz, now)`（`Intl.DateTimeFormat`，注入 `now`）→ `skyColorAt(hour)`：0–5 深蓝 `#3b4a6b`、5–7 橙粉 `#e8b89a`、7–17 浅天 `#cfe0ee`、17–19 橙 `#e6a878`、19–24 深蓝。**饱和度上限与门贴纸同级**（HSL S ≤ 0.35），走廊内部仍是米色系。每 60 秒重算一次（`setInterval`，不在 `useFrame`）。
+- 天色：`worldClock.ts`：`localHourIn(tz, now)`（`Intl.DateTimeFormat`，注入 `now`）→ `skyColorAt(hour)`：0–5 深蓝 `#3b4a6b`、5–7 灰粉 `#d9c6b8`、7–17 浅天 `#d6e0e8`、17–19 灰橙 `#d3bcac`、19–24 深蓝（第一版的 `#e8b89a` / `#cfe0ee` / `#e6a878` 饱和度 0.48–0.63，被下面那条门禁抓住）。**饱和度上限与门贴纸同级**（HSL S ≤ 0.35），走廊内部仍是米色系。每 60 秒重算一次（`setInterval`，不在 `useFrame`）。
 - 窗下一行小字：城市名 + 当地时间 `HH:mm`（`fontForText`，字号 0.12），每分钟更新。
 - 交互：无（原 `CorridorWindow` 的「头像从窗外探头」删掉——那是入口页的头像，放走廊里语义不通）。
 - 门禁：`worldClock.test.ts`（三个时区在给定 `now` 下的小时、跨日、夏令时两侧各一例）；窗的 `keepOut` 半径 1.5 进地标表，`corridorLandmarks.test.ts` 的重叠检查覆盖。

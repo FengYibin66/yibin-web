@@ -195,6 +195,41 @@ export interface DiagramEdge {
   both?: boolean
 }
 
+/** 走廊墙脚的年份刻度（ADR 20260908204303）：一小段竖线 + 手写年份 */
+export interface YearMarkSpec {
+  kind: 'yearMark'
+  id: string
+  size: SketchSize
+  year: number
+}
+
+/** 走廊墙上的履历便签：机构 / 角色 / 城市 · 年份，带胶带 */
+export interface TimelineNoteSpec {
+  kind: 'timelineNote'
+  id: string
+  size: SketchSize
+  title: string
+  subtitle: string
+  footer: string
+  paper?: string
+}
+
+/** 窗外的城市剪影（纸剪的，罐头味刻意） */
+export interface SkylineSpec {
+  kind: 'skyline'
+  id: string
+  size: SketchSize
+  city: 'london' | 'singapore' | 'beijing'
+}
+
+/** 段末门上的正字计数：走了几圈（规格 lab-corridor-story.md §4） */
+export interface TallySpec {
+  kind: 'tally'
+  id: string
+  size: SketchSize
+  count: number
+}
+
 export type SketchSpec =
   | StickySpec
   | DiagramSpec
@@ -203,6 +238,10 @@ export type SketchSpec =
   | DialSpec
   | TapeSpec
   | CableSpec
+  | YearMarkSpec
+  | TimelineNoteSpec
+  | SkylineSpec
+  | TallySpec
 
 /**
  * spec 的身份 —— 缓存键与随机种子都从这里派生。

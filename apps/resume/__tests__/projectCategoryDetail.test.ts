@@ -22,6 +22,8 @@ function fakeExperience(items: Array<Partial<ExperienceItem> & { id: string }>):
     company: 'C',
     role: 'R',
     period: 'P',
+    years: { start: 2020 },
+    cityId: 'london',
     location: 'L',
     bullets: [],
     ...item,

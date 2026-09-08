@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 
 import { getRail } from '@/lib/lab/app/stores/corridorStore'
+import { nextCatState, type CatState } from '@/lib/lab/domain/corridor/companion'
 import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
 import { useAchievementActions } from '@/context/AchievementsContext'
 import { useLabLabels } from '@/hooks/useLabLabels'
@@ -54,11 +55,6 @@ const CAT_SIZE = 0.7
 /** 相对入口页那只（1.5 见方）的比例，瞳孔位置与跟随幅度都按它缩放 */
 const SCALE = CAT_SIZE / 1.5
 
-/** 相机进入这个距离 → 醒 */
-const WAKE_DISTANCE = 8
-/** 相机离开这个距离 → 睡。与 WAKE_DISTANCE 不同以形成滞回 */
-const SLEEP_DISTANCE = 12
-
 /** 走廊几何（与 `CorridorGeometry` 同源） */
 const FLOOR_Y = -1.75
 /**
@@ -75,7 +71,7 @@ const FOOT_OFFSET = CAT_SIZE * 0.5 - CAT_SIZE * 0.15
 const STRETCH_DURATION = 0.8
 const SPEECH_VISIBLE_MS = 1800
 
-type CatState = 'sleep' | 'awake' | 'stretch'
+/* CatState 与三态的切换规则都在 domain（`corridor/companion.ts`），这里只渲染 */
 
 interface ResidentCatProps {
   /** 猫所在的世界 z（由 `CorridorSegment` 从地标表算出） */
@@ -137,9 +133,8 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
     （ADR 20260908172231）。
   */
   useFrame(state3 => {
-    const distance = Math.abs(getRail().z - z)
-    if (stateRef.current === 'sleep' && distance <= WAKE_DISTANCE) setState('awake')
-    else if (stateRef.current === 'awake' && distance > SLEEP_DISTANCE) setState('sleep')
+    const next = nextCatState(stateRef.current, getRail().z - z)
+    if (next !== stateRef.current) setState(next)
 
     // 睡着时的呼吸起伏。伸懒腰期间不要碰 scale —— 那是 gsap 在写
     const body = bodyRef.current

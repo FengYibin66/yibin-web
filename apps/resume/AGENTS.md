@@ -539,6 +539,11 @@ REDUCED=1 node scripts/qa/lab-walkthrough.mjs  # Lab，模拟"减少动效"（�
 > `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D
 > 场景，拼贴拼不出同一个画面。
 
+> **改过任何含中文的文件（包括代码注释）之后，提交前先跑
+> `python3 scripts/media/subset-fonts.py --check`。** 子集脚本扫的是**源码字节**，
+> 中文注释也算字符集的一部分 —— 加一段中文注释就会让指纹过期。CI 会抓
+> （`校验字体子集` 那一步），但那要等十分钟，本地一秒。同一天踩了三次。
+
 > `pnpm lint` **当前跑不起来**：`eslint.config.mjs` 按 flat config 写，但装的
 > `eslint-config-next@15.5.20` 导出的是旧版 eslintrc 对象 → `nextVitals is not iterable`。
 > 这是依赖版本不匹配，从未跑通过，CI 刻意不跑（见根 `CLAUDE.md`「已知负债」）。

@@ -21,6 +21,13 @@ export type AchievementTrigger =
   | { kind: 'room-interaction'; roomId: RoomId }
   /** 走廊内滚动/滑动 */
   | { kind: 'corridor-scroll' }
+  /**
+   * 走廊里的物件被点了（不在任何房间内）。
+   *
+   * `landmarkId` 指向 `domain/corridor/landmarks.ts` 的条目——与"房间内交互"
+   * 分开是因为走廊不是房间：`room-interaction` 需要一个 roomId，而走廊没有。
+   */
+  | { kind: 'corridor-interaction'; landmarkId: string }
   /** 独立路由 /gallery 里打开照片。**在 AchievementsProvider 之外**，
    *  所以必须走模块级存储——这正是 D1 的修法 */
   | { kind: 'gallery-route' }
@@ -82,6 +89,13 @@ export const ACHIEVEMENT_DEFS: Readonly<Record<AchievementId, AchievementDefinit
     id: 'publications_read',
     titleKey: 'publications_read',
     unlockedBy: { kind: 'room-interaction', roomId: 'publications' },
+    persisted: true,
+  },
+  pet_cat: {
+    id: 'pet_cat',
+    titleKey: 'pet_cat',
+    // 解锁源是**走廊里**的一个地标，不是房间——见 corridor-interaction 的说明
+    unlockedBy: { kind: 'corridor-interaction', landmarkId: 'resident-cat' },
     persisted: true,
   },
 }

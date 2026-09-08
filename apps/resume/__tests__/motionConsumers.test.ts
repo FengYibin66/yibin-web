@@ -32,25 +32,26 @@ import { importsModule, walkSources } from './helpers/sourceScan'
  */
 
 const ROOT = join(__dirname, '..')
-const STORE_MODULE = '@/lib/lab/app/stores/corridorStore'
+
+/**
+ * 读到动效开关的两种合规写法。
+ *
+ * 推荐 `useMotionScale`（唯一入口，见该文件的说明）；直接订阅 store 也算，
+ * 因为 hook 本身就是它的薄封装，硬禁只会让人绕。
+ */
+const MOTION_MODULES = ['@/hooks/useMotionScale', '@/lib/lab/app/stores/corridorStore'] as const
 
 /**
  * 房间层尚未接入动效开关的文件。
  *
- * **只能减，不能增。** 每接好一个就从这里删掉一行；新增的房间动画一开始就该
- * 读开关，不要往这张表里加。
+ * **已清空**（2026-09-08）：九个房间层的时间驱动动画全部接完 —— 云、桶、纸、
+ * 海浪、船、机柜 LED、纸材质 shader、论文卡的风摆。
+ *
+ * 这张表**只能减，不能增**：新增的动画一开始就该读开关。留着空表而不是删掉
+ * 整条断言，是因为它现在守的是「不许回退」——同 `labContrast.test.ts` 的
+ * `KNOWN_LOW_CONTRAST` 刻意留空。
  */
-const ROOM_LEVEL_PENDING: readonly string[] = [
-  'components/rooms/AboutRoom.tsx',
-  'components/rooms/ContactRoom.tsx',
-  'components/rooms/about/SkyChunk.tsx',
-  'components/rooms/contact/MessagePaper.tsx',
-  'components/rooms/contact/SocialBarrel.tsx',
-  'components/rooms/gallery/GalleryClouds.tsx',
-  'components/rooms/gallery/PaperMaterial.tsx',
-  'components/rooms/projects/LabFurniture.tsx',
-  'components/rooms/publications/PublicationCard.tsx',
-]
+const ROOM_LEVEL_PENDING: readonly string[] = []
 
 /** 由时间驱动（= 自发运动）的文件 */
 function timeDrivenFiles(dir: string): string[] {
@@ -65,7 +66,8 @@ function timeDrivenFiles(dir: string): string[] {
 }
 
 function guarded(file: string): boolean {
-  return importsModule(readFileSync(join(ROOT, file), 'utf8'), STORE_MODULE, file)
+  const source = readFileSync(join(ROOT, file), 'utf8')
+  return MOTION_MODULES.some(mod => importsModule(source, mod, file))
 }
 
 describe('持续动画必须读动效开关', () => {
@@ -74,9 +76,9 @@ describe('持续动画必须读动效开关', () => {
     expect(
       unguarded,
       '这些走廊组件由时间驱动却读不到动效开关，`prefers-reduced-motion` 对它们无效。\n' +
-        `修法：import { useCorridorStore } from '${STORE_MODULE}'，` +
-        '取 `state.motionScale`，为 0 时停在基准姿态（不是停在当前姿态——' +
-        '停在半空中的东西看起来像加载失败）。\n' +
+        "修法：`const motion = useMotionScale()`（'@/hooks/useMotionScale'），" +
+        '把幅度乘上去；乘不掉的（呼吸的灯、shader 的 uTime、按时间推进的漂移）' +
+        '用分支冻结在一个好看的值上，不要归零 —— 亮度为 0 的灯看起来是坏的。\n' +
         `未接开关：\n  ${unguarded.join('\n  ')}`,
     ).toEqual([])
   })
@@ -97,6 +99,10 @@ describe('持续动画必须读动效开关', () => {
         '· 多出来的：新增的房间动画请一开始就读 motionScale，不要往清单里加。\n' +
         '· 少了的：接好一个就把它从 ROOM_LEVEL_PENDING 里删掉（清单只能变短）。',
     ).toEqual([...ROOM_LEVEL_PENDING].sort())
+  })
+
+  it('房间层确实有时间驱动的组件（同上，防判据失效后空跑）', () => {
+    expect(timeDrivenFiles('components/rooms').length).toBeGreaterThanOrEqual(9)
   })
 
   it('清单里的每个文件都真实存在（防僵尸豁免）', () => {

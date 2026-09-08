@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import { LAB_FONT_LATIN_BOLD } from '@/lib/lab/domain/labFonts'
-import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 const CEILING_Y = 1.75  // CORRIDOR_HEIGHT(3.5) / 2
 
@@ -29,7 +29,7 @@ export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
     `motionScale` 为 0 时它停在基准位置，**但仍然可以点**——彩蛋是内容，
     减少动效不该把内容拿走。
   */
-  const motionScale = useCorridorStore(s => s.motionScale)
+  const motionScale = useMotionScale()
 
   useFrame((state) => {
     if (clicked || !bugRef.current || motionScale === 0) return

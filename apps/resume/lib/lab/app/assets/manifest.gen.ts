@@ -20,6 +20,7 @@ import { getCorridorMuralTexturePaths } from '@/lib/lab/corridorMurals'
 const CORRIDOR_TEXTURE_LITERALS: readonly string[] = [
   '/textures/corridor/bokilampy.webp',
   '/textures/corridor/bug_sketch.webp',
+  '/textures/corridor/cat_body.webp',
   '/textures/corridor/ceiling_texture.webp',
   '/textures/corridor/decorations/coffee_debug.webp',
   '/textures/corridor/decorations/idea_process.webp',
@@ -197,6 +198,7 @@ export const ALL_ASSETS: readonly string[] = [
   '/textures/contact/statek.webp',
   '/textures/corridor/bokilampy.webp',
   '/textures/corridor/bug_sketch.webp',
+  '/textures/corridor/cat_body.webp',
   '/textures/corridor/ceiling_texture.webp',
   '/textures/corridor/decorations/coffee_debug.webp',
   '/textures/corridor/decorations/idea_process.webp',

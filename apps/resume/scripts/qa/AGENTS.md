@@ -38,6 +38,21 @@ lab-walkthrough.mjs   Lab 巡检：门户 → 走廊走到底（8 屏）→ 地�
 - **软渲染是必须的**：脚本给 Chromium 传了 `--use-angle=swiftshader`。不传时
   headless 拿不到 WebGL 上下文，`LabClient` 渲染兜底页，截图里看不到 Lab。
 
+## 写 Lab 巡检脚本时踩过的四个坑
+
+1. **点过 UI 按钮之后，键盘走廊会失效。** 走廊的方向键前进**会让位给聚焦的控件**
+   （`domain/corridor/keyboard.ts`，审计 E4：空格既是走廊前进也是按钮激活键）。
+   点了面板的关闭按钮再按方向键，相机一步都不动 —— 第一版因此把"猫没睡回去"
+   当成了 bug。走之前先 `document.activeElement?.blur()`。
+2. **按完键不能马上断言。** 导轨是指数插值（lerp 0.035/帧）：按键把 targetZ 一路
+   推远，而 currentZ 要好几秒才追上。要轮询等状态收敛，不要等固定时长。
+3. **别用整幅截图判断"动画停了"。** 整幅截图包含 DOM 覆盖层（教程气泡、成就倒计时
+   条）的动画；只截 3D 区域又会被相机插值的长尾干扰。两次都会把"还在收敛"误判成
+   "动画没停"。先看 `data-lab-motion` / `data-lab-cat` 这类诊断属性，再看画面。
+4. **靠猜屏幕坐标点 3D 物件很容易点到门。** 门是 mesh、占的屏幕面积大，而
+   Gallery 门被点中会 `router.push('/gallery')` 直接跳走。点击循环里每次都要检查
+   `page.url()` 还在 `/lab`。
+
 ```bash
 node scripts/qa/walkthrough.mjs                              # Classic，打 dev
 BASE=http://127.0.0.1:4321 node scripts/qa/walkthrough.mjs    # Classic，打静态产物

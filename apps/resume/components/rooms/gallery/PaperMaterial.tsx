@@ -3,6 +3,7 @@
 import { forwardRef, useMemo, useRef, useImperativeHandle } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 export interface PaperMaterialHandle {
   bend: number
@@ -42,6 +43,7 @@ const PaperMaterial = forwardRef<PaperMaterialHandle, PaperMaterialProps>(functi
   ref
 ) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
+  const motionScale = useMotionScale()
 
   const onBeforeCompile = useMemo(() => (shader: THREE.WebGLProgramParametersWithUniforms) => {
     shader.uniforms.uBend         = { value: 0 }
@@ -134,7 +136,12 @@ const PaperMaterial = forwardRef<PaperMaterialHandle, PaperMaterialProps>(functi
   useFrame((state) => {
     const s = materialRef.current?.userData?.shader
     if (!s) return
-    s.uniforms.uTime.value = state.clock.getElapsedTime()
+    /*
+      `uTime` 冻结在 0 而不是继续推进（ADR 20260908172231）：shader 里的时间
+      驱动项（纸纹的轻微流动）随之静止。贴图仍然每帧同步 —— 那不是动画，
+      是资源就绪后的赋值，停掉会让纸变空白。
+    */
+    s.uniforms.uTime.value = motionScale === 0 ? 0 : state.clock.getElapsedTime()
     if (s.uniforms.mapBack)    s.uniforms.mapBack.value    = mapBack    ?? null
     if (s.uniforms.mapPainted) s.uniforms.mapPainted.value = mapPainted ?? null
   })

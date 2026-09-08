@@ -9,35 +9,94 @@ import { BugEaster } from './BugEaster'
 import { Avatar } from './Avatar'
 import { HeroText } from './HeroText'
 import { Doodles } from './Doodles'
-import type { RoomId } from '@/lib/lab/domain/ids'
+import { ResidentCat } from './companions/ResidentCat'
 import { useLabLabels } from '@/hooks/useLabLabels'
-import {
-  BUG_RELATIVE_Z,
-  CORRIDOR_DOORS,
-  SEGMENT_DOOR_RELATIVE_Z,
-  SEGMENT_LENGTH,
-  doorWallX,
-  segmentStartZ,
-} from '@/lib/lab/domain/corridor/layout'
+import { SEGMENT_LENGTH, doorWallX, segmentStartZ } from '@/lib/lab/domain/corridor/layout'
+import { landmarksInSegment, type Landmark } from '@/lib/lab/domain/corridor/landmarks'
 
 /**
- * 几何常量全部来自 `lib/lab/domain/corridor/layout`（ADR 20260903140615）。
+ * 走廊内容 = 遍历地标声明（ADR 20260908172231）。
  *
- * 本文件原先自带一份 `SEGMENT_DOORS` + `SEGMENT_LENGTH` + `segmentZStart`，
- * 而 `useCorridorCamera`、`TeleportRoom`、`corridorMurals` 各有一份同样的
- * 坐标——改一个门位要同步改四处，漏改不报错，只会让传送落到错误的位置或
- * 壁画压在门上（审计 B3）。
+ * 加一样东西是往 `domain/corridor/landmarks.ts` 里加一项 + 在下面的 `switch`
+ * 里给它一个渲染分支，**不是**在这里堆一段带坐标的 JSX。同一条纪律见
+ * `components/rooms/projects/AGENTS.md`：「加一块墙面装饰是往声明里加一项」。
+ *
+ * 本文件原先自带一份 `SEGMENT_DOORS` + 段号计算，而 `useCorridorCamera`、
+ * `TeleportRoom`、`corridorMurals` 各有一份同样的坐标——改一个门位要同步改四处，
+ * 漏改不报错，只会让传送落到错误的位置或壁画压在门上（审计 B3）。`layout.ts`
+ * 收掉了那一轮重复，地标表收掉的是「按类型分表」带来的下一轮。
  */
+function renderLandmark(
+  landmark: Landmark,
+  context: {
+    zStart: number
+    segmentIndex: number
+    doorLabels: Record<string, string>
+    setCameraOverride: (active: boolean) => void
+  },
+) {
+  const { zStart, segmentIndex, doorLabels, setCameraOverride } = context
+  const z = zStart + landmark.relativeZ
 
-/*
-  门牌文案来自 `content[locale].labUi.doors`（审计 E7 已修）。
+  switch (landmark.kind) {
+    /*
+      门牌文案来自 `content[locale].labUi.doors`（审计 E7 已修）：这里原先是
+      一张硬编码英文表。索引用 roomId，所以加一个房间不需要改这里。
+    */
+    case 'door':
+      return (
+        <DoorSection
+          key={landmark.id}
+          position={[doorWallX(landmark.side), 0, z]}
+          side={landmark.side}
+          type={landmark.textureType}
+          label={doorLabels[landmark.roomId] ?? landmark.roomId}
+          roomId={landmark.roomId}
+          segmentIndex={segmentIndex}
+          setCameraOverride={setCameraOverride}
+        />
+      )
 
-  这里原先是一张硬编码英文表，注释写着"ADR 20260903140619 的
-  content[locale].lab.doors 会取代这里"——现在取代了。索引用的是
-  `RoomDefinition.labelKey`（就是 roomId），所以加一个房间不需要改这里。
-*/
+    /*
+      欢迎区：HeroText 在 Avatar 后面（z −0.5 < −0.3），是 itomdev 原版的层次。
+      三者共用一个 group，所以它们是**一个**地标而不是三个。
+    */
+    case 'hero':
+      return (
+        <group key={landmark.id} position={[0, 0, z]}>
+          <HeroText visible={true} position={[0, -0.1, -0.5]} />
+          <Avatar position={[0, -0.61, -0.3]} />
+          <Doodles offsetZ={0} />
+        </group>
+      )
 
-// ─── Component ────────────────────────────────────────────────────────────────
+    case 'easter':
+      return <BugEaster key={landmark.id} position={[0, 0, z]} />
+
+    case 'segment-door':
+      return <SegmentDoor key={landmark.id} position={[0, 0, z]} />
+
+    /*
+      活物驻点。目前只有守相框的猫（ADR 20260908160918）——它坐在柜子顶上，
+      所以 x / y 由 `ResidentCat` 按走廊几何自己算，这里只给 z 与墙面。
+    */
+    case 'companion-anchor':
+      return <ResidentCat key={landmark.id} z={z} side={landmark.side} />
+
+    /*
+      家具由 `CorridorDecorations` 统一渲染（它还管吊灯与壁画，而壁画的位置
+      要避开家具——两者在同一个组件里才好保证）。地标表里的家具条目负责
+      声明位置与避让半径，不在这里出 JSX。
+    */
+    case 'furniture':
+      return null
+
+    // 第 3 期：窗（三扇窗三座城）/ 年份刻度（时间线墙）
+    case 'window':
+    case 'year-mark':
+      return null
+  }
+}
 
 interface CorridorSegmentProps {
   segmentIndex: number
@@ -53,27 +112,14 @@ function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegme
       {/* ── Corridor geometry (walls, floor, ceiling, lights) ── */}
       <CorridorGeometry zStart={zStart} length={SEGMENT_LENGTH} />
 
-      {/* ── Welcome area — exact itomdev layout ──
-          group at zStart-2, HeroText behind Avatar (z=-0.5 < z=-0.3) */}
-      <group position={[0, 0, zStart - 2]}>
-        <HeroText visible={true} position={[0, -0.1, -0.5]} />
-        <Avatar position={[0, -0.61, -0.3]} />
-        <Doodles offsetZ={0} />
-      </group>
-
-      {/* ── Door sections ── */}
-      {CORRIDOR_DOORS.map((door) => (
-        <DoorSection
-          key={`${door.roomId}-${segmentIndex}`}
-          position={[doorWallX(door.side), 0, zStart + door.relativeZ]}
-          side={door.side}
-          type={door.textureType}
-          label={labels.doors[door.roomId]}
-          roomId={door.roomId}
-          segmentIndex={segmentIndex}
-          setCameraOverride={setCameraOverride}
-        />
-      ))}
+      {landmarksInSegment(segmentIndex).map(landmark =>
+        renderLandmark(landmark, {
+          zStart,
+          segmentIndex,
+          doorLabels: labels.doors,
+          setCameraOverride,
+        }),
+      )}
 
       {/* ── Wall decorations (paintings, plants, lamps) ── */}
       <CorridorDecorations
@@ -81,12 +127,6 @@ function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegme
         segmentIndex={segmentIndex}
         setCameraOverride={setCameraOverride}
       />
-
-      {/* ── Bug easter egg ── */}
-      <BugEaster position={[0, 0, zStart + BUG_RELATIVE_Z]} />
-
-      {/* ── Segment transition door at the end ── */}
-      <SegmentDoor position={[0, 0, zStart + SEGMENT_DOOR_RELATIVE_Z]} />
     </group>
   )
 }

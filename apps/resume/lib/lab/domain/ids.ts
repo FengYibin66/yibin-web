@@ -34,6 +34,8 @@ export const ACHIEVEMENT_IDS = [
   'gallery_inspect',
   'contact_found',
   'publications_read',
+  /** 摸了柜子上那只守相框的猫（ADR 20260908160918） */
+  'pet_cat',
 ] as const
 export type AchievementId = (typeof ACHIEVEMENT_IDS)[number]
 

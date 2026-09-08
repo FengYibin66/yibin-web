@@ -777,6 +777,35 @@ test.describe('走廊世界状态', () => {
     await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-motion', '1')
   })
 
+  /**
+   * 走廊尽头那只猫（ADR 20260908160918）。
+   *
+   * ## 这条只断言"猫挂载了、初始是睡着的"
+   *
+   * 第一版还断言了"走到尽头会醒"：按 50 次方向键把相机推过 80 个世界单位，
+   * 再等 `data-lab-cat` 变成 `awake`。本地过，**CI 两个 project 全红** ——
+   * Lab 的 E2E 跑在 SwiftShader 软渲染上，而导轨是指数插值（lerp 0.035/帧），
+   * 在那个帧率下 80 单位要收敛很久，20 秒不够。
+   *
+   * 加长超时是把一条本来就不该由 E2E 承担的判断硬撑起来。距离判断是**纯逻辑**，
+   * 已经抽到 `domain/corridor/companion.ts` 并由 `__tests__/companion.test.ts`
+   * 覆盖（滞回、边界、坏输入、完整走位序列）；端到端那一段由巡检脚本
+   * （`scripts/qa/lab-walkthrough.mjs`）实测覆盖：睡 → 醒 → 点击伸懒腰 →
+   * 走远睡回去，成就解锁。
+   *
+   * 这里留下的是**快而确定**的部分：组件真的挂载了（`data-lab-cat` 存在
+   * —— 猫是 R3F 的 mesh，不在 DOM 里，没这个属性就无从断言），且初始态是睡着。
+   */
+  test('猫：挂载在走廊里，初始是睡着的', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-lab-cat', 'sleep', {
+      timeout: LAB_READY_TIMEOUT,
+    })
+  })
+
   test('墨迹记忆：进过的房间在地图上不再标问号，且刷新后仍然如此', async ({ page }) => {
     if (!(await openLab(page))) {
       test.skip(true, '无 WebGL')

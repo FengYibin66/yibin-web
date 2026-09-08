@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useMemo, useCallback, forwardRef, useImper
 import { useFrame } from '@react-three/fiber'
 import { Text, useTexture, Html, useCursor } from '@react-three/drei'
 import * as THREE from 'three'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 const PAPER_WIDTH  = 1.51
 const PAPER_HEIGHT = 1.7
@@ -156,6 +157,7 @@ export const MessagePaper = forwardRef<MessagePaperHandle, MessagePaperProps>(
   function MessagePaper({ position = [0, 0.05, 2], onSend }, ref) {
   const groupRef   = useRef<THREE.Group>(null)
   const paperRef   = useRef<THREE.Mesh>(null)
+  const motionScale = useMotionScale()
   const hiddenInputRef   = useRef<HTMLTextAreaElement>(null)
   const emailInputRef    = useRef<HTMLInputElement>(null)
   const subjectInputRef  = useRef<HTMLInputElement>(null)
@@ -269,7 +271,9 @@ export const MessagePaper = forwardRef<MessagePaperHandle, MessagePaperProps>(
 
   useFrame((state) => {
     if (!paperRef.current) return
-    paperRef.current.rotation.z = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.005
+    // 纸的轻微摆动（ADR 20260908172231：reduced 时归零，纸摊平）
+    paperRef.current.rotation.z =
+      Math.sin(state.clock.getElapsedTime() * 0.5) * 0.005 * motionScale
   })
 
   return (

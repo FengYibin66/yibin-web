@@ -1,34 +1,32 @@
 'use client'
 
 import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
-const MAX_EYE_MOVEMENT = 0.015
+import { useCatEyes } from './companions/useCatEyes'
+
 const FLOOR_Y = -1.75
 
 interface CatProps {
   position?: [number, number, number]
 }
 
+/**
+ * 入口页那只猫（门的预览里坐着的那只）。
+ *
+ * 瞳孔跟随逻辑已抽到 `companions/useCatEyes` —— 走廊柜子上还有一只
+ * （`companions/ResidentCat`，守着相框），同一个行为不写两遍。
+ */
 export function Cat({ position = [-1.5, FLOOR_Y + 0.6, 0.8] }: CatProps) {
   const leftPupilRef  = useRef<THREE.Mesh>(null)
   const rightPupilRef = useRef<THREE.Mesh>(null)
   const bodyTex = useTexture('/textures/corridor/cat_body.webp')
 
-  useFrame((state) => {
-    if (!leftPupilRef.current || !rightPupilRef.current) return
-    const { x, y } = state.pointer
-
-    const targetX = x * MAX_EYE_MOVEMENT * 2
-    const targetY = y * MAX_EYE_MOVEMENT * 2
-
-    leftPupilRef.current.position.x  = THREE.MathUtils.lerp(leftPupilRef.current.position.x,  -0.075 + targetX, 0.1)
-    leftPupilRef.current.position.y  = THREE.MathUtils.lerp(leftPupilRef.current.position.y,   0.28  + targetY, 0.1)
-    rightPupilRef.current.position.x = THREE.MathUtils.lerp(rightPupilRef.current.position.x,  0.043 + targetX, 0.1)
-    rightPupilRef.current.position.y = THREE.MathUtils.lerp(rightPupilRef.current.position.y,  0.28  + targetY, 0.1)
-  })
+  useCatEyes(
+    { left: leftPupilRef, right: rightPupilRef },
+    { left: [-0.075, 0.28], right: [0.043, 0.28] },
+  )
 
   return (
     <group position={position}>

@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
-import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 const TOTAL_FRAMES = 9
 const FPS           = 20
@@ -41,7 +41,7 @@ export function Avatar({ position = [0, -0.61, -0.3] }: AvatarProps) {
     一直在动的东西。`motionScale` 为 0 时**停在第一帧**（挥手的起始姿态），
     但**保留侧身闪避** —— 那是对相机靠近的响应，不是自发运动。
   */
-  const motionScale = useCorridorStore(state => state.motionScale)
+  const motionScale = useMotionScale()
 
   useEffect(() => {
     textures.forEach(tex => { tex.colorSpace = THREE.SRGBColorSpace })

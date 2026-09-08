@@ -4,6 +4,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CLOUD_TEXTURES, cloudAspect } from '@/lib/lab/cloudTextures'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 export const CHUNK_LENGTH = 40
 export const CHUNK_WIDTH  = 20
@@ -50,6 +51,7 @@ function Cloud({
   scrollProgressRef,
 }: CloudProps) {
   const meshRef     = useRef<THREE.Mesh>(null)
+  const motionScale = useMotionScale()
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
   const { camera }  = useThree()
   const basePos     = useRef(position)
@@ -80,8 +82,12 @@ function Cloud({
     }
     const dirX      = basePos.current[0] >= 0 ? 1 : -1
     const evasionX  = evasionFactor * 15 * dirX
-    const driftX    = Math.sin(time * driftSpeed + timeOffset) * driftAmount
-    const driftY    = Math.sin(time * driftSpeed * 0.7 + timeOffset + 1.5) * bobAmount
+    /*
+      云的自发漂移乘动效倍率（ADR 20260908172231）。
+      `evasionX`（相机接近时云让开）不受影响 —— 那是对滚动的响应。
+    */
+    const driftX    = Math.sin(time * driftSpeed + timeOffset) * driftAmount * motionScale
+    const driftY    = Math.sin(time * driftSpeed * 0.7 + timeOffset + 1.5) * bobAmount * motionScale
 
     meshRef.current.position.x = basePos.current[0] + driftX + evasionX
     meshRef.current.position.y = basePos.current[1] + driftY

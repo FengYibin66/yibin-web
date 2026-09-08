@@ -5,6 +5,9 @@ import {
   inkLevel,
   loadInkOrder,
   loadIntroInk,
+  introDrawLevel,
+  INTRO_TEAR_AT,
+  INTRO_DRAWN_AT,
   type InkInputs,
 } from '@/lib/lab/domain/corridor/ink'
 import { inkableLandmarkIds } from '@/lib/lab/domain/corridor/landmarks'
@@ -103,7 +106,32 @@ describe('显形策略', () => {
     })
   })
 
-  describe('过场：loadIntroInk（已定义、未接线）', () => {
+  describe('加载期时间窗：introDrawLevel（决定 D）', () => {
+    it('30% 之前一笔没画，90% 之后画完，中间线性', () => {
+      expect(introDrawLevel(0)).toBe(0)
+      expect(introDrawLevel(INTRO_TEAR_AT)).toBe(0)
+      expect(introDrawLevel(0.6)).toBeCloseTo(0.5, 6)
+      expect(introDrawLevel(INTRO_DRAWN_AT)).toBe(1)
+      expect(introDrawLevel(1)).toBe(1)
+    })
+
+    it('坏进度夹在 0–1', () => {
+      for (const p of [Number.NaN, -1, 5]) {
+        const v = introDrawLevel(p)
+        expect(v).toBeGreaterThanOrEqual(0)
+        expect(v).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('与 loadIntroInk 串起来：30% 时所有门都还是空白，90% 时全画完', () => {
+      for (const id of inkableLandmarkIds()) {
+        expect(loadIntroInk(id, introDrawLevel(0.3))).toBe(0)
+        expect(loadIntroInk(id, introDrawLevel(0.9))).toBe(1)
+      }
+    })
+  })
+
+  describe('过场：loadIntroInk（LabLoader 经 corridorStore.loadProgress 驱动 DoorSection 的 uDraw）', () => {
     it('loadInkOrder 覆盖全部可显形地标，序号从 0 起连续', () => {
       const ids = inkableLandmarkIds()
       const orders = ids.map(id => loadInkOrder(id))

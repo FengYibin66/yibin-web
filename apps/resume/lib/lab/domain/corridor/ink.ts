@@ -58,6 +58,19 @@ const LOAD_ORDER: readonly string[] = [...inkableLandmarkIds()].sort((a, b) => {
 
 const ORDER_INDEX = new Map(LOAD_ORDER.map((id, index) => [id, index]))
 
+/**
+ * 加载期「画出走廊」的时间窗（规格 lab-corridor-story.md §1，决定 D）：
+ * 进度到 30% 纸撕开、开始画，90% 画完；之后的 10% 是尾巴（字体 / 音频等不影响画面的资源）。
+ */
+export const INTRO_TEAR_AT = 0.3
+export const INTRO_DRAWN_AT = 0.9
+
+/** 把加载进度（0–1）映射到"画出来"的总量（0–1）：30% 前为 0，90% 后为 1 */
+export function introDrawLevel(loadProgress: number): number {
+  const p = clamp01(loadProgress)
+  return clamp01((p - INTRO_TEAR_AT) / (INTRO_DRAWN_AT - INTRO_TEAR_AT))
+}
+
 /** 地标在加载序列里的序号（0 起）。未知 id 返回 −1 */
 export function loadInkOrder(id: string): number {
   return ORDER_INDEX.get(id) ?? -1

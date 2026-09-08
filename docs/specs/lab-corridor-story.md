@@ -8,17 +8,22 @@
 
 走廊第 0 段是一条 **2017 → 2026 的时间轴**：墙脚有年份刻度，墙上按年挂着经历与教育的手写便签，三扇窗透出伦敦、新加坡、北京此刻的天色；加载时走廊被「画出来」而不是等一个进度环；走第二圈时走廊记得你；不想操作的人点一下「带我走一遍」60 秒看完；一路听得见脚步、爪音、叫声与纸声。
 
-## 1. 加载期：走廊被画出来（决定 D）
+## 1. 加载期：走廊被画出来（决定 D，实现时修订）
+
+> **修订（2026-09-08 实现时）**：初稿要求「进度 ≥ 30% 提前撕开，看着走廊一笔笔画出来，
+> 进度环收到右下角」。实现后限速到 2 Mbps 实测：撕开后是**一片空白**——走廊整个在一个
+> Suspense 边界里，墙 / 地板 / 门要等最后一张纹理到位才一起出现，提前撕开只是让人对着
+> 空页面等。要做到"边加载边画"得把 Suspense 边界拆到每个物件，那是另一次架构改动。
+> 所以：**撕开仍在加载完成时**；"画出来"保留，改为**与撕纸同步的 1.8 s 过场**。
 
 | 项 | 值 |
 |---|---|
-| 提前撕开阈值 | 加载进度 **≥ 30%** 时 `LabLoader` 的纸开始撕开（复用 `PaperTransition` 的撕痕） |
-| 撕开后 | 进度环从屏幕中央收到**右下角**（直径 44 px、继续显示百分比），直到 100% 消失 |
-| 画出来 | 所有 `inkable` 地标 + 地板 + 壁画的 `RevealMaterial` 新增 uniform `uDraw`（0 → 1：透明 → 线稿），由 `loadIntroInk(progress)` 驱动：`uDraw = clamp((progress − 0.3) / 0.6)`，即 30% 开始、90% 画完；地板沿 −z 方向画（`uDirection`），墙面物件用噪声擦除 |
-| 输入 | 撕开到 100% 之间 `rail.hold('loader')`，玩家不能动；100% 后 `release` |
-| 与稳态显形的关系 | `uDraw` 只管「有没有画出来」，`uProgress`（= `inkLevel`，ADR 20260908172231）只管「上没上色」；两个 uniform 独立，加载结束后 `uDraw` 恒 1、`uProgress` 由记忆 / 圈数 / 悬停决定 |
-| reduced motion | **照常**——出现内容不是运动；但撕开动画本身按既有规则跳到终态 |
-| 门禁 | `corridorInk.test.ts` 加 `loadIntroInk` 的单调性与端点；E2E `lab.spec.ts` 现有的加载用例不变（`lab-ui` 出现时机不变） |
+| 撕开时机 | 加载**稳定完成**（`useStableProgress` 的 `complete`），与修订前相同 |
+| 画出来 | `RevealMaterial` 新增 uniform `uDraw`（0 → 1：透明 → 线稿，噪声擦除），由 `loadIntroInk(id, introDrawLevel(progress))` 驱动。加载中 `progress` 被压在 `INTRO_TEAR_AT`（0.3）以下 → 门一笔没画（反正在纸后面）；撕纸开始那一刻 `progress` 用 1.8 s 从 0.3 走到 1 → 五扇门按离入口的远近依次画出来。**范围是五扇门及门把**（走廊里用 `RevealMaterial` 的只有它们）；地板 / 壁画 / 墙面是普通材质，随纸撕开一次性出现 |
+| 输入 | 首个进度事件起 `rail.hold('loader')`，完成时 `release`——这张纸 `pointerEvents: none`，滚轮原本能穿过去在纸后面把走廊滚跑 |
+| 与稳态显形的关系 | `uDraw` 只管「有没有画出来」，`uProgress`（= `inkLevel`，ADR 20260908172231）只管「上没上色」；两个 uniform 独立，过场结束后 `uDraw` 恒 1、`uProgress` 由记忆 / 圈数 / 悬停决定 |
+| reduced motion | 过场照常（出现内容不是运动）；撕纸动画本身按既有规则 |
+| 门禁 | `corridorInk.test.ts`：`introDrawLevel` 端点与线性、与 `loadIntroInk` 串联；`usePaintMaterial.test.tsx`：`uDraw` 默认 1、setter 写 uniform；E2E `lab.spec.ts` 现有加载用例不变 |
 
 ## 2. 时间线（ADR 20260908204303）
 

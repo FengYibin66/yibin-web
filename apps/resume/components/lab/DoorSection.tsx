@@ -16,6 +16,7 @@ import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
 import { inkLevel } from '@/lib/lab/domain/corridor/ink'
 import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { introDrawLevel, loadIntroInk } from '@/lib/lab/domain/corridor/ink'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'
@@ -172,8 +173,8 @@ export function DoorSection({
   const textGroupRef     = useRef<THREE.Group>(null)
   const arrowGroupRef    = useRef<THREE.Group>(null)
   const glowRef          = useRef<THREE.Mesh>(null)
-  const doorRevealRef    = useRef<{ uProgress: number } | null>(null)
-  const handleRevealRef  = useRef<{ uProgress: number } | null>(null)
+  const doorRevealRef    = useRef<{ uProgress: number; uDraw: number } | null>(null)
+  const handleRevealRef  = useRef<{ uProgress: number; uDraw: number } | null>(null)
 
   /*
     ── 显形基线（ADR 20260908172231）────────────────────────────────────────
@@ -190,6 +191,19 @@ export function DoorSection({
   )
   const baseInkRef = useRef(baseInk)
   baseInkRef.current = baseInk
+
+  /*
+    加载期"被画出来"（规格 lab-corridor-story.md §1，决定 D）：`uDraw` 由加载进度按
+    地标顺序推进（靠近入口的门先画完），加载结束恒 1。与 `uProgress`（上色）独立。
+    进度是 React 订阅：一次加载变几十次，不值得进渲染循环。
+  */
+  const loadProgress = useCorridorStore(state => state.loadProgress)
+  useEffect(() => {
+    const draw = loadIntroInk(landmarkId, introDrawLevel(loadProgress))
+    for (const ref of [doorRevealRef, handleRevealRef]) {
+      if (ref.current) ref.current.uDraw = draw
+    }
+  }, [loadProgress, landmarkId])
   const handlePaintedRef = useRef<THREE.Mesh>(null)
   const doorPaintedRef   = useRef<THREE.Mesh>(null)
 

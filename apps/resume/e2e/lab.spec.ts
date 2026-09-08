@@ -803,8 +803,9 @@ test.describe('走廊世界状态', () => {
     }
     const html = page.locator('html')
     await expect(html).toHaveAttribute('data-lab-dog', 'offstage')
-    await page.mouse.move(720, 450)
-    await page.mouse.wheel(0, 400)
+    // 方向键而不是滚轮：mobile WebKit 不支持 mouse.wheel；先点画布让焦点离开按钮（AGENTS 的坑 E4）
+    await page.mouse.click(720, 450)
+    for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowDown')
     await expect(html).toHaveAttribute('data-lab-dog', /arrive|trot|run|sit/)
   })
 
@@ -865,7 +866,7 @@ test.describe('走廊世界状态', () => {
  * 八站的画面由巡检脚本截。
  */
 test.describe('招聘官路线', () => {
-  test('点脚印进入 touring，滚一下轮立刻回 free', async ({ page }) => {
+  test('点脚印进入 touring，按一下方向键立刻回 free', async ({ page }) => {
     if (!(await openLab(page))) {
       test.skip(true, '无 WebGL')
       return
@@ -878,9 +879,9 @@ test.describe('招聘官路线', () => {
     await expect(page.getByTestId('tour-caption')).toBeVisible()
     await expect(page.getByTestId('nav-tour')).toHaveAttribute('aria-pressed', 'true')
 
-    // 任何输入 = 还给用户：滚一下轮
-    await page.mouse.move(720, 450)
-    await page.mouse.wheel(0, 120)
+    // 任何输入 = 还给用户：按一下方向键（mobile WebKit 不支持 mouse.wheel）
+    await page.mouse.click(720, 450)
+    await page.keyboard.press('ArrowDown')
     await expect(html).toHaveAttribute('data-lab-mode', 'free')
     await expect(page.getByTestId('tour-caption')).toHaveCount(0)
   })

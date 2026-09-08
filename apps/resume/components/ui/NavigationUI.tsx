@@ -290,8 +290,9 @@ export function NavigationUI() {
           transition: 'opacity 0.3s ease',
         }}
       >
-        {/* 带我走一遍 / 停止（房间里与传送中不显示：状态机那时也不会接受 TOUR_START） */}
-        {!isInRoom && !isTeleporting && (
+        {/* 带我走一遍 / 停止。加载完成前不显示（路线要导轨可用，状态机在 loading 会拒绝）；
+            房间里与传送中不显示（状态机那时也不会接受 TOUR_START） */}
+        {labLoaded && !isInRoom && !isTeleporting && (
           <NavButton
             onClick={() => {
               if (tour.running) { tour.stop(); return }

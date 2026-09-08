@@ -4,6 +4,7 @@ import { useMemo, useRef } from 'react'
 import { useLoader, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CLOUD_TEXTURES, cloudAspect } from '@/lib/lab/cloudTextures'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 
 
@@ -124,6 +125,7 @@ interface StaticCloudProps {
 
 function StaticCloud({ position, scale, opacity, textureIndex, driftSpeed, initialOffset, rotationOffset, startX, endX, baseWidth }: StaticCloudProps) {
   const meshRef   = useRef<THREE.Mesh>(null)
+  const motionScale = useMotionScale()
   const basePos   = useRef(position)
   const TOTAL     = startX - endX
   const texture   = useLoader(THREE.TextureLoader, CLOUD_TEXTURES[textureIndex])
@@ -133,7 +135,14 @@ function StaticCloud({ position, scale, opacity, textureIndex, driftSpeed, initi
 
   useFrame(({ camera, clock }) => {
     if (!meshRef.current) return
-    const progress = ((clock.getElapsedTime() * driftSpeed + initialOffset) % (TOTAL + 10)) - 5
+    /*
+      云的漂移（ADR 20260908172231）：reduced 时把时间冻在 0，云停在各自的
+      `initialOffset` 上 —— 它们本来就是按偏移错开分布的，所以停下来的画面
+      仍然是一片散开的云，不会挤在一起。
+      面向相机的 quaternion 照常同步：那是"看向哪就转向哪"，不是自发运动。
+    */
+    const elapsed = motionScale === 0 ? 0 : clock.getElapsedTime()
+    const progress = ((elapsed * driftSpeed + initialOffset) % (TOTAL + 10)) - 5
     meshRef.current.position.x = startX - progress
     meshRef.current.position.y = basePos.current[1]
     meshRef.current.position.z = basePos.current[2]

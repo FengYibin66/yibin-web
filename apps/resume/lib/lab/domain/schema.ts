@@ -190,6 +190,7 @@ export const achievementTriggerSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('room-interaction'), roomId }),
   z.object({ kind: z.literal('corridor-scroll') }),
   z.object({ kind: z.literal('gallery-route') }),
+  z.object({ kind: z.literal('corridor-interaction'), landmarkId: z.string().min(1) }),
 ])
 
 export const achievementDefinitionSchema = z.object({

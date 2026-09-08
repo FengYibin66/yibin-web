@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 import { INK } from '@/lib/lab/domain/sketch/types'
+import { useMotionScale } from '@/hooks/useMotionScale'
 import {
   CABINET,
   CABINET_LAMPS,
@@ -136,10 +137,23 @@ const LAMP_COLORS = ['#7dff9b', '#7dff9b', '#ffd166'] as const
  */
 export function ServerCabinet() {
   const lampsRef = useRef<THREE.Group>(null)
+  const motionScale = useMotionScale()
 
   useFrame(({ clock }) => {
     const group = lampsRef.current
     if (!group) return
+    /*
+      呼吸停下时**冻结在中等亮度**而不是归零（ADR 20260908172231）：
+      opacity 乘 0 会让整排灯全暗，看起来是机柜坏了而不是"动效已关"。
+      0.68 是 `0.35 + 0.65 * 0.5` —— 呼吸区间的中点。
+    */
+    if (motionScale === 0) {
+      for (const child of group.children) {
+        const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial
+        material.opacity = 0.68
+      }
+      return
+    }
     const t = clock.getElapsedTime()
     for (const [i, child] of group.children.entries()) {
       const mesh = child as THREE.Mesh

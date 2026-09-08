@@ -12,6 +12,7 @@ import { useAchievementActions } from '@/context/AchievementsContext'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { useLocale } from '@/hooks/useLocale'
 import { getAboutRoomCopy } from '@/lib/content/labAdapters'
+import { useMotionScale } from '@/hooks/useMotionScale'
 import { PaperAirplane } from './about/PaperAirplane'
 import SkyChunk, { CHUNK_LENGTH, CORRIDOR_CLIP_Z, ROOM_Z } from './about/SkyChunk'
 
@@ -37,6 +38,7 @@ interface MilestoneProps {
 }
 
 function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
+  const motionScale = useMotionScale()
   const { locale } = useLocale()
   const copy = useMemo(() => getAboutRoomCopy(locale), [locale])
   const avatarTexture = useLoader(THREE.TextureLoader, '/textures/about/awatarnachmurce.webp')
@@ -70,7 +72,9 @@ function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
     if (titleRef.current)  titleRef.current.position.x = -spreadFactor * 15 * 0.8
     if (brandRef.current)  brandRef.current.position.x = spreadFactor * 15 * 0.6
     if (avatarRef.current) {
-      avatarRef.current.position.y = 2 + Math.sin(time * 0.8) * 0.15 + spreadFactor * 3
+      // 漂浮幅度乘动效倍率；由滚动驱动的 spreadFactor 位移照常（ADR 20260908172231）
+      avatarRef.current.position.y =
+        2 + Math.sin(time * 0.8) * 0.15 * motionScale + spreadFactor * 3
       avatarRef.current.position.x = -spreadFactor * 15 * 0.3
     }
   })
@@ -102,6 +106,7 @@ function IntroMilestone({ z, scrollProgressRef }: MilestoneProps) {
 }
 
 function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
+  const motionScale = useMotionScale()
   const { locale } = useLocale()
   const copy = useMemo(() => getAboutRoomCopy(locale), [locale])
   const uoTexture  = useLoader(THREE.TextureLoader, '/textures/about/uowyspa.webp')
@@ -134,12 +139,13 @@ function JourneyMilestone({ z, scrollProgressRef }: MilestoneProps) {
     } else if (distanceZ >= revealEnd) { revealFactor = 1 }
 
     if (uoRef.current) {
-      uoRef.current.position.y = -2 + revealFactor * 3.5 + Math.sin(time * 0.5) * 0.2
-      uoRef.current.rotation.z = Math.sin(time * 0.3) * 0.05
+      uoRef.current.position.y = -2 + revealFactor * 3.5 + Math.sin(time * 0.5) * 0.2 * motionScale
+      uoRef.current.rotation.z = Math.sin(time * 0.3) * 0.05 * motionScale
     }
     if (frRef.current) {
-      frRef.current.position.y = -1 + revealFactor * 3.5 + Math.sin(time * 0.4 + 2) * 0.25
-      frRef.current.rotation.z = Math.sin(time * 0.2 + 1) * -0.05
+      frRef.current.position.y =
+        -1 + revealFactor * 3.5 + Math.sin(time * 0.4 + 2) * 0.25 * motionScale
+      frRef.current.rotation.z = Math.sin(time * 0.2 + 1) * -0.05 * motionScale
     }
   })
 

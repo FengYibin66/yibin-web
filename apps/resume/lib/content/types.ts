@@ -240,9 +240,14 @@ export interface LabUiLabels {
   /** 教程气泡：{标题, 说明} */
   tutorials: Record<
     'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
-    | 'gallery_inspect' | 'contact_found' | 'publications_read',
+    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat',
     { title: string; label: string }
   >
+  /** 活物冒的一行字（ADR 20260908160918） */
+  companions: {
+    /** 猫伸懒腰时头顶那句 */
+    catStretch: string
+  }
   /** 加载与失败态 */
   loading: {
     preparing: string

@@ -34,6 +34,10 @@ export const en: SiteContent = {
       gallery_inspect:   { title: 'Art Critic',  label: 'Open a photo in the Gallery' },
       contact_found:     { title: 'Sociable',    label: 'Find a contact method' },
       publications_read: { title: 'Scholar',     label: 'Read a publication' },
+      pet_cat:           { title: 'Curious',     label: 'A cat naps at the end of the hall' },
+    },
+    companions: {
+      catStretch: '...meow',
     },
     loading: {
       preparing: 'Preparing the room',

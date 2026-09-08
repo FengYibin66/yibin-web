@@ -4,7 +4,7 @@ import { useRef, useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
-import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 const RUBIK_SCRIBBLE_URL = '/fonts/RubikScribble-Regular.ttf'
 const CABIN_SKETCH_URL   = '/fonts/CabinSketch-Regular.ttf'
@@ -34,7 +34,7 @@ export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextPr
     动效开关（ADR 20260908172231）。存一份 ref 是因为 `useFrame` 的回调不重建
     （见本文件下方的依赖说明），闭包里读 state 会拿到挂载时的旧值。
   */
-  const motionScale = useCorridorStore(state => state.motionScale)
+  const motionScale = useMotionScale()
   const motionScaleRef = useRef(motionScale)
   motionScaleRef.current = motionScale
 

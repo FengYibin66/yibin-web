@@ -29,13 +29,15 @@ import {
  */
 
 describe('成就 id 注册表', () => {
-  it('七个 id 齐全', () => {
+  it('注册表内容与预期一致', () => {
     expect([...ACHIEVEMENT_IDS].sort()).toEqual([
       'about_scroll',
       'contact_found',
       'corridor_enter',
       'corridor_explore',
       'gallery_inspect',
+      // 摸柜子上那只守相框的猫（ADR 20260908160918）
+      'pet_cat',
       'projects_inspect',
       'publications_read',
     ])

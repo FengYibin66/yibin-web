@@ -22,6 +22,7 @@ import {
 } from '@/lib/lab/domain/corridor/assets'
 import { ROOMS, ROOMS_IN_CORRIDOR_ORDER } from '@/lib/lab/domain/rooms'
 import { ACHIEVEMENT_DEFS, PERSISTED_ACHIEVEMENTS } from '@/lib/lab/domain/achievements/defs'
+import { landmarkById } from '@/lib/lab/domain/corridor/landmarks'
 import { SOUND_MANIFEST, allSoundSources } from '@/lib/lab/domain/audio/manifest'
 import {
   achievementDefinitionSchema,
@@ -151,6 +152,43 @@ describe('注册表引用完整', () => {
 
   it('gallery_inspect 的解锁源是独立路由，不是 3D 房间（审计 D1）', () => {
     expect(ACHIEVEMENT_DEFS.gallery_inspect.unlockedBy.kind).toBe('gallery-route')
+  })
+
+  /**
+   * 走廊里的交互式成就必须指向真实地标（ADR 20260908160918 / 20260908172231）。
+   *
+   * 与上面那条"指向真实房间"同一形态，防的也是同一件事：审计 D1 里
+   * `gallery_inspect` 的唯一解锁调用落在一个零渲染方的组件里，成就永远解不开，
+   * 而没有任何东西能发现。走廊地标的 id 会随走廊改版变动，所以这条必须是机制。
+   */
+  it('走廊交互成就的解锁源指向真实地标', () => {
+    for (const def of Object.values(ACHIEVEMENT_DEFS)) {
+      const trigger = def.unlockedBy
+      if (trigger.kind !== 'corridor-interaction') continue
+      expect(
+        landmarkById(trigger.landmarkId),
+        `${def.id} 指向不存在的地标 ${trigger.landmarkId}`,
+      ).toBeDefined()
+    }
+  })
+
+  /**
+   * 而且那个地标必须真的**可点** —— 否则成就在运行时永远解不开。
+   *
+   * 判据：地标的 kind 属于"有交互组件"的那几种。今天只有 `companion-anchor`
+   * （猫）；将来加"可拨弄的小物"时把 kind 加进这张表。
+   */
+  it('走廊交互成就指向的地标是可交互的类型', () => {
+    const INTERACTIVE_KINDS = new Set(['companion-anchor', 'easter'])
+    for (const def of Object.values(ACHIEVEMENT_DEFS)) {
+      const trigger = def.unlockedBy
+      if (trigger.kind !== 'corridor-interaction') continue
+      const landmark = landmarkById(trigger.landmarkId)
+      expect(
+        landmark && INTERACTIVE_KINDS.has(landmark.kind),
+        `${def.id} 指向的 ${trigger.landmarkId} 是 ${landmark?.kind}，没有交互组件，成就永远解不开`,
+      ).toBe(true)
+    }
   })
 })
 

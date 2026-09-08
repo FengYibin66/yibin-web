@@ -17,6 +17,7 @@ import { PublicationCardBack } from './PublicationCardBack'
 import { PublicationCardFront } from './PublicationCardFront'
 import type { PublicationRoomItem } from './publicationTypes'
 import { usePublicationCardMotion } from './usePublicationCardMotion'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 function fmt3(v: THREE.Vector3 | number[]): string {
   const a = Array.isArray(v) ? v : v.toArray()
@@ -180,6 +181,7 @@ export const PublicationCard = forwardRef<
   const cursorOwnerRef = useRef<object>({})
   const visibilityDumpDoneRef = useRef(false)
   const motion = usePublicationCardMotion()
+  const motionScale = useMotionScale()
 
   useEffect(() => {
     clothespinTexture.colorSpace = THREE.SRGBColorSpace
@@ -212,7 +214,13 @@ export const PublicationCard = forwardRef<
     if (!material || !paper) {
       return
     }
-    const time = state.clock.getElapsedTime()
+    /*
+      这里的 `time` 不是动画时钟，而是**几何同步**：它把卡片正反面的文字贴到
+      纸在 shader 里的形变表面上。所以它必须与 `PaperMaterial` 的 `uTime`
+      取同一个值 —— 那边 reduced 时冻结在 0，这边也要，否则纸停了而文字还在
+      按流动的时间贴合，两者错位（ADR 20260908172231）。
+    */
+    const time = motionScale === 0 ? 0 : state.clock.getElapsedTime()
     bindFaceToPaperSurface(
       frontRef.current,
       'front',

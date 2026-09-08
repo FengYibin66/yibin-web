@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import '@/components/lab/shaders/RevealMaterial'
 import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 const _tempScale = new THREE.Vector3()
 
@@ -37,14 +38,20 @@ export function SocialBarrel({
   const texturePainted = useTexture(paintedPath)
 
   const [hovered, setHovered] = useState(false)
+  const motionScale = useMotionScale()
 
   useFrame((state) => {
     if (!meshRef.current) return
     const time = state.clock.getElapsedTime()
     const phaseOffset = position[0] * 0.5
-    meshRef.current.position.y = position[1] + Math.sin(time * 0.8 + phaseOffset) * 0.15
-    meshRef.current.position.x = position[0] + Math.sin(time * 0.4 + phaseOffset) * 0.2
-    meshRef.current.rotation.z = rotation[2] + Math.sin(time * 0.6 + phaseOffset) * 0.05
+    /*
+      浮动幅度乘动效倍率（ADR 20260908172231）：reduced 时归零，桶停在声明的
+      基准位置。hover 缩放不受影响 —— 那是对用户动作的响应。
+    */
+    const motion = motionScale
+    meshRef.current.position.y = position[1] + Math.sin(time * 0.8 + phaseOffset) * 0.15 * motion
+    meshRef.current.position.x = position[0] + Math.sin(time * 0.4 + phaseOffset) * 0.2 * motion
+    meshRef.current.rotation.z = rotation[2] + Math.sin(time * 0.6 + phaseOffset) * 0.05 * motion
 
     const targetScale = hovered ? 1.1 : 1
     meshRef.current.scale.lerp(_tempScale.set(targetScale, targetScale, 1), 0.1)

@@ -34,6 +34,10 @@ export const zh: SiteContent = {
       gallery_inspect:   { title: '评论家',   label: '在相册里打开一张照片' },
       contact_found:     { title: '社交家',   label: '找到一种联系方式' },
       publications_read: { title: '学者',     label: '读一篇论文' },
+      pet_cat:           { title: '好奇',     label: '走廊尽头有只猫在打盹' },
+    },
+    companions: {
+      catStretch: '……喵',
     },
     loading: {
       preparing: '正在准备房间',

@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { useRoomCamera } from '@/hooks/useRoomCamera'
+import { useMotionScale } from '@/hooks/useMotionScale'
 import { useAchievementActions } from '@/context/AchievementsContext'
 import { useLocale } from '@/hooks/useLocale'
 import { getContactRoomLinks } from '@/lib/content/labAdapters'
@@ -47,6 +48,7 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
   */
 
   const waveRefs     = useRef<(THREE.Mesh | null)[]>([])
+  const motionScale  = useMotionScale()
   const statekRef    = useRef<THREE.Mesh>(null)
   // MESSAGE 桶点击时聚焦到留言纸（见下方 SocialBarrel 的 onClick）
   const messagePaperRef = useRef<MessagePaperHandle>(null)
@@ -76,21 +78,28 @@ export function ContactRoom({ showRoom, isExiting }: ContactRoomProps) {
 
     const t = state.clock.getElapsedTime()
 
+    /*
+      海浪与船（ADR 20260908172231）：幅度乘动效倍率，reduced 时海面摊平、
+      船停在声明的位置。这一间房的运动幅度是全站最大的（船横向摆 ±12 单位），
+      对晕动敏感的访客尤其要能关掉。
+    */
     // Wave animation
     waveRefs.current.forEach((ref, i) => {
       if (ref) {
         const speed = 0.8 + i * 0.15
         const amplitude = 0.15 - i * 0.02
         const offset = i * 0.5
-        ref.position.y = Math.sin(t * speed + offset) * amplitude
+        ref.position.y = Math.sin(t * speed + offset) * amplitude * motionScale
       }
     })
 
     // Ship bobbing + sailing
     if (statekRef.current) {
-      statekRef.current.position.y = STATEK_SETTINGS.position[1] + Math.sin(t * 0.8) * 0.3
-      statekRef.current.position.x = STATEK_SETTINGS.position[0] + Math.sin(t * 0.04) * 12
-      statekRef.current.rotation.z = Math.sin(t * 0.96) * 0.05
+      statekRef.current.position.y =
+        STATEK_SETTINGS.position[1] + Math.sin(t * 0.8) * 0.3 * motionScale
+      statekRef.current.position.x =
+        STATEK_SETTINGS.position[0] + Math.sin(t * 0.04) * 12 * motionScale
+      statekRef.current.rotation.z = Math.sin(t * 0.96) * 0.05 * motionScale
     }
   })
 

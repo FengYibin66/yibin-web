@@ -126,7 +126,8 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | `roomCameraWiring.test.ts` | 无棘轮（全禁死声明 entryPose） | 0 |
 | `noGlobalScrollTriggerKill.test.ts` | 无棘轮（全禁 `ScrollTrigger.getAll()`） | 0 |
 | `railWriter.test.ts` | 无棘轮（`setRail` 只许 `useCorridorCamera` 调） | 0 |
-| `motionConsumers.test.ts` | `ROOM_LEVEL_PENDING`（房间层未接动效开关的文件） | 走廊层 0；房间层 9 个 |
+| `motionConsumers.test.ts` | `ROOM_LEVEL_PENDING`（房间层未接动效开关的文件） | **空**（走廊层与房间层都零例外） |
+| `corridorLandmarks.test.ts` | 无棘轮（地标表必须有生产消费者；活物距同侧门 > 15） | 0 |
 
 漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
 **换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
@@ -341,18 +342,50 @@ StrictMode 残值那条红。
    listener 比较 selector，即使没人订阅也是每秒 60 次无用功；一旦有人订阅就是每帧
    全树重渲染（成就 `TICK` 让 15 个 `DoorSection` 每秒渲染 10 次那次事故的形态）。
    `lap` / `visited` 由 `setRail` 派生，**只在真的变化时**才 `set`。
-4. **记忆从 localStorage 恢复必须显式、且在客户端 effect 里**（`hydrateCorridorMemory`，
+4. **声明必须有生产消费者**（门禁 `corridorLandmarks.test.ts` 的「接线检查」）。
+   `CorridorSegment` 改为遍历地标渲染之后，做变异测试时用 `git checkout` 还原文件
+   把那次重构**一起还原了**，随后 `git add -A` 提交了旧版 —— 地标表定义完整、
+   schema 与等价性断言全绿、巡检截图正常（旧版渲染出的画面一样），而
+   `landmarksInSegment` 在生产代码里零引用。这正是 ADR 20260903211338 要防的
+   「已定义、未接线」，现在由断言守着。
+5. **记忆从 localStorage 恢复必须显式、且在客户端 effect 里**（`hydrateCorridorMemory`，
    `LabScene` 挂载时调）。store 初值不读 storage：回访者盘上有记忆而服务端没有，
    那正是 hydration 不匹配——`LocaleProvider` 当年因此把读 storage 推迟到 `useEffect`。
    落盘一律走 `mergeCorridorMemory`（与盘上取并集），**不要用 `saveCorridorMemory` 覆盖**：
    hydrate 之前内存是空的，覆盖式写入会把盘上已有的记忆擦成空（实现时实测过）。
 
-**动效开关的语义**：`motionScale` 为 0 时停掉**由时间驱动**的自发运动（涂鸦漂浮、
-虫子游走、头像逐帧、标题字母漂浮），保留**由用户动作驱动**的响应（hover 上色、
-相机侧瞄、点击反馈、相机距离触发的裂开）。停的时候回到**基准姿态**而不是当前姿态
-——停在半空中歪着的涂鸦看起来像加载失败。门禁 `motionConsumers.test.ts` 守
-「走廊层每个时间驱动的 `useFrame` 都读过开关」，房间层还有 9 个未接，逐个列在
-`ROOM_LEVEL_PENDING` 里（只能变短）。
+**动效开关的语义**：唯一读法是 `useMotionScale()`（`hooks/useMotionScale.ts`）。
+为 0 时停掉**由时间驱动**的自发运动（涂鸦漂浮、虫子游走、头像逐帧、标题字母漂浮、
+云漂移、桶浮动、海浪与船、机柜 LED 呼吸、纸材质 shader 的 uTime、论文卡风摆），
+保留**由用户动作驱动**的响应（hover 上色、相机侧瞄、点击反馈、相机距离触发的裂开、
+猫的瞳孔跟随）。
+
+三条实现细则：
+
+- **能乘就乘**（`* motion`）：比 `if (reduced) return` 少一类"忘了处理 reduced 分支"
+  的 bug，也天然保证停下来时回到**基准姿态**而不是停在半空中。
+- **乘不掉的用分支，且冻结在一个好看的值上**：机柜 LED 的 opacity 归零会让整排灯
+  全暗、看起来是机柜坏了，所以冻在呼吸区间的中点 0.68。
+- **几何同步不是动画**：`PublicationCard` 把文字贴到纸在 shader 里的形变表面上，
+  它的 `time` 必须与 `PaperMaterial` 的 `uTime` 取同一个值（reduced 时都是 0），
+  否则纸停了而文字还在按流动的时间贴合，两者错位。
+
+门禁 `motionConsumers.test.ts` 守「每个时间驱动的 `useFrame` 都读过开关」，走廊层
+与房间层现在都是**零例外**（`ROOM_LEVEL_PENDING` 已清空，只能变短）。
+
+**走廊的活物**（ADR 20260908160918）：目前一只猫，`components/lab/companions/`。
+两条来自实测的硬约束：
+
+- **活物驻点距同侧门必须 > 15 单位**（门禁 `corridorLandmarks.test.ts`）。猫原本
+  坐在柜顶（−49）守着相框，而 Gallery 门在 −44 —— 相机走到能看见柜子的距离时，
+  门段的翻板已经绕外墙转了 30°（`TILT_START` = 15）把它整个遮住。走廊里三件家具
+  距最近同侧门都只有 5–7 单位，所以"活物坐在家具上"这条路在当前布局下都走不通。
+  猫改到走廊尽头（−68）、侧道 x = 1.9、坐地板。
+- **必须有接触阴影**。白色线稿的活物贴在白地板上像一张贴纸（HN 对 "My Room in 3D"
+  的批评：椅子会动而阴影不动）。走廊全是 `meshBasicMaterial`，阴影只能手画一块
+  压扁的淡色椭圆。
+- 状态写到 `html[data-lab-cat]`：3D 物件不在 DOM 里，没有它就无法断言"靠近会醒"。
+  同 `data-reveal-arrival` 的先例。
 
 **显形（墨迹）**：`RevealMaterial` 的 `uProgress` 有四个来源，而 uniform 只有一个，
 所以它是一条策略而不是三处各写。稳态 = `max(记忆, 圈数, 悬停)`；**加载显形不在

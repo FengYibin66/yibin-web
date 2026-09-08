@@ -777,6 +777,40 @@ test.describe('走廊世界状态', () => {
     await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-motion', '1')
   })
 
+  /**
+   * 走廊尽头那只猫（ADR 20260908160918）。
+   *
+   * 状态从 `html[data-lab-cat]` 读 —— 猫是 R3F 的 mesh，**不在 DOM 里**，
+   * 没有这个属性就只能在截图里找一只 0.7 单位宽的猫。
+   *
+   * **不点它**：3D 拾取要靠屏幕坐标，而那个坐标依赖 fov、视口与相机位置，
+   * 在两个 project（chromium / mobile-safari 视口不同）下都稳定的坐标不存在。
+   * 点击那条路由巡检脚本覆盖（`scripts/qa/lab-walkthrough.mjs` 与
+   * `.qa/cat-check.mjs` 实测过：点中即 `stretch`、成就解锁）。这里只守
+   * 「靠近会醒、走远会睡」——那是纯逻辑，且是回归最容易打断的部分。
+   */
+  test('猫：默认睡着，走到走廊尽头会醒', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-cat', 'sleep')
+
+    /*
+      猫在 relativeZ −68 → 世界 z = −58；醒的阈值 8 单位。
+      一次 ArrowDown 推进 1.6 单位，走 50 步到 −52（猫前 6 单位）。
+
+      导轨是指数插值，按键把目标推远而相机要几秒才追上 —— 所以断言用
+      `toHaveAttribute` 等（内部重试），不要按完就查。
+    */
+    for (let i = 0; i < 50; i += 1) {
+      await page.keyboard.press('ArrowDown')
+      await page.waitForTimeout(60)
+    }
+    await expect(html).toHaveAttribute('data-lab-cat', 'awake', { timeout: 20_000 })
+  })
+
   test('墨迹记忆：进过的房间在地图上不再标问号，且刷新后仍然如此', async ({ page }) => {
     if (!(await openLab(page))) {
       test.skip(true, '无 WebGL')

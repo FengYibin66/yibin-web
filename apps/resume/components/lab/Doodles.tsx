@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
-import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useMotionScale } from '@/hooks/useMotionScale'
 
 interface DoodleConfig {
   texture: string
@@ -35,7 +35,7 @@ function SketchElement({ texture, position, scale, rotSpeed, floatSpeed, floatAm
     `motionScale` 为 0 时停在**基准姿态**——不是停在当前姿态：停在半空中
     歪着的涂鸦看起来像加载失败。
   */
-  const motionScale = useCorridorStore(s => s.motionScale)
+  const motionScale = useMotionScale()
 
   useFrame((state) => {
     if (!ref.current) return

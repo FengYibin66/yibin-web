@@ -193,6 +193,43 @@ export const CORRIDOR_LANDMARKS: readonly Landmark[] = [
     inkable: false,
     visitRadius: 3,
   },
+  /*
+    走廊尽头打盹的猫（ADR 20260908160918）。
+
+    ## 为什么不在柜子上
+
+    原本的设计是让它坐在柜顶、守着那个相框（里面是 `beloved.jpg`），叙事更好。
+    实测发现**那个位置永远看不见**：柜子在 relativeZ −49，而 Gallery 门在 −44
+    —— 相机走到能看见柜子的距离时，门段的翻板已经绕外墙转了 30°
+    （`DoorSection` 的 `MAX_TILT`，`TILT_START` = 15 单位），整扇门横过来把
+    柜子完全遮住。
+
+    这不是柜子的问题：走廊里**所有**家具都挤在门附近（门每 12 单位一个，家具
+    在 −27 / −49 / −63，距最近同侧门都只有 5–7 单位）。所以"活物坐在家具上"
+    这条路在当前走廊布局下走不通。
+
+    ## 所以放在这里
+
+    −68：走廊尽头那一段。距最近的同侧门（右墙 −44）有 24 单位，远在翻板的
+    影响范围之外；旁边只有 bug 彩蛋（−70）与段末门（−95）。两个彩蛋凑在
+    "走廊尽头"反而成了一个可辨认的区域。
+
+    `x` 由 `ResidentCat` 取 ±1.6（走廊半宽 3.5）：足够靠侧不挡路，又在视野
+    中央区之内 —— 贴墙（±3.24）会让它在近距离时落到视锥外面。
+
+    `segments: [0]` 而不是 `'all'`：走廊无限延伸、每段结构相同，但一只**具体的**
+    猫在第 3 段再出现一只就不是"一只猫"了。这是 `segments` 字段存在的理由。
+  */
+  {
+    kind: 'companion-anchor',
+    id: 'resident-cat',
+    companion: 'cat',
+    side: 'right',
+    relativeZ: -68,
+    segments: [0],
+    inkable: false,
+    visitRadius: 6,
+  },
   {
     kind: 'segment-door',
     id: 'segment-door',

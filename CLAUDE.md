@@ -86,7 +86,7 @@ scripts/                 # 部署、环境构建、文档索引生成
 | CI 全量构建 | 改一行简历文案也重建 portal 与 auto-wechat 前端 | ADR 20260822120801 的未偿代价，ADR 20260822120807 用 path 过滤部分偿还 |
 | 单点故障 | 一台 CVM，无滚动更新、无自愈 | ADR 20260822120804 显式接受 |
 | resume 纹理加载瀑布 | `ProjectsRoom` 每张卡无条件声明 26 个纹理 loader（其余 3 条 P1 已修，见 `apps/resume/AGENTS.md` 的状态表） | 报告 `docs/reviews/2026-07-12-resume-lab-room-audit.md` **已陈旧**，以 AGENTS.md 为准 |
-| resume Lab 房间层还有 9 个持续动画不响应「减少动效」 | 走廊层已全部接入 `motionScale`（ADR 20260908172231），房间层（云 / 桶 / 纸 / 灯的呼吸等）9 个文件逐个登记在 `__tests__/motionConsumers.test.ts` 的 `ROOM_LEVEL_PENDING` 里 | 清单只能变短：新增的房间动画一开始就要读开关，接好一个删一行 |
+| resume Lab 的活物只有猫，狗待素材 | ADR 20260908160918 定的是「小狗引路 + 猫驻守」。猫已落地（走廊尽头、三态、成就）；**狗需要一张侧面站姿线稿**（切成身体 / 头 / 四腿 / 尾的分层纸偶），素材没有就做不了 | 线稿到位后按 `docs/specs/lab-companions.md` §2 实现；「减少动效」开关已全站接完（走廊层与房间层都零例外） |
 
 ## 分支与发布
 
@@ -102,8 +102,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 | 位置 | 数量 | 内容 |
 |------|------|------|
-| `apps/resume/__tests__/` | 1364（89 文件） | 组件与逻辑单测（vitest） |
-| `apps/resume/e2e/` | 152（76 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态）+ Classic 滚动显形的全部进入路径。Lab 那批的五个坑见 `apps/resume/AGENTS.md` |
+| `apps/resume/__tests__/` | 1374（89 文件） | 组件与逻辑单测（vitest） |
+| `apps/resume/e2e/` | 154（77 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物）+ Classic 滚动显形的全部进入路径。Lab 那批的五个坑见 `apps/resume/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 14 文件 | Go 单测 |

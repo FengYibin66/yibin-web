@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
+
+import { functionCalls, walkSources } from './helpers/sourceScan'
 
 import {
   CORRIDOR_LANDMARKS,
@@ -97,6 +102,43 @@ describe('走廊地标表', () => {
       expect(landmarkById('bug')?.relativeZ).toBe(BUG_RELATIVE_Z)
       expect(landmarkById('segment-door')?.relativeZ).toBe(SEGMENT_DOOR_RELATIVE_Z)
     })
+
+    /**
+     * 活物必须离同侧的门足够远，否则**永远看不见**。
+     *
+     * 这条是实测换来的：猫原本坐在柜顶（−49），而 Gallery 门在 −44 ——
+     * 相机走到能看见柜子的距离时，门段的翻板已经绕外墙转了 30°
+     * （`DoorSection` 的 `MAX_TILT`，从 `TILT_START` = 15 单位开始转），
+     * 整扇门横过来把柜子连猫一起遮住。截图里看不到猫，而三态切换、成就、
+     * 单测全是绿的 —— 这类"功能对但看不见"只有实机才发现得了。
+     *
+     * 15 单位是翻板开始转的距离，所以要求 > 15。
+     */
+    it('活物驻点距同侧门 > 15 单位（否则被门的翻板遮住）', () => {
+      const TILT_START = 15
+      const anchors = CORRIDOR_LANDMARKS.filter(
+        (l): l is Extract<Landmark, { kind: 'companion-anchor' }> =>
+          l.kind === 'companion-anchor',
+      )
+      expect(anchors.length, '没有活物驻点，这条断言会空跑').toBeGreaterThan(0)
+
+      for (const anchor of anchors) {
+        for (const door of CORRIDOR_DOORS) {
+          if (door.side !== anchor.side) continue
+          expect(
+            Math.abs(anchor.relativeZ - door.relativeZ),
+            `${anchor.id}（${anchor.relativeZ}）离同侧的 ${door.roomId} 门（${door.relativeZ}）` +
+              '太近，相机靠近时门的翻板会把它遮住',
+          ).toBeGreaterThan(TILT_START)
+        }
+      }
+    })
+
+    it('猫只在第 0 段出现（一只具体的猫不该每段一只）', () => {
+      expect(landmarkById('resident-cat')?.segments).toEqual([0])
+      expect(landmarksInSegment(1).map(l => l.id)).not.toContain('resident-cat')
+      expect(landmarksInSegment(0).map(l => l.id)).toContain('resident-cat')
+    })
   })
 
   describe('壁画避让由地标派生（等价性）', () => {
@@ -153,6 +195,52 @@ describe('走廊地标表', () => {
       for (const door of CORRIDOR_DOORS) {
         expect(inkable.has(`door-${door.roomId}`), `door-${door.roomId} 应可显形`).toBe(true)
       }
+    })
+  })
+
+  /**
+   * 「地标表必须有运行时消费者」。
+   *
+   * ## 这条门禁抓过一次真事
+   *
+   * 2026-09-08：`CorridorSegment` 改为遍历地标渲染之后，做变异测试时用
+   * `git checkout` 还原文件，把那次重构**一起还原了**，随后 `git add -A`
+   * 提交了旧版。结果是地标表定义完整、schema 与等价性断言全绿、巡检截图正常
+   * （旧版渲染出的画面一样），而 `landmarksInSegment` 在生产代码里**零引用**。
+   *
+   * 这正是 ADR 20260903211338 立规矩要防的那种状态：「已定义、未接线」在
+   * 测试里看不出来，因为测试自己会调它。判断落地的操作性标准是
+   * `grep -rl <模块> app components context hooks lib` —— 有非测试命中才算接线，
+   * 这条断言就是把那句话变成机制。
+   */
+  describe('接线检查：地标表有生产消费者', () => {
+    const PRODUCTION_DIRS = ['app', 'components', 'context', 'hooks', 'lib'] as const
+    const ROOT = join(__dirname, '..')
+
+    function productionFilesImporting(symbol: string): string[] {
+      const hits: string[] = []
+      for (const dir of PRODUCTION_DIRS) {
+        for (const file of walkSources(join(ROOT, dir))) {
+          const rel = relative(ROOT, file)
+          // 声明自身不算消费者
+          if (rel.endsWith('domain/corridor/landmarks.ts')) continue
+          if (functionCalls(readFileSync(file, 'utf8'), symbol, rel).length > 0) hits.push(rel)
+        }
+      }
+      return hits
+    }
+
+    it.each([
+      ['landmarksInSegment', '走廊渲染（CorridorSegment 遍历声明）'],
+      ['muralKeepOuts', '壁画避让（取代手写的第二套坐标真相）'],
+    ])('%s 在生产代码里被调用', (symbol, purpose) => {
+      const consumers = productionFilesImporting(symbol)
+      expect(
+        consumers,
+        `${symbol}（${purpose}）在 app/components/context/hooks/lib 下零调用。\n` +
+          '这意味着地标表只是一份"定义好但没人用"的数据 —— 测试会调它所以照样全绿，' +
+          '而运行时走的还是旧路径（ADR 20260903211338 的教训）。',
+      ).not.toEqual([])
     })
   })
 

@@ -27,30 +27,32 @@ export type TourCaptionKey =
   | 'publications'
   | 'gallery'
   | 'contact'
-  | 'cat'
+  | 'timeline'
   | 'end'
 
 /**
- * 门前 standOff = 7 落在门自动侧目的峭峰（`useCorridorCamera` 的 GLANCE_PEAK_DIST = 8）
- * 附近，相机会自然转向那扇门——不另写相机。
+ * 门前 standOff = 4.5：仍在门自动侧目的区间里（GLANCE_END −2 → GLANCE_PEAK 8），相机会转向
+ * 那扇门；比初稿的 7 近，门在画面里才够大（产品评审：7 时 Gallery 门只占屏幕一小块）。
+ * 猫站删了——招聘官的 60 秒预算不该花 3 秒介绍猫；换成一站停在履历便签前（`year-2022`
+ * 刻度处，左右墙是 Imperial / McAllister 那几张），那才是走廊里承载简历事实的东西。
  */
 export const TOUR_STOPS: readonly TourStop[] = [
   { id: 'welcome', landmarkId: 'welcome-avatar', standOff: 5, dwellMs: 4000, captionKey: 'welcome' },
-  { id: 'about', landmarkId: 'door-about', standOff: 7, dwellMs: 4000, captionKey: 'about' },
-  { id: 'projects', landmarkId: 'door-projects', standOff: 7, dwellMs: 4000, captionKey: 'projects' },
-  { id: 'publications', landmarkId: 'door-publications', standOff: 7, dwellMs: 4000, captionKey: 'publications' },
-  { id: 'gallery', landmarkId: 'door-gallery', standOff: 7, dwellMs: 4000, captionKey: 'gallery' },
-  { id: 'contact', landmarkId: 'door-contact', standOff: 7, dwellMs: 4000, captionKey: 'contact' },
-  { id: 'cat', landmarkId: 'resident-cat', standOff: 6, dwellMs: 3000, captionKey: 'cat' },
+  { id: 'about', landmarkId: 'door-about', standOff: 4.5, dwellMs: 3500, captionKey: 'about' },
+  { id: 'projects', landmarkId: 'door-projects', standOff: 4.5, dwellMs: 3500, captionKey: 'projects' },
+  { id: 'publications', landmarkId: 'door-publications', standOff: 4.5, dwellMs: 3500, captionKey: 'publications' },
+  { id: 'gallery', landmarkId: 'door-gallery', standOff: 4.5, dwellMs: 3000, captionKey: 'gallery' },
+  { id: 'timeline', landmarkId: 'year-2022', standOff: 3, dwellMs: 4000, captionKey: 'timeline' },
+  { id: 'contact', landmarkId: 'door-contact', standOff: 4.5, dwellMs: 3500, captionKey: 'contact' },
   { id: 'end', landmarkId: 'segment-door', standOff: 8, dwellMs: 5000, captionKey: 'end' },
 ]
 
 /**
  * 世界单位 / 秒。从起点 28 到段末门前共 105 单位（规格初稿估成 84）：
- * 3 u/s 是 35 s + 32 s 停留 = 67 s，超 60；4 u/s 是 26 s，合计 58 s。
+ * 3 u/s 是 35 s + 30 s 停留 = 65 s，超 60；4 u/s 是 26 s，合计 56 s。
  */
 export const TOUR_SPEED = 4
-/** reduced motion 下慢一点：路线仍可用（用户主动发起的导航），只是不赶。35 + 32 = 67 s ≤ 75 */
+/** reduced motion 下慢一点：路线仍可用（用户主动发起的导航），只是不赶。35 + 30 = 65 s ≤ 75 */
 export const TOUR_SPEED_REDUCED = 3
 export const TOUR_MAX_MS = 60_000
 export const TOUR_MAX_MS_REDUCED = 75_000

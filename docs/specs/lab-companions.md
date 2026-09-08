@@ -47,7 +47,7 @@
 | `arrive` | 从 `offstage` 出 | 从起点门旁（`segmentStartZ(0) − 6`，侧道）以 `run` 速度跑进视野到 `camZ − LEAD`，0.8 s；脚下一圈淡灰墨点扩散 0.4 s（登场瞬间，调研 §3.5） | 跑姿 | 到位 → `trot`；reduced 下改为直接出现在门旁 `sit` |
 | `trot` | `|camV|` ∈ (ε, V_RUN) | `camZ − LEAD`，LEAD = 5；侧道 x = `lane` | 腿摆频率 = `k · |位移|`，尾巴中速 | 速度变化 / 静止 |
 | `run` | `|camV|` ≥ V_RUN | 同上，但若落后（`z > camZ − LEAD + 3`）则以 2× lerp 追上 | 腿摆更快，身体前倾 6° | 速度回落 |
-| `sit` | 静止（`|camV|` < ε）持续 SIT_AFTER = 2.5 s | 原地 | 坐姿部件（正面），面向相机 | 玩家再动 → 0.3 s 内回 `trot` |
+| `sit` | 静止（`|camV|` < ε）持续 SIT_AFTER = **1.2 s**（初稿 2.5 s，UX 评审：那时注意力早已离开狗） | 原地 | 坐姿部件（正面），面向相机 | 玩家再动 → 0.3 s 内回 `trot` |
 | `idle-look` | 在 `sit` 中每 6–9 s（确定性伪随机，种子取 `floor(camZ)`） | 原地 | 头部 ±12° 摆一次，0.6 s | 自动回 `sit` |
 | `wait-at-door` | `phase` 进入 `aligning` | `targetDoorZ + 1.5`，x = 门同侧 `±(WALL_X − 1.2)` | 到达后坐姿，面向门 | `phase` 回到 `idle`（退房完成） |
 | `greet` | 从 `wait-at-door` 退出的第一帧 | 原地 | 身体 y 小跳一次（0.35 s，高 0.15） | 自动回 `trot` |
@@ -187,7 +187,7 @@ scripts/qa/lab-walkthrough.mjs       Lab 巡检
 
 **帧序**：`Dog` 读的是 `camera.position.z`，由走廊导轨在同一帧的 `useFrame` 里写。R3F 同优先级回调按注册顺序执行，`Dog` 在 `LabScene` 里挂在 `CameraController` 之后即可读到本帧值；即使读到上一帧也只差一帧的 lerp，可接受。**不要**给 `Dog` 的 `useFrame` 传正数 priority——那会关闭 R3F 的自动渲染。
 
-**成就进度**：`dog_companion` 是"累计 30 s"，是数值进度而非布尔。`AchievementDefinition` 需加可选 `total`（默认 1），进度累加走 `addProgress(id, seconds)`，与 folio-2025 的 group 进度同形态（调研 §3.4）。
+**成就进度**：`dog_companion` 是"累计 30 s"。**实现为布尔**（累计计时在 reducer 里，满 30 s 输出一次事件），没有做数值进度条——`total` / `addProgress` 那套要改成就面板与持久化格式，收益不抵成本；将来若做进度显示再补。
 
 ---
 

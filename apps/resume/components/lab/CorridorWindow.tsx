@@ -5,12 +5,17 @@ import { Text, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
 import { useLabLabels } from '@/hooks/useLabLabels'
+import { useLocale } from '@/hooks/useLocale'
+import { content } from '@/lib/content'
+import { cityYearSpan } from '@/lib/lab/domain/corridor/timeline'
 import { WALL_X } from '@/lib/lab/domain/corridor/layout'
 import {
   CITY_TIME_ZONE,
   localHourIn,
   localTimeLabel,
   skyColorAt,
+  skyPhaseAt,
+  skylineInkAt,
   type WindowCity,
 } from '@/lib/lab/domain/corridor/worldClock'
 import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
@@ -44,16 +49,27 @@ interface CorridorWindowProps {
 
 export function CorridorWindow({ city, z, side }: CorridorWindowProps) {
   const labels = useLabLabels()
+  const { locale } = useLocale()
   const frameTex = useTexture('/textures/entrance/window_sketch.webp')
 
-  const skylineSpec = useMemo<SkylineSpec>(
-    () => ({ kind: 'skyline', id: city, size: { width: TEX_W, height: TEX_H }, city }),
-    [city],
-  )
-  const skylineTex = useMemo(() => sketchTexture(skylineSpec), [skylineSpec])
+  /* 第二行：这座城在履历里的年份——让窗与便签讲同一件事，而不是一个世界时钟挂件 */
+  const yearsLine = useMemo(() => {
+    const c = content[locale]
+    const span = cityYearSpan([...c.experience.items, ...c.education.items], city)
+    if (!span) return ''
+    return span.end === undefined ? `${span.start} – ${labels.timeline.present}` : `${span.start} – ${span.end}`
+  }, [locale, city, labels])
 
   const tz = CITY_TIME_ZONE[city]
   const [clock, setClock] = useState(() => ({ hour: localHourIn(tz, new Date()), label: localTimeLabel(tz, new Date()) }))
+
+  // 剪影墨色随天色；缓存键带上时段，夜里那张与白天那张是两张纹理
+  const phase = skyPhaseAt(clock.hour)
+  const skylineSpec = useMemo<SkylineSpec>(
+    () => ({ kind: 'skyline', id: `${city}-${phase}`, size: { width: TEX_W, height: TEX_H }, city, ink: skylineInkAt(clock.hour) }),
+    [city, phase, clock.hour],
+  )
+  const skylineTex = useMemo(() => sketchTexture(skylineSpec), [skylineSpec])
   useEffect(() => {
     const tick = () => {
       const now = new Date()
@@ -95,17 +111,29 @@ export function CorridorWindow({ city, z, side }: CorridorWindowProps) {
         <planeGeometry args={[FRAME_SIZE, FRAME_SIZE]} />
         <meshBasicMaterial map={frameTex} transparent alphaTest={0.05} depthWrite={false} />
       </mesh>
-      {/* 窗下一行小字：城市 · 当地时间 */}
+      {/* 窗下两行小字：城市 · 当地时间 / 在这座城的年份 */}
       <Text
         position={[0, -FRAME_SIZE / 2 - 0.1, 0.012]}
         fontSize={0.12}
-        color="#5a4a32"
+        color="#3a3a3a"
         anchorX="center"
         anchorY="top"
         font={fontForText(caption, LAB_FONT_LATIN_REGULAR)}
       >
         {caption}
       </Text>
+      {yearsLine && (
+        <Text
+          position={[0, -FRAME_SIZE / 2 - 0.27, 0.012]}
+          fontSize={0.1}
+          color="#8a7a62"
+          anchorX="center"
+          anchorY="top"
+          font={fontForText(yearsLine, LAB_FONT_LATIN_REGULAR)}
+        >
+          {yearsLine}
+        </Text>
+      )}
     </group>
   )
 }

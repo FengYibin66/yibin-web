@@ -59,13 +59,15 @@ const LOAD_ORDER: readonly string[] = [...inkableLandmarkIds()].sort((a, b) => {
 const ORDER_INDEX = new Map(LOAD_ORDER.map((id, index) => [id, index]))
 
 /**
- * 加载期「画出走廊」的时间窗（规格 lab-corridor-story.md §1，决定 D）：
- * 进度到 30% 纸撕开、开始画，90% 画完；之后的 10% 是尾巴（字体 / 音频等不影响画面的资源）。
+ * 「画出来」的进度窗（规格 lab-corridor-story.md §1，决定 D 的修订版）：
+ * `introDrawLevel` 把 0.3 → 0.9 线性映射到 0 → 1。加载中 LabLoader 把 loadProgress 压在
+ * 0.3 以下（门一笔没画，反正在纸后面）；撕纸开始时用 1.8 s 从 0.3 tween 到 1，门随撕纸
+ * 被画出来。纸**不在 30% 撕开**——那版实测是空页面，见规格 §1 的修订注记。
  */
 export const INTRO_TEAR_AT = 0.3
 export const INTRO_DRAWN_AT = 0.9
 
-/** 把加载进度（0–1）映射到"画出来"的总量（0–1）：30% 前为 0，90% 后为 1 */
+/** 把进度（0–1）映射到"画出来"的总量（0–1）：0.3 前为 0，0.9 后为 1 */
 export function introDrawLevel(loadProgress: number): number {
   const p = clamp01(loadProgress)
   return clamp01((p - INTRO_TEAR_AT) / (INTRO_DRAWN_AT - INTRO_TEAR_AT))
@@ -95,10 +97,8 @@ export function loadInkOrder(id: string): number {
  * 首个地标的窗口从 0 开始、末个在 1 结束 —— 「进度 0 全是草稿、进度 1 全部
  * 上色」这两条边界天然成立。
  *
- * **状态：已定义、未接线**（ADR 20260903211338 要求这样标注）。接线要连带
- * 决定 loader 的遮挡时机（`LabLoader` 现在是 `z-index 9999` 的纸盖住一切，
- * 走廊被画出来的过程看不见），那是一个产品决定，见
- * `docs/architecture/lab-corridor-world.md` §8 的 D。
+ * **已接线**：`LabLoader` 写 `corridorStore.loadProgress`，`DoorSection` 每帧读它算
+ * `uDraw`（不订阅——撕纸那 1.8 s 里进度每帧变）。
  */
 export function loadIntroInk(id: string, loadProgress: number): number {
   const index = loadInkOrder(id)
@@ -118,9 +118,17 @@ export function loadIntroInk(id: string, loadProgress: number): number {
  *
  * @param id 地标 id。未知 id 返回 0（记忆里可能存着已删除的地标）
  */
+/**
+ * 第二圈起未访问的门的基线。不是 1：全部上色会把"哪些看过"的记忆抹掉，且与顶栏
+ * 「已探索 N / M」互相否证（产品评审）。0.55 明显有色、又与已访问的 1 分得开；
+ * 第二圈的辨识度交给段末门的正字、猫的"又是你"和狗的一句。
+ */
+export const LAP_INK = 0.55
+
 export function inkLevel(id: string, inputs: InkInputs): number {
   if (inputs.inked.has(id)) return 1
   const lap = Number.isFinite(inputs.lap) ? inputs.lap : 0
-  if (lap >= 1) return 1
-  return clamp01(inputs.hover ?? 0)
+  const hover = clamp01(inputs.hover ?? 0)
+  if (lap >= 1) return Math.max(LAP_INK, hover)
+  return hover
 }

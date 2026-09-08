@@ -220,6 +220,8 @@ export interface SkylineSpec {
   id: string
   size: SketchSize
   city: 'london' | 'singapore' | 'beijing'
+  /** 填充墨色，按窗外天色传（夜里深一档才有对比）；缺省日间灰 */
+  ink?: string
 }
 
 /** 段末门上的正字计数：走了几圈（规格 lab-corridor-story.md §4） */

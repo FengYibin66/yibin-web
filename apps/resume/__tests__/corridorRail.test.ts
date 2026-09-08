@@ -16,7 +16,7 @@ function fakeHandle(): CorridorRailHandle {
   return {
     jumpTo: vi.fn(),
     scrollTo: vi.fn(() => Promise.resolve()),
-    hold: vi.fn(),
+    hold: vi.fn(() => true),
     release: vi.fn(),
   }
 }

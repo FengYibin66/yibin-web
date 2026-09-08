@@ -14,12 +14,16 @@ import type { YearMarkSpec } from '@/lib/lab/domain/sketch/types'
  * 十个年份十张小画布）。
  */
 
-/** 世界尺寸；纹理 160 × 58 与之同比（sketch/AGENTS.md：宽高比不一致线条会被拉扁） */
-const WIDTH = 0.5
-const HEIGHT = 0.18
+/**
+ * 世界尺寸；纹理 160 × 58 与之同比（sketch/AGENTS.md：宽高比不一致线条会被拉扁）。
+ * 第一版 0.5 × 0.18 贴在墙脚 y −1.45：实机 6 单位外约 28 × 10 px 的浅灰字，没人看见
+ * （产品评审："实际上是不可见的噪声"）。放大到 0.8 × 0.29、提到踢脚线上方 −1.15。
+ */
+const WIDTH = 0.8
+const HEIGHT = 0.29
 const TEX_W = 160
 const TEX_H = 58
-const Y = -1.45
+const Y = -1.15
 
 interface YearMarkProps {
   year: number

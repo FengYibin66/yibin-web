@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -11,7 +11,7 @@ import { useScene } from '@/context/SceneContext'
 import { useMotionScale } from '@/hooks/useMotionScale'
 import { getRail, useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 import { say } from '@/lib/lab/app/stores/speechStore'
-import { ARRIVE_S, INITIAL_DOG, stepDog, type DogInput, type DogSnapshot } from '@/lib/lab/domain/corridor/dog'
+import { ARRIVE_S, DOG_LANE_X, DOG_LEAD, INITIAL_DOG, stepDog, type DogInput, type DogSnapshot } from '@/lib/lab/domain/corridor/dog'
 import {
   DOG_PART_FILES,
   DOG_SIDE_FOOT_V,
@@ -56,6 +56,10 @@ const TAIL_SWING = 0.25
 const SIDE_PART_IDS = Object.keys(DOG_SIDE_PARTS) as DogSidePart[]
 
 const partUrl = (file: string) => `/textures/corridor/companion/${file}.webp`
+/** 五个部件 + 坐姿，顺序与 SIDE_PART_IDS 一致；模块级，别每次渲染重建 */
+const PART_URLS = SIDE_PART_IDS.map(id => partUrl(DOG_PART_FILES[id])).concat(partUrl(DOG_PART_FILES.sit))
+/** 叫声定位用的临时数组：每帧只写不新建 */
+const _worldPos: [number, number, number] = [0, 0, 0]
 
 /** 一个绕枢轴转的部件：父组在枢轴处，子网格反向偏移 */
 function Part({
@@ -84,12 +88,16 @@ function Part({
 export function GuideDog() {
   const motionScale = useMotionScale()
   const { play } = useAudio()
-  const { unlockAchievement } = useAchievementActions()
+  const { unlockAchievement, showTutorial } = useAchievementActions()
   const { roomLoadState } = useScene()
+  /*
+    前导距离随宽高比：竖屏时水平视场收窄，5 单位处横向可见半宽只有 1.33 < 侧道 1.4，
+    狗的中心出画（UX 评审）。按 tan(fov/2)·aspect 反解，让狗中心 + 0.6 的余量在画内；桌面仍是 5。
+  */
+  const aspect = useThree(s => s.viewport.aspect)
+  const lead = Math.max(DOG_LEAD, (DOG_LANE_X + 0.6) / (Math.tan(Math.PI / 6) * aspect))
 
-  const textures = useTexture(
-    SIDE_PART_IDS.map(id => partUrl(DOG_PART_FILES[id])).concat(partUrl(DOG_PART_FILES.sit)),
-  )
+  const textures = useTexture(PART_URLS)
   const sideTex = useMemo(
     () => Object.fromEntries(SIDE_PART_IDS.map((id, i) => [id, textures[i]!])) as Record<DogSidePart, THREE.Texture>,
     [textures],
@@ -101,8 +109,11 @@ export function GuideDog() {
     放进 ref 给 useFrame 读——它一次进出房才变两次。
   */
   const doorRef = useRef<DogInput['doorTarget']>(null)
+  /** 进房失败：目标门消失但玩家没进去，狗不该打招呼 */
+  const abortedRef = useRef(false)
   useEffect(() => {
     const { phase, roomId, segmentIndex } = roomLoadState
+    abortedRef.current = phase === 'failed'
     if (phase === 'idle' || phase === 'failed' || !roomId) {
       doorRef.current = null
       return
@@ -142,13 +153,17 @@ export function GuideDog() {
       reducedMotion: motionScale === 0,
       lap,
       dt: delta,
+      doorAborted: abortedRef.current,
+      lead,
     })
     const s = r.next
     snapRef.current = s
 
     const footOffset = s.posture === 'sit' ? SIT_FOOT_OFFSET : SIDE_FOOT_OFFSET
     const centerY = FLOOR_Y + footOffset
-    const worldPos: [number, number, number] = [s.x, centerY, s.z]
+    _worldPos[0] = s.x
+    _worldPos[1] = centerY
+    _worldPos[2] = s.z
 
     for (const ev of r.events) {
       switch (ev.type) {
@@ -157,7 +172,7 @@ export function GuideDog() {
           pawToggle.current = pawToggle.current === 'a' ? 'b' : 'a'
           break
         case 'bark':
-          play('dog_bark', { position: worldPos })
+          play('dog_bark', { position: _worldPos })
           break
         case 'speech':
           say({ speaker: 'dog', key: ev.key, priority: 2 })
@@ -166,6 +181,8 @@ export function GuideDog() {
           unlockAchievement('dog_companion')
           break
         case 'arrived':
+          // 狗登场那一刻提一句"继续走，小狗会跟着你"（作用域 corridor，进房整批出队）
+          showTutorial('dog_companion', 'corridor')
           break
       }
     }

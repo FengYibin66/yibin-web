@@ -1,18 +1,18 @@
 /**
  * 一行字气泡的规则（架构文档 §7，ADR 20260908160918）。
  *
- * 发言者：头像、狗、猫。三条规则全是纯函数：
+ * 发言者：狗、猫（头像的闲聊在规格里有、没有实现——不预留没人用的枚举值）。三条规则全是纯函数：
  *
  * 1. **同时只一个气泡**——两个活物同时冒字，读者一个也读不完。
  * 2. **每个发言者有冷却**——猫被连点十次不该喵十次（成就照解，字只冒一次）。
- * 3. **优先级**：用户触发（点猫）> 状态变化（狗到门口）> 闲聊（头像"往前滚滚看"）。
+ * 3. **优先级**：用户触发（点猫）> 状态变化（狗到门口）> 闲聊（预留给将来的闲话）。
  *    高优先级可以顶掉正在显示的低优先级；反之被丢弃，不排队——排队的字会在
  *    读者已经走远之后才冒出来。
  *
  * 文案不在这里：这里只传**键**（`labUi.companions.<key>`），渲染层按语言取字。
  */
 
-export type Speaker = 'cat' | 'dog' | 'avatar'
+export type Speaker = 'cat' | 'dog'
 
 /** 1 闲聊 · 2 状态变化 · 3 用户触发 */
 export type SpeechPriority = 1 | 2 | 3
@@ -47,7 +47,6 @@ export const SPEECH_MS = 1800
 export const SPEECH_COOLDOWN_MS: Readonly<Record<Speaker, number>> = {
   cat: 10_000,
   dog: 10_000,
-  avatar: 15_000,
 }
 
 export interface SpeechResult {

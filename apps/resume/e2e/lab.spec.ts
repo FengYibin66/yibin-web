@@ -796,6 +796,18 @@ test.describe('走廊世界状态', () => {
    * 这里留下的是**快而确定**的部分：组件真的挂载了（`data-lab-cat` 存在
    * —— 猫是 R3F 的 mesh，不在 DOM 里，没这个属性就无从断言），且初始态是睡着。
    */
+  test('狗：第一次位移就登场，之后一直在（data-lab-dog 离开 offstage）', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-dog', 'offstage')
+    await page.mouse.move(720, 450)
+    await page.mouse.wheel(0, 400)
+    await expect(html).toHaveAttribute('data-lab-dog', /arrive|trot|run|sit/)
+  })
+
   test('猫：挂载在走廊里，初始是睡着的', async ({ page }) => {
     if (!(await openLab(page))) {
       test.skip(true, '无 WebGL')

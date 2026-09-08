@@ -147,9 +147,11 @@ describe('走廊地标表', () => {
       **不再有**手写避让表，只从 `muralKeepOuts()` 读。
     */
     it('corridorMurals 里没有手写的 MURAL_KEEP_OUTS，且调用 muralKeepOuts()', () => {
-      const source = readFileSync(join(__dirname, '../lib/lab/corridorMurals.ts'), 'utf8')
+      const file = join(__dirname, '../lib/lab/corridorMurals.ts')
+      const source = readFileSync(file, 'utf8')
       expect(source).not.toMatch(/export const MURAL_KEEP_OUTS/)
-      expect(source).toMatch(/muralKeepOuts\(\)/)
+      // AST：注释里出现 muralKeepOuts() 不算调用（machineEventWiring 第一版把注释当发送方栽过）
+      expect(functionCalls(source, 'muralKeepOuts', file).length).toBeGreaterThan(0)
     })
 
     it('门 / 家具 / 头像 / 段末门的避让区数值与迁移前一致（重构不挪壁画）', () => {

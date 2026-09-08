@@ -58,7 +58,7 @@ import { useCatEyes } from './useCatEyes'
  * 1.15 让它在 6 单位外约 80 像素高——一眼就是一只猫，又明显小于人
  * （`Avatar` 高 2.3，约为猫的两倍）。
  */
-const CAT_SIZE = 1.15
+const CAT_SIZE = 1.35
 /** 相对入口页那只（1.5 见方）的比例，瞳孔位置与跟随幅度都按它缩放 */
 const SCALE = CAT_SIZE / 1.5
 
@@ -248,6 +248,11 @@ export function ResidentCat({ z, side }: ResidentCatProps) {
         `meshBasicMaterial`（不参与光照），所以阴影只能是一块手画的淡色椭圆，
         平铺在地板上略高一点避免 z-fighting。
       */}
+      {/* 一块比猫稍大的浅色地面晕：走廊尽头被雾推成纯白，没有它 15 单位外看不出"那里有东西" */}
+      <mesh position={[0, -FOOT_OFFSET + 0.006, 0.02]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 0.5, 1]}>
+        <circleGeometry args={[CAT_SIZE * 0.9, 32]} />
+        <meshBasicMaterial color="#cfcabb" transparent opacity={0.22} depthWrite={false} />
+      </mesh>
       <mesh
         position={[0, -FOOT_OFFSET + 0.01, 0.02]}
         rotation={[-Math.PI / 2, 0, 0]}

@@ -27,6 +27,9 @@ import {
 } from '@/lib/lab/domain/machines/room.machine'
 
 export type RoomId = 'about' | 'projects' | 'publications' | 'gallery' | 'contact'
+
+/** 加载完成信号的兜底时限 */
+const LOADED_FALLBACK_MS = 20_000
 export type TeleportPhase = 'closing' | 'teleporting' | 'opening' | null
 
 /**
@@ -405,6 +408,14 @@ export function SceneProvider({ children }: { children: React.ReactNode }) {
 
   /* LabLoader 稳定完成 → LOADED（LabLoader 是兄弟组件，经模块级信号；已完成则立刻回调） */
   useEffect(() => onLabLoaded(markLoaded), [markLoaded])
+  /*
+    兜底：一张挂住的纹理不该让路线永远不可用。`useStableProgress` 若始终不 complete，
+    20 s 后也视为加载完成（此时 LabLoader 已经给了"去 Classic"的逃生链接）。
+  */
+  useEffect(() => {
+    const id = window.setTimeout(markLoaded, LOADED_FALLBACK_MS)
+    return () => window.clearTimeout(id)
+  }, [markLoaded])
 
   const startTour = useCallback((): boolean => tryCorridor({ type: 'TOUR_START' }), [tryCorridor])
 

@@ -15,6 +15,7 @@ import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 import { useTour } from '@/hooks/useTour'
+import { isLabLoaded, onLabLoaded } from '@/lib/lab/app/labLoaded'
 
 /*
   地图里的房间名来自 `labUi.doors`，与走廊门牌是同一份（审计 E7）。
@@ -43,6 +44,9 @@ export function NavigationUI() {
   const [mapOpen, setMapOpen]               = useState(false)
   /* 招聘官路线（ADR 20260908204302）：互斥归状态机、运动归导轨，这里只有按钮与字幕 */
   const tour = useTour()
+  /* 走廊教程要等纸撕开再提——"点一扇门"在门还没画出来时是错的（产品评审） */
+  const [labLoaded, setLabLoaded] = useState(isLabLoaded)
+  useEffect(() => onLabLoaded(() => setLabLoaded(true)), [])
   /*
     地图上"这间去过没有"的来源（ADR 20260908172231）。用 `inked`（真的进过）
     而不是 `visited`（从门口路过）—— 地图要回答的是"还有哪些内容没看"。
@@ -70,6 +74,7 @@ export function NavigationUI() {
     滚轮解锁，键盘用户永远关不掉它。
   */
   useEffect(() => {
+    if (!labLoaded || tour.running) return // 纸没撕开不提；路线中"教你怎么操作"自相矛盾
     if (!hasEntered && !isTeleporting) {
       showTutorial('corridor_enter', 'corridor')
     } else if (hasEntered && !isTeleporting && !isInRoom) {
@@ -77,7 +82,7 @@ export function NavigationUI() {
       // 会走了之后再提"不想走可以让它带你"——排在探索提示后面（ADR 20260908204302）
       showTutorial('tour_complete', 'corridor')
     }
-  }, [hasEntered, isTeleporting, isInRoom, showTutorial])
+  }, [labLoaded, tour.running, hasEntered, isTeleporting, isInRoom, showTutorial])
 
   // Close panels when teleporting or in room
   useEffect(() => {
@@ -198,33 +203,42 @@ export function NavigationUI() {
       <AchievementPopup />
 
       {/* 路线字幕：每站一句（规格 lab-corridor-story.md §5.1） */}
-      {tour.running && tour.caption && (
+      {tour.caption && (
         <div
           role="status"
           data-testid="tour-caption"
           data-tour-stop={tour.stopId ?? ''}
           style={{
+            /*
+              像字幕，不像第二张成就纸卡：深底浅字、无描边、无斜角，在明暗与形状上与
+              成就 / 教程气泡（白底纸卡，bottom ≈ 90–150）一眼分开，且在它们之上（UX 评审）。
+            */
             position: 'absolute',
-            // 成就 / 教程气泡占着 bottom ≈ 90 那一带（实机截图里字幕被它盖住），字幕再往上
-            bottom: 156,
+            bottom: 230,
             left: '50%',
-            transform: 'translateX(-50%) rotate(-0.4deg)',
-            maxWidth: 'min(560px, 86vw)',
-            padding: '10px 18px',
-            background: '#fffdf7',
-            color: '#2a1f0e',
-            border: '1.5px solid #3a3a3a',
-            borderRadius: 3,
-            boxShadow: '2px 3px 0 rgba(58,58,58,0.18)',
+            transform: 'translateX(-50%)',
+            maxWidth: 'min(640px, 88vw)',
+            padding: '10px 20px',
+            background: 'rgba(42,31,14,0.84)',
+            color: '#fffdf7',
+            borderRadius: 6,
             fontFamily: 'var(--font-sketch)',
-            fontSize: 16,
+            fontSize: 20,
             lineHeight: 1.35,
             textAlign: 'center',
             pointerEvents: 'none',
-            zIndex: 30,
+            zIndex: 120,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 14,
           }}
         >
-          {labels.tour[tour.caption]}
+          {tour.running && (
+            <span style={{ fontSize: 13, opacity: 0.6, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+              {tour.index}/{tour.total}
+            </span>
+          )}
+          <span>{labels.tour[tour.caption]}</span>
         </div>
       )}
 
@@ -285,16 +299,15 @@ export function NavigationUI() {
               void tour.start()
             }}
             active={tour.running}
+            solid={tour.running}
             aria-label={tour.running ? labels.panels.stopTour : labels.panels.tour}
             aria-pressed={tour.running}
             data-testid="nav-tour"
           >
-            {/* 一只小脚印 */}
+            {/* 一只小脚印：一个掌垫 + 三个脚趾，18 px 里再多就成一团灰点（UX 评审） */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <ellipse cx="9" cy="14.5" rx="3.2" ry="4.2" />
-              <circle cx="5.2" cy="8.2" r="1.4" /><circle cx="8.4" cy="6.4" r="1.4" />
-              <circle cx="12" cy="7.2" r="1.3" /><circle cx="14.6" cy="10" r="1.2" />
-              <ellipse cx="17" cy="16.5" rx="2.2" ry="3" opacity="0.55" />
+              <ellipse cx="12" cy="15.5" rx="4.4" ry="5.2" />
+              <circle cx="6.6" cy="8.6" r="2" /><circle cx="12" cy="6.4" r="2" /><circle cx="17.4" cy="8.6" r="2" />
             </svg>
           </NavButton>
         )}
@@ -599,11 +612,14 @@ export function NavigationUI() {
 function NavButton({
   onClick,
   active,
+  solid,
   children,
   ...props
 }: {
   onClick: () => void
   active?: boolean
+  /** 实心反白：进行中的模式（路线）要与"面板开着"的浅色 active 一眼分开 */
+  solid?: boolean
   children: React.ReactNode
   [key: string]: unknown
 }) {
@@ -611,13 +627,13 @@ function NavButton({
     <button
       onClick={onClick}
       style={{
-        background: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
-        border: `1.5px solid ${active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
+        background: solid ? '#2a1f0e' : active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
+        border: `1.5px solid ${solid ? '#2a1f0e' : active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
         borderRadius: 8,
         width: 40, height: 40,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
-        color: '#2a1f0e',
+        color: solid ? '#fffdf7' : '#2a1f0e',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         transition: 'background 0.2s, border-color 0.2s',

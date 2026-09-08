@@ -77,13 +77,18 @@ describe('引路小狗 reducer', () => {
       expect(snap.z).toBeLessThan(28)
     })
 
-    it('reduced：直接坐下，此后相机走远也不动', () => {
+    it('reduced：直接坐下；相机走远超过 6 单位就瞬移回前导位（不消失，也不插值）', () => {
       const first = stepDog(INITIAL_DOG, input({ camV: -4, reducedMotion: true }))
       expect(first.next.state).toBe('sit')
       const z0 = first.next.z
-      const { snap } = run(first.next, 300, i => ({ camV: -6, camZ: 28 - i * 0.1, reducedMotion: true }))
-      expect(snap.state).toBe('sit')
-      expect(snap.z).toBe(z0)
+      // 走 3 单位内：不动
+      const near = run(first.next, 30, i => ({ camV: -6, camZ: 28 - i * 0.1, reducedMotion: true })).snap
+      expect(near.z).toBe(z0)
+      // 走远：一步跳到前导位，之后又不动
+      const far = run(first.next, 300, i => ({ camV: -6, camZ: 28 - i * 0.1, reducedMotion: true })).snap
+      expect(far.state).toBe('sit')
+      expect(far.z).toBeLessThan(z0)
+      expect(Math.abs(far.z - (28 - 29.9 - DOG_LEAD))).toBeLessThan(6.5)
     })
   })
 
@@ -210,6 +215,12 @@ describe('引路小狗 reducer', () => {
       expect(r.next.state).toBe('greet')
       expect(r.events).toContainEqual({ type: 'speech', key: 'dogLap' })
       expect(r.next.lap).toBe(1)
+    })
+
+    it('第三圈起说"又一圈"，不再喊"第二圈"', () => {
+      const s = { ...trottingDog(), lap: 1 }
+      const r = stepDog(s, input({ camZ: s.z + DOG_LEAD, camV: -4, lap: 2 }))
+      expect(r.events).toContainEqual({ type: 'speech', key: 'dogLapMore' })
     })
   })
 

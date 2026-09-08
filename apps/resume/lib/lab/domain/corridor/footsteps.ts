@@ -5,7 +5,7 @@
  * 见 `exploration.ts`），而且导轨是指数插值——按时间响会在相机已经停下、
  * 插值尾巴还在挪的那一秒里多响两步。
  *
- * 玩家（步距 1.8）与狗（步距 0.9）共用同一个计数器。
+ * 玩家（步距 1.8，`playerFootstep`）与狗（步距 0.9，`dog.ts` 的 reducer）共用 `advanceStride`。
  */
 
 import { motionOf, type MotionBand } from './world'

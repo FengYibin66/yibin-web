@@ -86,8 +86,19 @@ export const corridorMachine = setup({
   context: { currentRoom: null, teleportTarget: null, fastTeleport: false },
   states: {
     /** 首屏纹理加载（撕纸 loader 覆盖期间） */
+    /*
+      加载中也接受 TELEPORT 与 DOOR_CLICK：加载纸是 pointer-events none，地图按钮与门在纸
+      下面照样点得到，两者在接线前一直是可用的（E2E 在 lab-ui 出现的瞬间就传送）。
+      把它们关掉是行为回归——第一次接线时就这么让 16 条 E2E 变红；只关门不关传送则会让
+      走廊机与房间机对"在不在房间里"给出相反答案（评审抓到）。`loading` 真正门控的只有
+      路线：它要导轨可用。
+    */
     loading: {
-      on: { LOADED: 'corridor' },
+      on: {
+        LOADED: 'corridor',
+        TELEPORT: { target: 'teleporting', guard: 'isDifferentRoom', actions: 'setTeleportTarget' },
+        DOOR_CLICK: 'entering',
+      },
     },
 
     corridor: {

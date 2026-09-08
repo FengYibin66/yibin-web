@@ -18,6 +18,7 @@ import {
   relativeZOfYear,
   timelineYears,
   yearAt,
+  cityYearSpan,
   type TimelineEntry,
 } from '@/lib/lab/domain/corridor/timeline'
 import { content } from '@/lib/content'
@@ -76,6 +77,19 @@ describe('年份刻度落点', () => {
       '2017r-6', '2018l-15.3', '2019r-24.7', '2020r-34', '2021l-43.3',
       '2022r-52.7', '2023r-62', '2024l-71.3', '2025l-80.7', '2026l-89',
     ])
+  })
+})
+
+describe('城市年份跨度（窗下第二行）', () => {
+  const all = [...content.en.experience.items, ...content.en.education.items]
+  it('伦敦 2021–2023，新加坡 2023–2025，北京 2025–2026', () => {
+    expect(cityYearSpan(all, 'london')).toEqual({ start: 2021, end: 2023 })
+    expect(cityYearSpan(all, 'singapore')).toEqual({ start: 2023, end: 2025 })
+    expect(cityYearSpan(all, 'beijing')).toEqual({ start: 2025, end: 2026 })
+  })
+  it('有开区间的城市终点为 undefined；没有条目的城市为 null', () => {
+    expect(cityYearSpan(all, 'silicon-valley')).toEqual({ start: 2026 })
+    expect(cityYearSpan(all, 'nowhere')).toBeNull()
   })
 })
 

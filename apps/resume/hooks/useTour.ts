@@ -33,12 +33,17 @@ const OWNER = 'tour'
 
 export interface TourState {
   readonly running: boolean
-  /** 当前停靠点的字幕键；行进中是下一站的 */
+  /** 当前停靠点的字幕键；行进中是下一站的；走完后是 `end`，常驻到下一次输入 */
   readonly caption: TourCaptionKey | null
   readonly stopId: string | null
+  /** 第几站 / 共几站（1 起），字幕里的小计数：没有它访客不知道还要等多久（UX 评审） */
+  readonly index: number
+  readonly total: number
 }
 
-const IDLE: TourState = { running: false, caption: null, stopId: null }
+const IDLE: TourState = { running: false, caption: null, stopId: null, index: 0, total: 0 }
+/** 走完了：导轨已还给玩家，最后一句留着告诉他下一步 */
+const ENDED: TourState = { running: false, caption: 'end', stopId: 'end', index: 0, total: 0 }
 
 export function useTour() {
   const { mode, startTour: machineStart, endTour: machineEnd } = useScene()
@@ -47,35 +52,68 @@ export function useTour() {
   const [state, setState] = useState<TourState>(IDLE)
   /** 本次路线的取消令牌：每次开始换一个，旧的 await 醒来后发现不是自己就退出 */
   const runToken = useRef(0)
+  /** 停留用的定时器，取消时清掉（不然最多留 5 s 的悬挂闭包） */
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const finish = useCallback((reason: 'done' | 'input') => {
     runToken.current += 1
+    if (dwellTimer.current) {
+      clearTimeout(dwellTimer.current)
+      dwellTimer.current = null
+    }
     corridorRailRelease(OWNER)
     machineEnd(reason)
-    setState(IDLE)
+    setState(reason === 'done' ? ENDED : IDLE)
   }, [machineEnd])
 
+  /*
+    走完之后最后一句常驻：结束那一刻画面停在段末门前，没有这句访客不知道下一步。
+    任何输入（导轨已释放，所以这里自己听）清掉它。
+  */
+  useEffect(() => {
+    if (state.running || state.caption !== 'end') return
+    const clear = () => setState(IDLE)
+    const opts = { passive: true, once: true } as const
+    window.addEventListener('wheel', clear, opts)
+    window.addEventListener('keydown', clear, opts)
+    window.addEventListener('touchstart', clear, opts)
+    window.addEventListener('pointerdown', clear, opts)
+    return () => {
+      window.removeEventListener('wheel', clear)
+      window.removeEventListener('keydown', clear)
+      window.removeEventListener('touchstart', clear)
+      window.removeEventListener('pointerdown', clear)
+    }
+  }, [state.running, state.caption])
+
   const start = useCallback(async () => {
-    if (!machineStart()) return false
-    const token = ++runToken.current
+    // 先拿导轨再进状态机：拿不到（别人持有 / 未挂载）什么都不该变
     const onInput = () => finish('input')
-    if (!corridorRailHold(OWNER, onInput)) {
-      machineEnd('input')
+    if (!corridorRailHold(OWNER, onInput)) return false
+    if (!machineStart()) {
+      corridorRailRelease(OWNER)
       return false
     }
+    const token = ++runToken.current
 
     const rail = getRail()
     const legs = tourPlan(rail.z, Math.max(0, segmentIndexAtZ(rail.z)), motionScale === 0)
-    setState({ running: true, caption: legs[0]?.stop.captionKey ?? null, stopId: null })
+    const total = legs.length
+    setState({ running: true, caption: legs[0]?.stop.captionKey ?? null, stopId: null, index: 1, total })
 
     try {
-      for (const leg of legs) {
+      for (const [i, leg] of legs.entries()) {
         if (runToken.current !== token) return true
-        setState({ running: true, caption: leg.stop.captionKey, stopId: null })
+        setState({ running: true, caption: leg.stop.captionKey, stopId: null, index: i + 1, total })
         await corridorRailScrollTo(leg.targetZ, { duration: leg.travelMs / 1000 })
         if (runToken.current !== token) return true
-        setState({ running: true, caption: leg.stop.captionKey, stopId: leg.stop.id })
-        await new Promise<void>(resolve => setTimeout(resolve, leg.dwellMs))
+        setState({ running: true, caption: leg.stop.captionKey, stopId: leg.stop.id, index: i + 1, total })
+        await new Promise<void>(resolve => {
+          dwellTimer.current = setTimeout(() => {
+            dwellTimer.current = null
+            resolve()
+          }, leg.dwellMs)
+        })
       }
       if (runToken.current !== token) return true
       unlockAchievement('tour_complete')

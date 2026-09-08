@@ -605,16 +605,49 @@ function fitSize(text: string, available: number, preferred: number, min: number
   return Math.max(min, Math.round(Math.min(preferred, fit)))
 }
 
+/**
+ * 标题折行：按字号下限 `min` 算每行能放几个字，把单词贪心地装进最多三行；三行还装不下就
+ * 再缩字号（仍不低于 min 的一半）。没有空格（中文）按字符切。第一版是一路缩字号，长标题
+ * 被压到比副标题还小（UX 评审）。
+ */
+export function wrapTitle(text: string, available: number, preferred: number, min: number): { lines: string[]; size: number } {
+  const oneLine = fitSize(text, available, preferred, 1)
+  if (oneLine >= min) return { lines: [text], size: oneLine }
+
+  const tokens = text.includes(' ') ? text.split(' ') : [...text]
+  const joiner = text.includes(' ') ? ' ' : ''
+  const pack = (size: number): string[] => {
+    const perLine = Math.max(1, Math.floor(available / (size * CHAR_WIDTH_RATIO)))
+    const lines: string[] = []
+    let cur = ''
+    for (const t of tokens) {
+      const next = cur ? cur + joiner + t : t
+      if (next.length <= perLine || cur === '') cur = next
+      else { lines.push(cur); cur = t }
+    }
+    if (cur) lines.push(cur)
+    return lines
+  }
+  let size = min
+  let lines = pack(size)
+  while (lines.length > 3 && size > min / 2) {
+    size -= 2
+    lines = pack(size)
+  }
+  return { lines, size }
+}
+
 /** 年份刻度：左侧一小段竖线，右侧手写年份；整体略微倾斜像是蹲下来写的 */
 function planYearMark(spec: YearMarkSpec): SketchOp[] {
   const { width: w, height: h } = spec.size
   const seed = seedFrom(specKey(spec))
   const ops: SketchOp[] = []
-  const tickX = Math.round(w * 0.12)
+  // 一小段短横当刻度（第一版是竖线，紧贴数字左侧读作"| 2021"，像输入光标——UX 评审）
+  const tickX = Math.round(w * 0.06)
   ops.push({
     kind: 'line',
-    x1: tickX, y1: Math.round(h * 0.15),
-    x2: tickX, y2: Math.round(h * 0.85),
+    x1: tickX, y1: Math.round(h * 0.5),
+    x2: Math.round(tickX + w * 0.09), y2: Math.round(h * 0.5),
     style: pencil(seed, { strokeWidth: 2.6 }),
   })
   const text = String(spec.year)
@@ -663,16 +696,27 @@ function planTimelineNote(spec: TimelineNoteSpec): SketchOp[] {
   })
 
   const available = w - pad * 2
-  const titleSize = fitSize(spec.title, available, h * 0.2, 9)
-  const subSize = fitSize(spec.subtitle, available, h * 0.14, 8)
-  const footSize = fitSize(spec.footer, available, h * 0.13, 8)
+  /*
+    标题：字号有下限、超长就折两行，而不是一路缩小——第一版长标题
+    （"National University of Singapore (NUS)"）被压到 19 px，比 40 px 的副标题还小，
+    层次反了（UX 评审）。
+  */
+  const titleLines = wrapTitle(spec.title, available, h * 0.24, 28)
+  const titleSize = titleLines.size
+  const subSize = fitSize(spec.subtitle, available, h * 0.17, 8)
+  const footSize = fitSize(spec.footer, available, h * 0.16, 8)
 
   let y = pad + tapeH * 0.4 + titleSize
-  ops.push({ kind: 'text', x: pad, y, text: spec.title, size: titleSize, color: INK, align: 'left', rotate: -0.01 })
+  const lineStep = Math.round(titleSize * 1.12)
+  for (const [i, line] of titleLines.lines.entries()) {
+    ops.push({ kind: 'text', x: pad, y: y + i * lineStep, text: line, size: titleSize, color: INK, align: 'left', rotate: -0.01 })
+  }
+  y += lineStep * (titleLines.lines.length - 1)
   y += Math.round(titleSize * 0.3)
+  const lastLine = titleLines.lines[titleLines.lines.length - 1] ?? ''
   ops.push({
     kind: 'line', x1: pad, y1: y,
-    x2: Math.min(w - pad, pad + spec.title.length * titleSize * CHAR_WIDTH_RATIO), y2: y,
+    x2: Math.min(w - pad, pad + lastLine.length * titleSize * CHAR_WIDTH_RATIO), y2: y,
     style: pencil(seed + 2, { strokeWidth: 1.6 }),
   })
   y += Math.round(subSize * 1.45)
@@ -707,6 +751,8 @@ function planSkyline(spec: SkylineSpec): SketchOp[] {
   const seed = seedFrom(specKey(spec))
   const ops: SketchOp[] = []
   const blocks = SKYLINES[spec.city]
+  // 斜线填充而不是实心块：走廊里一切都是只描边的线稿，实心矩形像贴纸（UX 评审）
+  const ink = spec.ink ?? '#5a5f6b'
   blocks.forEach(([x, bw, bh], i) => {
     // 先取整高度再算 y，保证 y + h == 画布高（分别取整会多出 1 px 画到画布外）
     const bhPx = Math.round(bh * h)
@@ -714,7 +760,7 @@ function planSkyline(spec: SkylineSpec): SketchOp[] {
       kind: 'rect',
       x: Math.round(x * w), y: h - bhPx,
       w: Math.round(bw * w), h: bhPx,
-      style: pencil(seed + i, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.6, roughness: 0.8 }),
+      style: pencil(seed + i, { fill: ink, fillStyle: 'hachure', strokeWidth: 2.2, roughness: 0.8 }),
     })
   })
   // 新加坡：三塔顶上那条横板
@@ -723,7 +769,7 @@ function planSkyline(spec: SkylineSpec): SketchOp[] {
       kind: 'rect',
       x: Math.round(0.38 * w), y: h - Math.round(0.66 * h),
       w: Math.round(0.31 * w), h: Math.round(0.05 * h),
-      style: pencil(seed + 20, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.6 }),
+      style: pencil(seed + 20, { fill: ink, fillStyle: 'hachure', strokeWidth: 2.2 }),
     })
   }
   // 伦敦：钟楼顶尖
@@ -731,7 +777,7 @@ function planSkyline(spec: SkylineSpec): SketchOp[] {
     ops.push({
       kind: 'polygon',
       points: [[0.14 * w, h - 0.62 * h], [0.17 * w, h - 0.74 * h], [0.20 * w, h - 0.62 * h]],
-      style: pencil(seed + 21, { fill: '#5a5f6b', fillStyle: 'solid', strokeWidth: 1.4 }),
+      style: pencil(seed + 21, { fill: ink, fillStyle: 'hachure', strokeWidth: 2 }),
     })
   }
   // 地平线

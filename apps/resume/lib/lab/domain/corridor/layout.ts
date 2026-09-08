@@ -67,10 +67,10 @@ export const CORRIDOR_FURNITURE: readonly CorridorFurniturePlacement[] = [
  * 时区在 `worldClock.ts`。
  */
 export interface CorridorWindowPlacement {
-  id: string
-  city: 'london' | 'singapore' | 'beijing'
-  relativeZ: number
-  side: WallSide
+  readonly id: string
+  readonly city: 'london' | 'singapore' | 'beijing'
+  readonly relativeZ: number
+  readonly side: WallSide
 }
 
 export const CORRIDOR_WINDOWS: readonly CorridorWindowPlacement[] = [

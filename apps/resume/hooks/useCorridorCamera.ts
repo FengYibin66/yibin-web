@@ -19,6 +19,9 @@ import {
 
 // 门的相对 Z 与侧墙来自 domain —— 原先这里自带一份拷贝（审计 B3）
 
+/** scrollTo 到站的容差（世界单位） */
+const ARRIVE_EPS = 0.4
+
 const GLANCE_START_DIST = 15
 const GLANCE_PEAK_DIST  = 8
 const GLANCE_END_DIST   = -2
@@ -78,10 +81,17 @@ export function useCorridorCamera({
   const holdRef = useRef<{ owner: string; onInput: () => void } | null>(null)
   const scrollTween = useRef<gsap.core.Tween | null>(null)
   const scrollReject = useRef<((reason: Error) => void) | null>(null)
+  /*
+    tween 结束只说明 targetZ 到了；currentZ 以 smoothing 跟随，还差一截。到站的判定
+    放到 useFrame 里：|currentZ − z| < ARRIVE_EPS 才 resolve，字幕与 data-tour-stop
+    不会在相机还在路上时就翻成"已到站"。
+  */
+  const arriveRef = useRef<{ z: number; resolve: () => void } | null>(null)
 
   const cancelScroll = useCallback((reason: string) => {
     scrollTween.current?.kill()
     scrollTween.current = null
+    arriveRef.current = null
     const reject = scrollReject.current
     scrollReject.current = null
     reject?.(new Error(reason))
@@ -107,18 +117,17 @@ export function useCorridorCamera({
           onUpdate: () => { targetZ.current = proxy.z },
           onComplete: () => {
             scrollTween.current = null
-            scrollReject.current = null
             exploredRef.current = true
-            resolve()
+            arriveRef.current = { z, resolve }
           },
         })
       })
     },
     hold(owner, onInput) {
-      if (holdRef.current && holdRef.current.owner !== owner && process.env.NODE_ENV !== 'production') {
-        throw new Error(`走廊导轨已被 ${holdRef.current.owner} 独占，${owner} 不能再持有`)
-      }
+      // 已被别人持有：拒绝而不是夺权（夺权会让原持有者的 release 落空，导轨永久锁死）
+      if (holdRef.current && holdRef.current.owner !== owner) return false
       holdRef.current = { owner, onInput }
+      return true
     },
     release(owner) {
       if (holdRef.current?.owner !== owner) return
@@ -239,6 +248,8 @@ export function useCorridorCamera({
       if (interceptInput()) return
       targetZ.current = nextTargetZ(targetZ.current, deltaY, scrollSpeed)
     } else {
+      // 路线中横向滑动也算"我要接管"——否则镜头能被拧到侧墙而字幕照常推进
+      if (interceptInput()) return
       targetLook.current.x = nextLookX(targetLook.current.x, deltaX, window.innerWidth, lookIntensity)
     }
   }, [scrollSpeed, lookIntensity, interceptInput])
@@ -273,6 +284,14 @@ export function useCorridorCamera({
 
     // Smooth Z (no lower bound — infinite)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
+
+    // scrollTo 的到站判定（见 arriveRef）
+    const arrive = arriveRef.current
+    if (arrive && Math.abs(currentZ.current - arrive.z) < ARRIVE_EPS) {
+      arriveRef.current = null
+      scrollReject.current = null
+      arrive.resolve()
+    }
 
     /*
       「开始探索」的判定：按**位移**，不按输入事件类型。滚轮 / 触摸 / 键盘

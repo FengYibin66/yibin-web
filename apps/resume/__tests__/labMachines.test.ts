@@ -144,7 +144,8 @@ describe('corridorMachine', () => {
     const a = createActor(corridorMachine)
     a.start()
     expect(a.getSnapshot().value).toBe('loading')
-    a.send({ type: 'DOOR_CLICK', roomId: 'about', segmentIndex: 0 })
+    // 点门与传送在加载中是允许的（纸 pointer-events none，本来就点得到）；路线不行
+    a.send({ type: 'TOUR_START' })
     expect(a.getSnapshot().value).toBe('loading')
   })
 })
@@ -478,10 +479,12 @@ describe('corridorMachine · touring', () => {
     expect(a.getSnapshot().can({ type: 'TOUR_START' })).toBe(false)
   })
 
-  it('加载完成前不能开始路线', () => {
+  it('加载完成前不能开始路线，但能传送、能点门（加载纸 pointer-events none，两者本来就点得到）', () => {
     const a = createActor(corridorMachine)
     a.start()
     expect(a.getSnapshot().can({ type: 'TOUR_START' })).toBe(false)
+    expect(a.getSnapshot().can({ type: 'DOOR_CLICK', roomId: 'about', segmentIndex: 0 })).toBe(true)
+    expect(a.getSnapshot().can({ type: 'TELEPORT', roomId: 'about' })).toBe(true)
   })
 
   it('纸还没合上就中止：TELEPORT_ABORT → aborted → 纸开完回走廊', () => {

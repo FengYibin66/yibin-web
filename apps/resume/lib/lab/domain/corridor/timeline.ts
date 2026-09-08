@@ -112,6 +112,29 @@ export interface TimelineEntry {
   readonly years: { readonly start: number; readonly end?: number }
 }
 
+/**
+ * 一座城市在履历里的年份跨度（窗下第二行）：取该城全部条目的最早起点与最晚终点，
+ * 有开区间（至今）则终点为 undefined。没有条目返回 null。
+ */
+export function cityYearSpan(
+  entries: readonly (TimelineEntry & { readonly cityId: string })[],
+  cityId: string,
+): { readonly start: number; readonly end?: number } | null {
+  let start = Number.POSITIVE_INFINITY
+  let end: number | undefined = Number.NEGATIVE_INFINITY
+  let open = false
+  let found = false
+  for (const e of entries) {
+    if (e.cityId !== cityId) continue
+    found = true
+    start = Math.min(start, e.years.start)
+    if (e.years.end === undefined) open = true
+    else if (end !== undefined) end = Math.max(end, e.years.end)
+  }
+  if (!found) return null
+  return open ? { start } : { start, end: end as number }
+}
+
 export interface TimelineNotePlacement {
   readonly id: string
   readonly relativeZ: number

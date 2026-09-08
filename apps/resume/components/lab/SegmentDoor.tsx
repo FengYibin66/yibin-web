@@ -168,12 +168,17 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
  */
 function LapTally({ y }: { y: number }) {
   const lap = useCorridorStore(s => s.lap)
+  // 第 0 圈什么都不画，也不栅格化（早退在 hooks 之前：整个子组件不渲染）
+  if (lap <= 0) return null
+  return <LapTallyMark y={y} lap={lap} />
+}
+
+function LapTallyMark({ y, lap }: { y: number; lap: number }) {
   const spec = useMemo<TallySpec>(
     () => ({ kind: 'tally', id: `lap-${lap}`, size: { width: 160, height: 64 }, count: lap }),
     [lap],
   )
   const texture = useMemo(() => sketchTexture(spec), [spec])
-  if (lap <= 0) return null
   return (
     <mesh position={[1.35, y + 0.55, 0.09]} rotation={[0, 0, -0.04]}>
       <planeGeometry args={[0.6, 0.24]} />

@@ -20,7 +20,7 @@
 
 import type { WallSide } from '../ids'
 import { WALL_X } from './layout'
-import { DOG_STRIDE } from './footsteps'
+import { DOG_STRIDE, EMPTY_STRIDE, advanceStride, type StrideState } from './footsteps'
 import { clampDelta, motionOf } from './world'
 
 export type DogState =
@@ -39,8 +39,8 @@ export const DOG_LEAD = 5
 export const DOG_LANE_X = 1.4
 /** 视野中央禁区半宽 —— 不变量 */
 export const CENTER_BAND = 0.6
-/** 玩家静止多久狗坐下 */
-export const SIT_AFTER_S = 2.5
+/** 玩家静止多久狗坐下。2.5 s 时注意力早已离开狗（UX 评审）；1.2 s */
+export const SIT_AFTER_S = 1.2
 /** 打招呼那一跳 */
 export const GREET_S = 0.35
 export const GREET_HOP = 0.15
@@ -72,6 +72,10 @@ export interface DogInput {
   readonly reducedMotion: boolean
   readonly lap: number
   readonly dt: number
+  /** 进房失败了（doorTarget 变回 null 但玩家从没进去）：不要"欢迎回来" */
+  readonly doorAborted?: boolean
+  /** 前导距离，缺省 DOG_LEAD；竖屏视锥窄，组件按宽高比把它拉远（UX 评审） */
+  readonly lead?: number
 }
 
 export type DogPosture = 'side' | 'sit'
@@ -96,14 +100,15 @@ export interface DogSnapshot {
   readonly lap: number
   readonly laneTarget: number
   readonly nextLookAt: number
-  readonly pawAccum: number
+  /** 爪音计步（与玩家脚步共用 footsteps.ts 的计数器） */
+  readonly stride: StrideState
 }
 
 export type DogEvent =
   | { readonly type: 'arrived' }
   | { readonly type: 'bark' }
   | { readonly type: 'paw' }
-  | { readonly type: 'speech'; readonly key: 'dogGreet' | 'dogWait' | 'dogLap' }
+  | { readonly type: 'speech'; readonly key: 'dogGreet' | 'dogWait' | 'dogLap' | 'dogLapMore' }
   | { readonly type: 'achievement' }
 
 export const INITIAL_DOG: DogSnapshot = {
@@ -124,7 +129,7 @@ export const INITIAL_DOG: DogSnapshot = {
   lap: 0,
   laneTarget: DOG_LANE_X,
   nextLookAt: 7,
-  pawAccum: 0,
+  stride: EMPTY_STRIDE,
 }
 
 export interface DogStep {
@@ -204,15 +209,22 @@ export function stepDog(s: DogSnapshot, input: DogInput): DogStep {
     }
   }
 
-  // reduced：坐定不动，只响应圈数变化的那句话
+  /*
+    reduced：不插值，但也不能消失。第一版让它坐定不动，玩家走两三秒狗就落在相机背后、
+    整段路再也不出现——"减少动效"把内容拿走了（UX 评审）。掉出视野就**瞬移**到前导位：
+    瞬移不是动画，阈值 6 保证只在真的看不见时跳一次。
+  */
   if (input.reducedMotion) {
-    if (lap > s.lap) events.push({ type: 'speech', key: 'dogLap' })
-    return { next: { ...n, lap, state: 'sit', posture: 'sit' }, events }
+    if (lap > s.lap) events.push({ type: 'speech', key: lap === 1 ? 'dogLap' : 'dogLapMore' })
+    const lead = input.lead ?? DOG_LEAD
+    const z = Math.abs(s.z - (input.camZ - lead)) > 6 ? input.camZ - lead : s.z
+    return { next: { ...n, lap, z, state: 'sit', posture: 'sit' }, events }
   }
 
   // ── 圈数变化：打个招呼 ────────────────────────────────────────────────────
   if (lap > s.lap && s.state !== 'arrive' && s.state !== 'greet') {
-    events.push({ type: 'speech', key: 'dogLap' }, { type: 'bark' })
+    // 第二圈是"第二圈！"，再往后就只是"又一圈！"（规格 §4）
+    events.push({ type: 'speech', key: lap === 1 ? 'dogLap' : 'dogLapMore' }, { type: 'bark' })
     n = { ...n, lap, state: 'greet', posture: 'side', stateTime: 0 }
     return { next: n, events }
   }
@@ -268,18 +280,16 @@ export function stepDog(s: DogSnapshot, input: DogInput): DogStep {
 
       // 等门回来后从等待位（贴墙）回到侧道
       const x = approach(s.x, s.laneTarget, FOLLOW_RATE, dt)
-      const target = input.camZ - DOG_LEAD
+      const lead = input.lead ?? DOG_LEAD
+      const target = input.camZ - lead
 
       let rate = FOLLOW_RATE
-      if (band === 'run' && s.z > input.camZ - DOG_LEAD + CATCHUP_LAG) rate *= 2
+      if (band === 'run' && s.z > input.camZ - lead + CATCHUP_LAG) rate *= 2
       const z = approach(s.z, target, rate, dt)
       const dz = Math.abs(z - s.z)
 
-      let pawAccum = s.pawAccum + dz
-      if (pawAccum >= DOG_STRIDE) {
-        pawAccum -= DOG_STRIDE
-        events.push({ type: 'paw' })
-      }
+      const stride = advanceStride(s.stride, z, DOG_STRIDE, true)
+      if (stride.step) events.push({ type: 'paw' })
 
       const companionTime = s.companionTime + dt
       let achieved = s.achieved
@@ -299,7 +309,7 @@ export function stepDog(s: DogSnapshot, input: DogInput): DogStep {
         tailPhase: s.tailPhase + dt * (band === 'run' ? 10 : 6),
         lean: band === 'run' ? RUN_LEAN_RAD : 0,
         stillTime: 0,
-        pawAccum,
+        stride: stride.state,
         companionTime,
         achieved,
       }
@@ -341,6 +351,10 @@ export function stepDog(s: DogSnapshot, input: DogInput): DogStep {
 
     case 'wait-at-door': {
       if (!input.doorTarget) {
+        // 加载失败、玩家其实没进去：回去跟跑，别"欢迎回来"（评审抓到）
+        if (input.doorAborted) {
+          return { next: { ...n, state: 'trot', posture: 'side', stateTime: 0, stillTime: 0 }, events }
+        }
         events.push({ type: 'speech', key: 'dogGreet' }, { type: 'bark' })
         return { next: { ...n, state: 'greet', posture: 'side', stateTime: 0 }, events }
       }

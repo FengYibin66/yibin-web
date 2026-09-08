@@ -61,9 +61,10 @@ export interface CorridorRailHandle {
   scrollTo(z: number, options: ScrollToOptions): Promise<void>
   /**
    * 独占导轨：滚轮 / 键盘 / 触摸不再写 `targetZ`，改为回调 `onInput`（持有者决定怎么办
-   * ——路线是"当帧退出"）。开发态断言同一时刻只一个 owner。
+   * ——路线是"当帧退出"）。已被别人持有时返回 false、**不夺权**：夺权会让原持有者的
+   * `release` 变成空操作，导轨被永久锁死（评审抓到；第一版在生产静默覆盖、开发态抛错）。
    */
-  hold(owner: string, onInput: () => void): void
+  hold(owner: string, onInput: () => void): boolean
   release(owner: string): void
 }
 
@@ -100,7 +101,7 @@ export function corridorRailJumpTo(z: number): boolean {
   return true
 }
 
-/** 当前有没有导轨在挂载（测试与调试用） */
+/** 平滑滚到 z；导轨没挂载时 reject（调用方按"被打断"处理） */
 export function corridorRailScrollTo(z: number, options: ScrollToOptions): Promise<void> {
   if (!handle) return Promise.reject(new Error('走廊导轨没挂载'))
   return handle.scrollTo(z, options)
@@ -108,8 +109,7 @@ export function corridorRailScrollTo(z: number, options: ScrollToOptions): Promi
 
 export function corridorRailHold(owner: string, onInput: () => void): boolean {
   if (!handle) return false
-  handle.hold(owner, onInput)
-  return true
+  return handle.hold(owner, onInput)
 }
 
 export function corridorRailRelease(owner: string): boolean {
@@ -118,6 +118,7 @@ export function corridorRailRelease(owner: string): boolean {
   return true
 }
 
+/** 当前有没有导轨在挂载（测试与调试用） */
 export function isCorridorRailMounted(): boolean {
   return handle !== null
 }

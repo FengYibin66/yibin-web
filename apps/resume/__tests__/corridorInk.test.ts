@@ -5,6 +5,7 @@ import {
   inkLevel,
   loadInkOrder,
   loadIntroInk,
+  LAP_INK,
   introDrawLevel,
   INTRO_TEAR_AT,
   INTRO_DRAWN_AT,
@@ -48,10 +49,14 @@ describe('显形策略', () => {
       expect(inkLevel(someId, { ...base, inked: new Set([someId]) })).toBe(1)
     })
 
-    it('圈数：第 2 圈（lap ≥ 1）起全部上色', () => {
-      expect(inkLevel(someId, { ...base, lap: 0 })).toBe(0)
-      expect(inkLevel(someId, { ...base, lap: 1 })).toBe(1)
-      expect(inkLevel(someId, { ...base, lap: 7 })).toBe(1)
+    it('圈数：第 2 圈（lap ≥ 1）起未访问的门有底色（LAP_INK），但不到 1 —— 记忆仍可辨', () => {
+      expect(inkLevel('door-about', { inked: new Set(), lap: 1 })).toBe(LAP_INK)
+      expect(inkLevel('door-about', { inked: new Set(), lap: 3 })).toBe(LAP_INK)
+      expect(inkLevel('door-about', { inked: new Set(['door-about']), lap: 1 })).toBe(1)
+      // 悬停仍能把它推满
+      expect(inkLevel('door-about', { inked: new Set(), lap: 1, hover: 1 })).toBe(1)
+      expect(LAP_INK).toBeGreaterThan(0.3)
+      expect(LAP_INK).toBeLessThan(0.8)
     })
 
     it('悬停：直接透传，且被夹在 0–1', () => {

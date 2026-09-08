@@ -22,7 +22,8 @@ export type SkyPhase = 'night' | 'dawn' | 'day' | 'dusk'
  * 走廊内部仍是米色系（About 那次「房间变蓝」的教训针对的是室内）。
  */
 export const SKY_COLORS: Readonly<Record<SkyPhase, string>> = {
-  night: '#3b4a6b',
+  // 夜色：第一版 #3b4a6b 是全场唯一的饱和深块，剪影在它上面对比只有 1.35:1（UX 评审）
+  night: '#6b7385',
   dawn: '#d9c6b8',
   day: '#d6e0e8',
   dusk: '#d3bcac',
@@ -76,4 +77,9 @@ export function skyPhaseAt(hour: number): SkyPhase {
 
 export function skyColorAt(hour: number): string {
   return SKY_COLORS[skyPhaseAt(hour)]
+}
+
+/** 窗外剪影的墨色：夜里深一档，与夜色的对比才够（约 3:1）；白天用中灰 */
+export function skylineInkAt(hour: number): string {
+  return skyPhaseAt(hour) === 'night' ? '#39404e' : '#5a5f6b'
 }

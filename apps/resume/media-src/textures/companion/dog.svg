@@ -1,59 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!--
-    引路小狗 · 侧面站姿（朝 −x）。柴犬式轮廓：立耳、卷尾、短吻，无项圈。
-    每个部件一个顶层 <g id>，切层脚本按 id 单独栅格化（其余组隐藏）。
-    枢轴在 lib/lab/domain/corridor/dogParts.mjs：
-      body 0.53,0.55 · head 0.40,0.49 · leg-front 0.395,0.62 · leg-back 0.67,0.62 · tail 0.73,0.49
-    风格与 cat_body 一致：细墨线、白填充、透明底。线条刻意不对称，是手画的意思。
+    引路小狗 · 侧面站姿（朝 −x）。第二版（UI/UX 评审后）：
+    - 耳朵起笔接在头部轮廓上、半折下垂（第一版两只分离的尖三角立耳 + 卷尾被读成第二只猫）
+    - 尾巴斜后上方一根粗棒，不再回卷
+    - 前后各两条腿（同一组内错开 26 px；侧面四条腿是"这是狗"最省事的信号）
+    - 口吻拉长；线宽 7 → 4.5、5 → 3.5，墨色 #2b2b2b → #3a3a3a，与猫 / 气泡描边 / INK 同一支笔
+    每个部件一个顶层 <g id>，切层脚本按 id 单独栅格化。枢轴见 lib/lab/domain/corridor/dogParts.mjs。
   -->
   <defs>
     <style>
-      .ink { fill: #ffffff; stroke: #2b2b2b; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
-      .ink-thin { fill: none; stroke: #2b2b2b; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
-      .dot { fill: #2b2b2b; stroke: none; }
+      .ink { fill: #ffffff; stroke: #3a3a3a; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+      .ink-thin { fill: none; stroke: #3a3a3a; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+      .dot { fill: #3a3a3a; stroke: none; }
     </style>
   </defs>
 
-  <!-- 后腿先画，被身体压住一半 -->
+  <!-- 后腿（两条，远的那条略靠后、略浅） -->
   <g id="leg-back">
-    <path class="ink" d="M 646 612 C 640 668, 642 728, 647 796 C 648 818, 658 830, 690 831 C 722 832, 732 822, 730 800 C 726 740, 726 675, 724 618 Z"/>
-    <path class="ink-thin" d="M 664 812 C 676 806, 700 806, 714 812"/>
+    <path class="ink" d="M 672 612 C 668 668, 670 728, 674 796 C 675 816, 683 826, 706 827 C 728 828, 736 818, 734 800 C 731 740, 730 675, 728 618 Z" opacity="0.72"/>
+    <path class="ink" d="M 642 612 C 636 668, 638 728, 643 796 C 644 818, 654 830, 684 831 C 714 832, 724 822, 722 800 C 718 740, 718 675, 716 618 Z"/>
+    <path class="ink-thin" d="M 660 812 C 672 806, 696 806, 710 812"/>
   </g>
 
   <g id="tail">
-    <!-- 卷尾：先粗墨线做描边，再细一档的白线覆盖，得到一条有轮廓的卷 -->
-    <path d="M 742 500 C 792 472, 842 418, 826 360 C 812 316, 758 328, 764 372 C 768 400, 802 402, 810 376" fill="none" stroke="#2b2b2b" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M 742 500 C 792 472, 842 418, 826 360 C 812 316, 758 328, 764 372 C 768 400, 802 402, 810 376" fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
-    <path class="ink-thin" d="M 778 458 C 800 440, 812 418, 808 396"/>
+    <!-- 斜后上方一根粗棒：先粗墨线做描边，再细一档的白线覆盖 -->
+    <path d="M 748 500 C 790 470, 826 430, 846 372" fill="none" stroke="#3a3a3a" stroke-width="40" stroke-linecap="round"/>
+    <path d="M 748 500 C 790 470, 826 430, 846 372" fill="none" stroke="#ffffff" stroke-width="31" stroke-linecap="round"/>
+    <path class="ink-thin" d="M 790 456 C 806 438, 822 416, 834 392"/>
   </g>
 
   <g id="body">
-    <path class="ink" d="M 336 566 C 330 476, 424 428, 546 430 C 662 432, 764 474, 772 562 C 778 642, 706 690, 566 690 C 436 690, 340 654, 336 566 Z"/>
-    <!-- 背线与腹线的两笔补描，纸偶感 -->
-    <path class="ink-thin" d="M 400 468 C 470 444, 560 440, 640 456"/>
-    <path class="ink-thin" d="M 420 664 C 470 678, 560 682, 640 672"/>
-    <!-- 胸口一小片竖毛 -->
-    <path class="ink-thin" d="M 364 600 C 372 612, 372 624, 366 636 M 386 606 C 392 618, 392 630, 388 640"/>
+    <!-- 胸腔高、臀部略低，不是一只蛋 -->
+    <path class="ink" d="M 330 560 C 322 466, 420 424, 546 430 C 664 436, 766 480, 772 566 C 778 640, 706 686, 566 688 C 434 690, 338 652, 330 560 Z"/>
+    <path class="ink-thin" d="M 400 466 C 470 442, 560 438, 640 456"/>
+    <path class="ink-thin" d="M 420 662 C 470 676, 560 680, 640 670"/>
+    <path class="ink-thin" d="M 364 598 C 372 610, 372 622, 366 634 M 386 604 C 392 616, 392 628, 388 638"/>
   </g>
 
+  <!-- 前腿（两条） -->
   <g id="leg-front">
-    <path class="ink" d="M 366 612 C 362 668, 362 728, 366 796 C 367 818, 377 830, 407 831 C 437 832, 449 822, 447 800 C 444 740, 443 675, 440 618 Z"/>
-    <path class="ink-thin" d="M 384 812 C 396 806, 420 806, 432 812"/>
+    <path class="ink" d="M 396 612 C 392 668, 392 728, 396 796 C 397 816, 405 826, 428 827 C 450 828, 458 818, 456 800 C 453 740, 452 675, 450 618 Z" opacity="0.72"/>
+    <path class="ink" d="M 362 612 C 358 668, 358 728, 362 796 C 363 818, 373 830, 403 831 C 433 832, 445 822, 443 800 C 440 740, 439 675, 436 618 Z"/>
+    <path class="ink-thin" d="M 380 812 C 392 806, 416 806, 428 812"/>
   </g>
 
   <g id="head">
-    <!-- 立耳 -->
-    <path class="ink" d="M 238 354 L 214 236 L 308 324 Z"/>
-    <path class="ink" d="M 328 322 L 372 224 L 398 334 Z"/>
-    <!-- 头 -->
-    <path class="ink" d="M 300 326 C 372 324, 424 384, 418 452 C 412 520, 360 556, 296 554 C 232 552, 186 502, 190 440 C 194 380, 236 328, 300 326 Z"/>
-    <!-- 短吻 -->
-    <path class="ink" d="M 214 452 C 168 452, 146 486, 174 510 C 204 530, 254 508, 248 476 C 244 458, 230 452, 214 452 Z"/>
-    <circle class="dot" cx="166" cy="480" r="10"/>
-    <path class="ink-thin" d="M 182 516 Q 204 532, 232 520"/>
-    <!-- 眼睛 -->
-    <circle class="dot" cx="276" cy="428" r="10"/>
-    <!-- 眉心一小撮 -->
-    <path class="ink-thin" d="M 300 372 C 312 364, 326 366, 334 376"/>
+    <!-- 头：略扁，颈部接身体 -->
+    <path class="ink" d="M 304 330 C 376 326, 424 380, 418 448 C 412 516, 362 552, 298 550 C 234 548, 190 500, 194 440 C 198 380, 240 334, 304 330 Z"/>
+    <!-- 半折下垂的耳朵：起笔在头顶轮廓上 -->
+    <path class="ink" d="M 262 340 C 236 356, 222 396, 232 432 C 246 436, 264 420, 276 398 C 284 378, 282 356, 262 340 Z"/>
+    <path class="ink" d="M 360 336 C 388 348, 404 388, 396 424 C 382 430, 366 416, 352 396 C 342 376, 342 352, 360 336 Z"/>
+    <!-- 拉长的口吻 -->
+    <path class="ink" d="M 216 448 C 160 446, 130 480, 154 510 C 182 536, 246 520, 250 486 C 252 466, 238 450, 216 448 Z"/>
+    <circle class="dot" cx="148" cy="484" r="9"/>
+    <path class="ink-thin" d="M 168 520 Q 194 538, 226 526"/>
+    <!-- 眼睛与眉 -->
+    <circle class="dot" cx="280" cy="428" r="9"/>
+    <path class="ink-thin" d="M 302 374 C 314 366, 328 368, 336 378"/>
   </g>
 </svg>

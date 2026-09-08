@@ -10,7 +10,7 @@ import {
   type SpeechState,
 } from '@/lib/lab/domain/corridor/speech'
 
-const say = (state: SpeechState, speaker: 'cat' | 'dog' | 'avatar', priority: 1 | 2 | 3, now: number) =>
+const say = (state: SpeechState, speaker: 'cat' | 'dog', priority: 1 | 2 | 3, now: number) =>
   requestSpeech(state, { speaker, key: `${speaker}-${priority}`, priority }, now)
 
 describe('气泡规则', () => {
@@ -27,7 +27,7 @@ describe('气泡规则', () => {
     })
 
     it('高优先级顶掉正在显示的低优先级', () => {
-      const a = say(EMPTY_SPEECH, 'avatar', 1, 1000)
+      const a = say(EMPTY_SPEECH, 'dog', 1, 1000)
       const b = say(a.state, 'cat', 3, 1200)
       expect(b.shown).toBe(true)
       expect(b.state.current?.speaker).toBe('cat')
@@ -35,7 +35,7 @@ describe('气泡规则', () => {
 
     it('低优先级顶不掉高优先级', () => {
       const a = say(EMPTY_SPEECH, 'cat', 3, 1000)
-      const b = say(a.state, 'avatar', 1, 1200)
+      const b = say(a.state, 'dog', 1, 1200)
       expect(b.shown).toBe(false)
     })
 
@@ -64,8 +64,9 @@ describe('气泡规则', () => {
       expect(b.shown).toBe(true)
     })
 
-    it('头像的冷却更长（15 s），闲聊不该比活物更聒噪', () => {
-      expect(SPEECH_COOLDOWN_MS.avatar).toBeGreaterThan(SPEECH_COOLDOWN_MS.dog)
+    it('两只活物的冷却都不短于 10 s', () => {
+      expect(SPEECH_COOLDOWN_MS.cat).toBeGreaterThanOrEqual(10_000)
+      expect(SPEECH_COOLDOWN_MS.dog).toBeGreaterThanOrEqual(10_000)
     })
   })
 

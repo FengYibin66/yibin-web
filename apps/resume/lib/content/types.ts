@@ -278,11 +278,13 @@ export interface LabUiLabels {
     dogWait: string
     /** 走进第二圈 */
     dogLap: string
+    /** 第三圈及以后 */
+    dogLapMore: string
   }
   /** 城市名：三扇窗下的字与时间线便签的"城市 · 年份"行（规格 lab-corridor-story.md §2–§3） */
   cities: Record<CityId, string>
   /** 招聘官路线的字幕（规格 lab-corridor-story.md §5.1），键 = TOUR_STOPS 的 captionKey */
-  tour: Record<'welcome' | 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | 'cat' | 'end', string>
+  tour: Record<'welcome' | 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | 'timeline' | 'end', string>
   /** 时间线便签 */
   timeline: {
     /** 开区间的结尾："Present" / "至今" */

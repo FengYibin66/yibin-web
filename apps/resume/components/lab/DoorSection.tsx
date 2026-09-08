@@ -14,9 +14,8 @@ import { isDoorEntryOwner } from '@/lib/lab/domain/machines/room.machine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
-import { inkLevel } from '@/lib/lab/domain/corridor/ink'
+import { inkLevel, introDrawLevel, loadIntroInk } from '@/lib/lab/domain/corridor/ink'
 import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
-import { introDrawLevel, loadIntroInk } from '@/lib/lab/domain/corridor/ink'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'
@@ -192,18 +191,6 @@ export function DoorSection({
   const baseInkRef = useRef(baseInk)
   baseInkRef.current = baseInk
 
-  /*
-    加载期"被画出来"（规格 lab-corridor-story.md §1，决定 D）：`uDraw` 由加载进度按
-    地标顺序推进（靠近入口的门先画完），加载结束恒 1。与 `uProgress`（上色）独立。
-    进度是 React 订阅：一次加载变几十次，不值得进渲染循环。
-  */
-  const loadProgress = useCorridorStore(state => state.loadProgress)
-  useEffect(() => {
-    const draw = loadIntroInk(landmarkId, introDrawLevel(loadProgress))
-    for (const ref of [doorRevealRef, handleRevealRef]) {
-      if (ref.current) ref.current.uDraw = draw
-    }
-  }, [loadProgress, landmarkId])
   const handlePaintedRef = useRef<THREE.Mesh>(null)
   const doorPaintedRef   = useRef<THREE.Mesh>(null)
 
@@ -285,6 +272,15 @@ export function DoorSection({
   useFrame(() => {
     const inner = innerGroupRef.current
     if (!inner) return
+
+    /*
+      加载期"被画出来"（规格 lab-corridor-story.md §1）：`uDraw` 由加载进度按地标顺序推进。
+      **每帧读、不订阅**：撕纸那 1.8 s 里 LabLoader 的 tween 每帧 set 一次 loadProgress，
+      订阅会让常驻的 15 个 DoorSection 各重渲染 108 次——与成就 TICK 那次事故同形态。
+    */
+    const draw = loadIntroInk(landmarkId, introDrawLevel(useCorridorStore.getState().loadProgress))
+    if (doorRevealRef.current && doorRevealRef.current.uDraw !== draw) doorRevealRef.current.uDraw = draw
+    if (handleRevealRef.current && handleRevealRef.current.uDraw !== draw) handleRevealRef.current.uDraw = draw
 
     // 裁剪平面：外层 group 的局部 x=0 平面（即走廊墙），法向朝房间那一侧
     const outer = outerGroupRef.current

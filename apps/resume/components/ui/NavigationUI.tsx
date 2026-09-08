@@ -14,6 +14,7 @@ import { nextLocaleLabel } from '@/lib/content/localeToggle'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useTour } from '@/hooks/useTour'
 
 /*
   地图里的房间名来自 `labUi.doors`，与走廊门牌是同一份（审计 E7）。
@@ -40,6 +41,8 @@ export function NavigationUI() {
   const { locale, toggle: toggleLocale } = useLocale()
 
   const [mapOpen, setMapOpen]               = useState(false)
+  /* 招聘官路线（ADR 20260908204302）：互斥归状态机、运动归导轨，这里只有按钮与字幕 */
+  const tour = useTour()
   /*
     地图上"这间去过没有"的来源（ADR 20260908172231）。用 `inked`（真的进过）
     而不是 `visited`（从门口路过）—— 地图要回答的是"还有哪些内容没看"。
@@ -71,6 +74,8 @@ export function NavigationUI() {
       showTutorial('corridor_enter', 'corridor')
     } else if (hasEntered && !isTeleporting && !isInRoom) {
       showTutorial('corridor_explore', 'corridor')
+      // 会走了之后再提"不想走可以让它带你"——排在探索提示后面（ADR 20260908204302）
+      showTutorial('tour_complete', 'corridor')
     }
   }, [hasEntered, isTeleporting, isInRoom, showTutorial])
 
@@ -192,6 +197,37 @@ export function NavigationUI() {
       {/* Global achievement popup */}
       <AchievementPopup />
 
+      {/* 路线字幕：每站一句（规格 lab-corridor-story.md §5.1） */}
+      {tour.running && tour.caption && (
+        <div
+          role="status"
+          data-testid="tour-caption"
+          data-tour-stop={tour.stopId ?? ''}
+          style={{
+            position: 'absolute',
+            // 成就 / 教程气泡占着 bottom ≈ 90 那一带（实机截图里字幕被它盖住），字幕再往上
+            bottom: 156,
+            left: '50%',
+            transform: 'translateX(-50%) rotate(-0.4deg)',
+            maxWidth: 'min(560px, 86vw)',
+            padding: '10px 18px',
+            background: '#fffdf7',
+            color: '#2a1f0e',
+            border: '1.5px solid #3a3a3a',
+            borderRadius: 3,
+            boxShadow: '2px 3px 0 rgba(58,58,58,0.18)',
+            fontFamily: 'var(--font-sketch)',
+            fontSize: 16,
+            lineHeight: 1.35,
+            textAlign: 'center',
+            pointerEvents: 'none',
+            zIndex: 30,
+          }}
+        >
+          {labels.tour[tour.caption]}
+        </div>
+      )}
+
       {/* Back button */}
       {isInRoom && (
         <button
@@ -240,6 +276,29 @@ export function NavigationUI() {
           transition: 'opacity 0.3s ease',
         }}
       >
+        {/* 带我走一遍 / 停止（房间里与传送中不显示：状态机那时也不会接受 TOUR_START） */}
+        {!isInRoom && !isTeleporting && (
+          <NavButton
+            onClick={() => {
+              if (tour.running) { tour.stop(); return }
+              closeAll()
+              void tour.start()
+            }}
+            active={tour.running}
+            aria-label={tour.running ? labels.panels.stopTour : labels.panels.tour}
+            aria-pressed={tour.running}
+            data-testid="nav-tour"
+          >
+            {/* 一只小脚印 */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <ellipse cx="9" cy="14.5" rx="3.2" ry="4.2" />
+              <circle cx="5.2" cy="8.2" r="1.4" /><circle cx="8.4" cy="6.4" r="1.4" />
+              <circle cx="12" cy="7.2" r="1.3" /><circle cx="14.6" cy="10" r="1.2" />
+              <ellipse cx="17" cy="16.5" rx="2.2" ry="3" opacity="0.55" />
+            </svg>
+          </NavButton>
+        )}
+
         {/* Map button */}
         <NavButton
           onClick={() => { setMapOpen(o => !o); setAudioOpen(false); setAchievementsOpen(false) }}

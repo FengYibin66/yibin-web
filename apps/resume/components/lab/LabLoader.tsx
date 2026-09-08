@@ -3,6 +3,7 @@ import { useEffect, useRef, useMemo, useState } from 'react'
 import gsap from 'gsap'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import { useStableProgress } from '@/hooks/useStableProgress'
+import { markLabLoaded } from '@/lib/lab/app/labLoaded'
 import { buildTearPoints, tearEdgeCoords } from '@/lib/lab/tearEdge'
 
 const SLOW_LOAD_HINT_MS = 8000
@@ -48,6 +49,9 @@ export function LabLoader() {
   useEffect(() => {
     if (complete && !exitedRef.current) {
       exitedRef.current = true
+      // 走廊状态机 loading → corridor（ADR 20260908204302）：此前点门 / 传送 / 路线都被拒。
+      // LabLoader 不在 SceneProvider 之下（LabClient 里是兄弟），走模块级信号
+      markLabLoaded()
       const container = containerRef.current
       const left = leftRef.current
       const right = rightRef.current

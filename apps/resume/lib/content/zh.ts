@@ -36,6 +36,7 @@ export const zh: SiteContent = {
       publications_read: { title: '学者',     label: '读一篇论文' },
       pet_cat:           { title: '好奇',     label: '走廊尽头有只猫在打盹' },
       dog_companion:     { title: '有伴',     label: '继续走，小狗会跟着你' },
+      tour_complete:     { title: '被带着走了一遍', label: '按一下脚印，带你走一遍' },
     },
     cities: {
       sichuan: '四川',
@@ -45,6 +46,16 @@ export const zh: SiteContent = {
       beijing: '北京',
       'silicon-valley': '硅谷',
       remote: '远程',
+    },
+    tour: {
+      welcome: '你好，我是易斌。带你走一遍。',
+      about: '关于：从土木到 AI 的故事。',
+      projects: '项目：可以走近看的屏幕。',
+      publications: '论文：晾在绳子上的研究。',
+      gallery: '相册：四个国家的照片。',
+      contact: '联系：找到我最快的方式。',
+      cat: '还有猫。有空点它一下。',
+      end: '再走一圈，或者点一扇门进去。',
     },
     timeline: {
       present: '至今',
@@ -76,6 +87,8 @@ export const zh: SiteContent = {
       map: '导航地图',
       openMap: '打开地图',
       closeMap: '关闭地图',
+      tour: '带我走一遍',
+      stopTour: '停止',
       help: '怎么玩',
       exitLab: '退出 Lab',
       toggleLanguage: 'Switch to English',

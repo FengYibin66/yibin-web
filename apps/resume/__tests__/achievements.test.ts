@@ -42,6 +42,8 @@ describe('成就 id 注册表', () => {
       'pet_cat',
       'projects_inspect',
       'publications_read',
+      // 让路线带着走完一遍（ADR 20260908204302）
+      'tour_complete',
     ])
   })
 

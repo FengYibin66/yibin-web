@@ -262,7 +262,8 @@ export interface LabUiLabels {
   /** 教程气泡：{标题, 说明} */
   tutorials: Record<
     'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
-    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat' | 'dog_companion',
+    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat' | 'dog_companion'
+    | 'tour_complete',
     { title: string; label: string }
   >
   /** 活物冒的一行字（ADR 20260908160918；规则见 domain/corridor/speech.ts） */
@@ -280,6 +281,8 @@ export interface LabUiLabels {
   }
   /** 城市名：三扇窗下的字与时间线便签的"城市 · 年份"行（规格 lab-corridor-story.md §2–§3） */
   cities: Record<CityId, string>
+  /** 招聘官路线的字幕（规格 lab-corridor-story.md §5.1），键 = TOUR_STOPS 的 captionKey */
+  tour: Record<'welcome' | 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | 'cat' | 'end', string>
   /** 时间线便签 */
   timeline: {
     /** 开区间的结尾："Present" / "至今" */
@@ -307,6 +310,9 @@ export interface LabUiLabels {
     map: string
     openMap: string
     closeMap: string
+    /** 「带我走一遍」按钮的可访问名，路线中变为「停止」 */
+    tour: string
+    stopTour: string
     help: string
     exitLab: string
     /**

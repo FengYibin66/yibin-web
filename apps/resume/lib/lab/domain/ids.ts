@@ -38,6 +38,8 @@ export const ACHIEVEMENT_IDS = [
   'pet_cat',
   /** 小狗陪跑累计 30 秒（规格 lab-companions.md §4） */
   'dog_companion',
+  /** 让路线带着走完一遍（ADR 20260908204302）；中途退出不算 */
+  'tour_complete',
 ] as const
 export type AchievementId = (typeof ACHIEVEMENT_IDS)[number]
 

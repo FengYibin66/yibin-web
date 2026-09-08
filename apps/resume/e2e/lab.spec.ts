@@ -843,3 +843,58 @@ test.describe('走廊世界状态', () => {
     await expect(page.getByTestId('map-room-contact')).toHaveAttribute('data-visited', 'false')
   })
 })
+
+/**
+ * 招聘官路线（ADR 20260908204302）。
+ *
+ * 只测**快而确定**的部分：按钮进入 touring、任何输入当帧退出、字幕出现。
+ * 走完全程（58 秒）不在这里测——软渲染下导轨的插值追不上 tween，且 60 秒的
+ * E2E 只会在 CI 上随机红；完整计划由 `__tests__/tour.test.ts` 用注入时间跑完，
+ * 八站的画面由巡检脚本截。
+ */
+test.describe('招聘官路线', () => {
+  test('点脚印进入 touring，滚一下轮立刻回 free', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+
+    await page.getByTestId('nav-tour').click()
+    await expect(html).toHaveAttribute('data-lab-mode', 'touring')
+    await expect(page.getByTestId('tour-caption')).toBeVisible()
+    await expect(page.getByTestId('nav-tour')).toHaveAttribute('aria-pressed', 'true')
+
+    // 任何输入 = 还给用户：滚一下轮
+    await page.mouse.move(720, 450)
+    await page.mouse.wheel(0, 120)
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    await expect(page.getByTestId('tour-caption')).toHaveCount(0)
+  })
+
+  test('ESC 也能退出路线', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    await page.getByTestId('nav-tour').click()
+    await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'touring')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'free')
+  })
+
+  test('走廊模式属性在进房 / 退房时切换（状态机接线的可见面）', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    await page.getByTestId('nav-map').click()
+    await page.getByTestId('map-room-about').click()
+    await expect(html).toHaveAttribute('data-lab-mode', /teleporting|inRoom/)
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-room', 'about', { timeout: 60_000 })
+    await expect(html).toHaveAttribute('data-lab-mode', 'inRoom')
+  })
+})

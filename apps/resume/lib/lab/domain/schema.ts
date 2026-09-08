@@ -192,6 +192,7 @@ export const achievementTriggerSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('gallery-route') }),
   z.object({ kind: z.literal('corridor-interaction'), landmarkId: z.string().min(1) }),
   z.object({ kind: z.literal('corridor-companion'), companion: z.enum(['dog', 'cat']) }),
+  z.object({ kind: z.literal('tour-complete') }),
 ])
 
 export const achievementDefinitionSchema = z.object({

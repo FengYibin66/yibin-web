@@ -1,5 +1,5 @@
 import { act, render } from '@testing-library/react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { ROOM_LOAD_TIMEOUT_CODE } from '@/components/lab/useDoorEntryOrchestrator'
@@ -30,6 +30,9 @@ function harness() {
     const value = useScene()
     const ref = useRef(scene)
     ref.current.current = value
+    // 实机里 LabLoader 稳定完成后调 markLoaded；这里挂载即算加载完
+    const { markLoaded } = value
+    useEffect(() => { markLoaded() }, [markLoaded])
     return null
   }
   render(<SceneProvider><Probe /></SceneProvider>)

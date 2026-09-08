@@ -44,6 +44,13 @@ export type CorridorEvent =
   | { type: 'PAPER_CLOSED' }
   | { type: 'CAMERA_PLACED' }
   | { type: 'PAPER_OPENED' }
+  /** 纸还没合上 / 相机还没放好时中止传送（房间加载失败在 enteringFast 走 ROOM_FAILED） */
+  | { type: 'TELEPORT_ABORT' }
+  /** 招聘官路线（ADR 20260908204302） */
+  | { type: 'TOUR_START' }
+  | { type: 'TOUR_END' }
+  /** 路线中任何用户输入（滚轮 / 键盘 / 触摸 / ESC）：当帧退出路线 */
+  | { type: 'INPUT' }
 
 export const corridorMachine = setup({
   types: {
@@ -87,6 +94,20 @@ export const corridorMachine = setup({
       on: {
         DOOR_CLICK: 'entering',
         TELEPORT: { target: 'teleporting', guard: 'isDifferentRoom', actions: 'setTeleportTarget' },
+        TOUR_START: 'touring',
+      },
+    },
+
+    /*
+      招聘官路线（ADR 20260908204302）。互斥由状态图表达：这里没有 TELEPORT 边，
+      `teleporting` / `inRoom` 里没有 TOUR_START 边——不需要任何 if。
+      路线中点门 = 退出路线并进房，一条边完成，不让用户点两次。
+    */
+    touring: {
+      on: {
+        INPUT: 'corridor',
+        TOUR_END: 'corridor',
+        DOOR_CLICK: 'entering',
       },
     },
 
@@ -103,11 +124,16 @@ export const corridorMachine = setup({
       on: {
         EXIT: 'exiting',
         TELEPORT: { target: 'teleporting', guard: 'isDifferentRoom', actions: 'setTeleportTarget' },
+        // 进房之后的运行时错误（审计 A8）：房间没了，走廊机也得回走廊
+        ROOM_FAILED: { target: 'corridor', actions: 'leaveRoom' },
       },
     },
 
     exiting: {
-      on: { ROOM_EXITED: { target: 'corridor', actions: 'leaveRoom' } },
+      on: {
+        ROOM_EXITED: { target: 'corridor', actions: 'leaveRoom' },
+        ROOM_FAILED: { target: 'corridor', actions: 'leaveRoom' },
+      },
     },
 
     teleporting: {
@@ -115,11 +141,11 @@ export const corridorMachine = setup({
       states: {
         /** 纸从两侧飞来合上 */
         paperClosing: {
-          on: { PAPER_CLOSED: 'relocating' },
+          on: { PAPER_CLOSED: 'relocating', TELEPORT_ABORT: 'aborted' },
         },
         /** 纸后面瞬移相机到目标门前 */
         relocating: {
-          on: { CAMERA_PLACED: 'enteringFast' },
+          on: { CAMERA_PLACED: 'enteringFast', TELEPORT_ABORT: 'aborted' },
         },
         /** 快速进房（纸还遮着，进入动画跳过） */
         enteringFast: {
@@ -147,6 +173,8 @@ export const corridorMachine = setup({
         aborted: {
           on: {
             PAPER_OPENED: { target: '#corridor.corridor', actions: ['clearTeleport', 'leaveRoom'] },
+            // 纸还在打开时又点了地图：直接开下一次传送，别让用户等纸开完再点一次
+            TELEPORT: { target: '#corridor.teleporting', guard: 'isDifferentRoom', actions: 'setTeleportTarget' },
           },
         },
       },
@@ -157,4 +185,26 @@ export const corridorMachine = setup({
 /** 传送中（导航该禁用、纸该显示） */
 export function isTeleporting(stateValue: unknown): boolean {
   return typeof stateValue === 'object' && stateValue !== null && 'teleporting' in stateValue
+}
+
+export type TeleportSubstate = 'paperClosing' | 'relocating' | 'enteringFast' | 'paperOpening' | 'aborted'
+
+export function teleportSubstate(stateValue: unknown): TeleportSubstate | null {
+  if (!isTeleporting(stateValue)) return null
+  return (stateValue as { teleporting: TeleportSubstate }).teleporting
+}
+
+export type CorridorMode = 'free' | 'touring' | 'teleporting' | 'inRoom'
+
+/**
+ * 走廊模式（ADR 20260908172231 预留的 `world.mode`，现在由状态机快照派生）。
+ * `entering` / `exiting` 归 inRoom：导轨都不驱动相机；`aborted` 归 free：纸在打开，
+ * 玩家已经在走廊里；`loading` 归 free。
+ */
+export function corridorModeOf(stateValue: unknown): CorridorMode {
+  if (stateValue === 'touring') return 'touring'
+  if (stateValue === 'inRoom' || stateValue === 'entering' || stateValue === 'exiting') return 'inRoom'
+  const sub = teleportSubstate(stateValue)
+  if (sub !== null) return sub === 'aborted' ? 'free' : 'teleporting'
+  return 'free'
 }

@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import gsap from 'gsap'
 
 import { registerCorridorRail } from '@/lib/lab/app/camera/corridorRail'
 import { setRail } from '@/lib/lab/app/stores/corridorStore'
@@ -70,16 +71,71 @@ export function useCorridorCamera({
     `update()` 才应用，而 `update()` 在非持有态直接 return）。
     详见 `lib/lab/app/camera/corridorRail.ts` 的说明。
   */
+  /*
+    导轨的独占者（ADR 20260908204302）。持有期间输入处理函数不写 targetZ，
+    改为通知持有者；`scrollTo` 的 tween 在 release / 新 scrollTo / 卸载时撤销。
+  */
+  const holdRef = useRef<{ owner: string; onInput: () => void } | null>(null)
+  const scrollTween = useRef<gsap.core.Tween | null>(null)
+  const scrollReject = useRef<((reason: Error) => void) | null>(null)
+
+  const cancelScroll = useCallback((reason: string) => {
+    scrollTween.current?.kill()
+    scrollTween.current = null
+    const reject = scrollReject.current
+    scrollReject.current = null
+    reject?.(new Error(reason))
+  }, [])
+
   useEffect(() => registerCorridorRail({
     jumpTo(z) {
       // 目标与当前值一起设：只设目标的话相机会平滑滑过去，而传送要的是瞬移
       targetZ.current = z
       currentZ.current = z
-      // 传送本身就算"探索过了"——否则那条教程气泡会在落地后才弹出来
       exploredRef.current = true
       startZRef.current = z
     },
-  }), [])
+    scrollTo(z, { duration, ease = 'power1.inOut' }) {
+      cancelScroll('scrollTo 被新的 scrollTo 取代')
+      return new Promise<void>((resolve, reject) => {
+        scrollReject.current = reject
+        const proxy = { z: targetZ.current }
+        scrollTween.current = gsap.to(proxy, {
+          z,
+          duration,
+          ease,
+          onUpdate: () => { targetZ.current = proxy.z },
+          onComplete: () => {
+            scrollTween.current = null
+            scrollReject.current = null
+            exploredRef.current = true
+            resolve()
+          },
+        })
+      })
+    },
+    hold(owner, onInput) {
+      if (holdRef.current && holdRef.current.owner !== owner && process.env.NODE_ENV !== 'production') {
+        throw new Error(`走廊导轨已被 ${holdRef.current.owner} 独占，${owner} 不能再持有`)
+      }
+      holdRef.current = { owner, onInput }
+    },
+    release(owner) {
+      if (holdRef.current?.owner !== owner) return
+      holdRef.current = null
+      cancelScroll(`${owner} 释放了导轨`)
+    },
+  }), [cancelScroll])
+
+  useEffect(() => () => cancelScroll('导轨卸载'), [cancelScroll])
+
+  /** 被独占时：不写 targetZ，通知持有者；返回 true 表示输入已被拦截 */
+  const interceptInput = useCallback((): boolean => {
+    const held = holdRef.current
+    if (!held) return false
+    held.onInput()
+    return true
+  }, [])
   const glance        = useRef(0)
   const targetGlance  = useRef(0)
 
@@ -96,8 +152,9 @@ export function useCorridorCamera({
   const handleWheel = useCallback((e: WheelEvent) => {
     if (!scrollEnabledRef.current) return
     e.preventDefault()
+    if (interceptInput()) return
     targetZ.current = targetZ.current - e.deltaY * scrollSpeed
-  }, [scrollSpeed])
+  }, [scrollSpeed, interceptInput])
 
   const setCameraOverride = useCallback((active: boolean) => {
     cameraOverrideRef.current = active
@@ -132,8 +189,9 @@ export function useCorridorCamera({
     const d = corridorKeyDelta(e.key, e.target as HTMLElement | null)
     if (d === null) return
     e.preventDefault()
+    if (interceptInput()) return
     targetZ.current = targetZ.current - d * scrollSpeed
-  }, [scrollSpeed])
+  }, [scrollSpeed, interceptInput])
 
   // After any touch, browsers fire a synthetic mousemove at the tap position.
   // Without this guard, tapping the left/right half of a phone screen would
@@ -178,11 +236,12 @@ export function useCorridorCamera({
     }
 
     if (s.axis === 'walk') {
+      if (interceptInput()) return
       targetZ.current = nextTargetZ(targetZ.current, deltaY, scrollSpeed)
     } else {
       targetLook.current.x = nextLookX(targetLook.current.x, deltaX, window.innerWidth, lookIntensity)
     }
-  }, [scrollSpeed, lookIntensity])
+  }, [scrollSpeed, lookIntensity, interceptInput])
 
   useEffect(() => {
     window.addEventListener('keydown',    handleKeyDown)

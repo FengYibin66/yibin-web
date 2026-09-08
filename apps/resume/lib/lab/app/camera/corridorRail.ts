@@ -40,14 +40,31 @@
  */
 
 /** 导轨对外的命令面 */
+export interface ScrollToOptions {
+  /** 秒 */
+  readonly duration: number
+  /** gsap ease 名 */
+  readonly ease?: string
+}
+
 export interface CorridorRailHandle {
   /**
    * 立刻把导轨（目标与当前值一起）挪到 `z`。
-   *
-   * 目标与当前值**必须一起设**：只设目标的话相机会平滑滑过去，那正是传送要
-   * 避免的（传送的语义是"纸合上、换个地方、纸打开"）。
+   * 传送用：纸合着的时候瞬移，不需要中间态。
    */
   jumpTo(z: number): void
+  /**
+   * 目标 z 平滑过去（ADR 20260908204302）。改的是导轨的 `targetZ`，`currentZ` 照常按
+   * 导轨的 smoothing 跟随——手感与玩家自己滚动完全一致。
+   * 到达 resolve；被 `release` / 新的 scrollTo / 卸载打断则 reject。
+   */
+  scrollTo(z: number, options: ScrollToOptions): Promise<void>
+  /**
+   * 独占导轨：滚轮 / 键盘 / 触摸不再写 `targetZ`，改为回调 `onInput`（持有者决定怎么办
+   * ——路线是"当帧退出"）。开发态断言同一时刻只一个 owner。
+   */
+  hold(owner: string, onInput: () => void): void
+  release(owner: string): void
 }
 
 let handle: CorridorRailHandle | null = null
@@ -84,6 +101,23 @@ export function corridorRailJumpTo(z: number): boolean {
 }
 
 /** 当前有没有导轨在挂载（测试与调试用） */
+export function corridorRailScrollTo(z: number, options: ScrollToOptions): Promise<void> {
+  if (!handle) return Promise.reject(new Error('走廊导轨没挂载'))
+  return handle.scrollTo(z, options)
+}
+
+export function corridorRailHold(owner: string, onInput: () => void): boolean {
+  if (!handle) return false
+  handle.hold(owner, onInput)
+  return true
+}
+
+export function corridorRailRelease(owner: string): boolean {
+  if (!handle) return false
+  handle.release(owner)
+  return true
+}
+
 export function isCorridorRailMounted(): boolean {
   return handle !== null
 }

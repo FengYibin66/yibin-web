@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, useEffect, type ReactNode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -21,8 +21,15 @@ import { SceneProvider, useScene } from '@/context/SceneContext'
  * 那个文件另一半测手写 reducer 的合法转移矩阵，已由状态图的全路径覆盖取代。
  */
 
+/** 实机里 LabLoader 稳定完成后调 markLoaded；测试里没有 LabLoader，挂载即算加载完 */
+function Loaded() {
+  const { markLoaded } = useScene()
+  useEffect(() => { markLoaded() }, [markLoaded])
+  return null
+}
+
 function SceneWrapper({ children }: { children: ReactNode }) {
-  return createElement(SceneProvider, null, children)
+  return createElement(SceneProvider, null, createElement(Loaded), children)
 }
 
 const IDLE = { phase: 'idle', roomId: null, segmentIndex: null, attempt: 0, error: null }

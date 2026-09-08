@@ -31,7 +31,7 @@ import { canBrowse, dockMachine, hasSelection } from '@/lib/lab/domain/machines/
   真能跑完 / 每个状态都有出边"，而不是手写几条 happy path。这里原先那三组
   describe 是它的真子集，留着只会让两处断言各自漂移。
 
-  这个文件现在管 `corridorMachine`（**仍未接线**，运行时零引用）与
+  这个文件现在管 `corridorMachine`（ADR 20260908204302 起接入 `SceneContext`，是走廊模式的来源）与
   `dockMachine`（Projects 在用），外加文件末尾对三台机器共用的静态分析。
 */
 
@@ -437,5 +437,78 @@ describe('状态图静态分析', () => {
     const { nodes, edges } = analyze({ config: broken, id: 'broken' } as never)
     const deadEnds = nodes.filter(n => !n.isFinal && (edges.get(n.id) ?? []).length === 0)
     expect(deadEnds.map(n => n.id)).toEqual(['trap'])
+  })
+})
+
+// ─── corridorMachine：招聘官路线（ADR 20260908204302）────────────────────────
+
+describe('corridorMachine · touring', () => {
+  it('走廊里可以开始路线；输入 / 走完都回走廊', () => {
+    const a = corridorActor()
+    a.send({ type: 'TOUR_START' })
+    expect(a.getSnapshot().value).toBe('touring')
+    a.send({ type: 'INPUT' })
+    expect(a.getSnapshot().value).toBe('corridor')
+
+    a.send({ type: 'TOUR_START' })
+    a.send({ type: 'TOUR_END' })
+    expect(a.getSnapshot().value).toBe('corridor')
+  })
+
+  it('路线中点门 = 退出路线并进房，一条边', () => {
+    const a = corridorActor()
+    a.send({ type: 'TOUR_START' })
+    a.send({ type: 'DOOR_CLICK', roomId: 'about', segmentIndex: 0 })
+    expect(a.getSnapshot().value).toBe('entering')
+  })
+
+  it('路线中不能传送；传送中 / 房间里不能开始路线 —— 互斥由状态图表达', () => {
+    const a = corridorActor()
+    a.send({ type: 'TOUR_START' })
+    expect(a.getSnapshot().can({ type: 'TELEPORT', roomId: 'about' })).toBe(false)
+    a.send({ type: 'INPUT' })
+
+    a.send({ type: 'TELEPORT', roomId: 'about' })
+    expect(a.getSnapshot().can({ type: 'TOUR_START' })).toBe(false)
+    a.send({ type: 'PAPER_CLOSED' })
+    a.send({ type: 'CAMERA_PLACED' })
+    a.send({ type: 'ROOM_ENTERED', roomId: 'about' })
+    a.send({ type: 'PAPER_OPENED' })
+    expect(a.getSnapshot().value).toBe('inRoom')
+    expect(a.getSnapshot().can({ type: 'TOUR_START' })).toBe(false)
+  })
+
+  it('加载完成前不能开始路线', () => {
+    const a = createActor(corridorMachine)
+    a.start()
+    expect(a.getSnapshot().can({ type: 'TOUR_START' })).toBe(false)
+  })
+
+  it('纸还没合上就中止：TELEPORT_ABORT → aborted → 纸开完回走廊', () => {
+    const a = corridorActor()
+    a.send({ type: 'TELEPORT', roomId: 'about' })
+    a.send({ type: 'TELEPORT_ABORT' })
+    expect(a.getSnapshot().value).toEqual({ teleporting: 'aborted' })
+    a.send({ type: 'PAPER_OPENED' })
+    expect(a.getSnapshot().value).toBe('corridor')
+    expect(a.getSnapshot().context.teleportTarget).toBeNull()
+  })
+
+  it('aborted 里再点地图：直接开下一次传送，不必等纸开完', () => {
+    const a = corridorActor()
+    a.send({ type: 'TELEPORT', roomId: 'about' })
+    a.send({ type: 'TELEPORT_ABORT' })
+    a.send({ type: 'TELEPORT', roomId: 'projects' })
+    expect(a.getSnapshot().value).toEqual({ teleporting: 'paperClosing' })
+    expect(a.getSnapshot().context.teleportTarget).toBe('projects')
+  })
+
+  it('进房后运行时错误：inRoom --ROOM_FAILED--> corridor（审计 A8 的走廊侧）', () => {
+    const a = corridorActor()
+    a.send({ type: 'DOOR_CLICK', roomId: 'about', segmentIndex: 0 })
+    a.send({ type: 'ROOM_ENTERED', roomId: 'about' })
+    a.send({ type: 'ROOM_FAILED' })
+    expect(a.getSnapshot().value).toBe('corridor')
+    expect(a.getSnapshot().context.currentRoom).toBeNull()
   })
 })

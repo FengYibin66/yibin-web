@@ -34,6 +34,8 @@ export type AchievementTrigger =
    * "位置"这个属性。
    */
   | { kind: 'corridor-companion'; companion: 'dog' | 'cat' }
+  /** 招聘官路线走完（控制器上报） */
+  | { kind: 'tour-complete' }
   /** 独立路由 /gallery 里打开照片。**在 AchievementsProvider 之外**，
    *  所以必须走模块级存储——这正是 D1 的修法 */
   | { kind: 'gallery-route' }
@@ -109,6 +111,12 @@ export const ACHIEVEMENT_DEFS: Readonly<Record<AchievementId, AchievementDefinit
     titleKey: 'dog_companion',
     // 累计计时在狗的 reducer 里（domain/corridor/dog.ts），满 30 s 输出一次事件
     unlockedBy: { kind: 'corridor-companion', companion: 'dog' },
+    persisted: true,
+  },
+  tour_complete: {
+    id: 'tour_complete',
+    titleKey: 'tour_complete',
+    unlockedBy: { kind: 'tour-complete' },
     persisted: true,
   },
 }

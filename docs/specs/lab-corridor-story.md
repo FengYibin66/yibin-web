@@ -102,7 +102,7 @@ relativeZOfYear(y) = fromRelativeZ + (y − startYear) / (endYear − startYear)
 | 7 | resident-cat | 6 | 3 s | `cat` |
 | 8 | segment-door | 8 | 5 s | `end` |
 
-- 行进：`TOUR_SPEED = 3` 单位/秒（reduced 下 2），`scrollTo` 的 `duration = distance / speed`，ease `power1.inOut`。从起点 28 到段末门前约 84 单位 → 28 s；停留合计 32 s；**总计 ≤ 60 s**（门禁 `tour.test.ts` 断言 `tourTotalMs() ≤ 60_000`；reduced 下 ≤ 75 s）。
+- 行进：`TOUR_SPEED = 4` 单位/秒（reduced 下 3），`scrollTo` 的 `duration = distance / speed`，ease `power1.inOut`。从起点 28 到段末门前共 **105** 单位（初稿估成 84，实现时按地标算出）→ 26 s；停留合计 32 s；**总计 58 s ≤ 60 s**（门禁 `tour.test.ts` 断言 `tourTotalMs() ≤ 60_000`；reduced 下 35 + 32 = 67 s ≤ 75 s）。
 - 门前 standOff = 7 落在门自动侧目的峭峰（`GLANCE_PEAK_DIST = 8`）附近，相机会自然转向那扇门，不另写相机。
 - 字幕：DOM 层（`NavigationUI` 底部一条纸带，与成就提示同款），每站一句 ≤ 40 字符（en）/ 18 字（zh）；最后一站「再走一圈，或者点一扇门进去 / Loop again, or step through a door」。
 

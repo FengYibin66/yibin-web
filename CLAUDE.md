@@ -86,7 +86,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 | CI 全量构建 | 改一行简历文案也重建 portal 与 auto-wechat 前端 | ADR 20260822120801 的未偿代价，ADR 20260822120807 用 path 过滤部分偿还 |
 | 单点故障 | 一台 CVM，无滚动更新、无自愈 | ADR 20260822120804 显式接受 |
 | resume 纹理加载瀑布 | `ProjectsRoom` 每张卡无条件声明 26 个纹理 loader（其余 3 条 P1 已修，见 `apps/resume/AGENTS.md` 的状态表） | 报告 `docs/reviews/2026-07-12-resume-lab-room-audit.md` **已陈旧**，以 AGENTS.md 为准 |
-| resume Lab 的活物只有猫，狗待素材 | ADR 20260908160918 定的是「小狗引路 + 猫驻守」。猫已落地（走廊尽头、三态、成就）；**狗需要一张侧面站姿线稿**（切成身体 / 头 / 四腿 / 尾的分层纸偶），素材没有就做不了 | 线稿到位后按 `docs/specs/lab-companions.md` §2 实现；「减少动效」开关已全站接完（走廊层与房间层都零例外） |
+| resume Lab 加载期不能「边加载边画」 | 规格 `lab-corridor-story.md` §1 的决定 D 初稿要 30% 提前撕开、看走廊一笔笔画出来；实测走廊整个在一个 Suspense 边界里，撕开后是空白。现在是撕纸时 1.8 s 把门画出来 | 要做到边加载边画得把 Suspense 边界拆到每个物件，需先写 ADR |
+| resume Lab `dockMachine` 只有 Projects 用 | Publications 仍是 `publicationMotionMachine`（ADR 20260903211338 登记；`corridor.machine` 那项已由 20260908204302 清偿） | 接线时另写 ADR 或并入 Publications 的下一次改动 |
 
 ## 分支与发布
 
@@ -102,8 +103,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 | 位置 | 数量 | 内容 |
 |------|------|------|
-| `apps/resume/__tests__/` | 1374（89 文件） | 组件与逻辑单测（vitest） |
-| `apps/resume/e2e/` | 154（77 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物）+ Classic 滚动显形的全部进入路径。Lab 那批的五个坑见 `apps/resume/AGENTS.md` |
+| `apps/resume/__tests__/` | 1545（97 文件） | 组件与逻辑单测（vitest）：含走廊 domain 的纯函数（狗 reducer 2000 步随机不变量、气泡规则、时间线落点、世界时钟、路线计划）与 AST 门禁 |
+| `apps/resume/e2e/` | 160（80 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物 / 招聘官路线）+ Classic 滚动显形的全部进入路径。Lab 那批的坑见 `apps/resume/AGENTS.md` 与 `apps/resume/scripts/qa/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 14 文件 | Go 单测 |

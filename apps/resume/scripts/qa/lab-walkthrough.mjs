@@ -72,12 +72,16 @@ async function shot(label, wait = 1200) {
   await page.screenshot({ path: `${OUT}/${file}` })
   const state = await page.evaluate(() => {
     const ui = document.querySelector('[data-testid="lab-ui"]')
+    const html = document.documentElement.dataset
     return {
       room: ui?.getAttribute('data-lab-room') ?? '-',
       phase: ui?.getAttribute('data-lab-phase') ?? '-',
+      mode: html.labMode ?? '-',
+      dog: html.labDog ?? '-',
+      cat: html.labCat ?? '-',
     }
   })
-  console.log(`${file.padEnd(44)} room=${state.room} phase=${state.phase}`)
+  console.log(`${file.padEnd(44)} room=${state.room} phase=${state.phase} mode=${state.mode} dog=${state.dog} cat=${state.cat}`)
 }
 
 /** 方向键前进。走廊是一维导轨，不是 WASD */
@@ -96,11 +100,31 @@ await page.goto(`${BASE}/lab/`, { waitUntil: 'domcontentloaded', timeout: 90_000
 await page.getByTestId('lab-ui').waitFor({ timeout: 60_000 })
 await shot('corridor-start', 4000)
 
-// 沿走廊走到底：门、家具、壁画、彩蛋、段末门依次入画
+// 沿走廊走到底：门、家具、壁画、彩蛋、段末门依次入画。
+// 同一路上还能看到：年份刻度（墙脚）、履历便签（墙上方）、三扇窗（右 −12.5 / 左 −40.5 / 右 −62）、
+// 跟跑的狗（画面下方靠右）。第 8 张附近猫应当已醒（data-lab-cat）。
 for (let i = 1; i <= 8; i += 1) {
   await walk(6)
   await shot(`corridor-${i}`)
 }
+
+// ── 狗：停 3 秒该坐下（sit），再走该起来 ─────────────────────────────────
+await shot('dog-sit', 3500)
+await walk(2)
+await shot('dog-up', 600)
+
+// ── 招聘官路线：从这里按脚印，取三站截图，再滚一下轮打断 ──────────────────
+// 注意：路线是 wall-clock 驱动的 tween，软渲染下相机会落后于目标，截图看的是
+// 字幕与模式切换，不是精确位置。走完全程 58 秒不在巡检里等。
+await page.getByTestId('nav-tour').click()
+await shot('tour-start', 800)
+await page.waitForTimeout(7000)
+await shot('tour-stop-2', 200)
+await page.waitForTimeout(7000)
+await shot('tour-stop-3', 200)
+await page.mouse.move(720, 450)
+await page.mouse.wheel(0, 120)
+await shot('tour-interrupted', 600)
 
 // ── 地图：未进过的房间应带手写问号 ───────────────────────────────────────────
 await page.getByTestId('nav-map').click()

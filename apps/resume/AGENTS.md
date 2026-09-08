@@ -53,7 +53,7 @@ scripts/
 ├── lab/                 # 预载表生成器
 ├── media/               # 五条素材流水线：音频 / 门贴纸 / 纹理 / 证书图片 / 字体子集
 │                        # 都支持 --check，CI 会跑（见 media-src/AGENTS.md）
-└── qa/                  # 用户路径巡检：每步一张整屏截图，**给人看、不断言**（见该目录 AGENTS.md）
+└── qa/                  # 用户路径巡检（Classic + Lab）：每步一张整屏截图，**给人看、不断言**
 __tests__/               # vitest
 ```
 
@@ -125,6 +125,8 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | `machineEventWiring.test.ts` | 无棘轮（全禁孤儿事件） | 0 |
 | `roomCameraWiring.test.ts` | 无棘轮（全禁死声明 entryPose） | 0 |
 | `noGlobalScrollTriggerKill.test.ts` | 无棘轮（全禁 `ScrollTrigger.getAll()`） | 0 |
+| `railWriter.test.ts` | 无棘轮（`setRail` 只许 `useCorridorCamera` 调） | 0 |
+| `motionConsumers.test.ts` | `ROOM_LEVEL_PENDING`（房间层未接动效开关的文件） | 走廊层 0；房间层 9 个 |
 
 漏译剩的那一条是 `HeroText` 的 3D 标语 `<AI Engineer />`——不是"忘了翻"而是
 **换文案要重做排版**（三个 `<Text>` 的 `baseX` 按那 11 个拉丁字符的宽度逐个手调
@@ -313,6 +315,51 @@ Classic 页的滚动显形在「详情页 → 返回简历（客户端导航 + h
 两条测试都做过变异验证：塞回一个 `getAll()` 门禁红；把 `revert` 换成 `kill`，
 StrictMode 残值那条红。
 
+## 走廊世界状态：一个量一个来源、一个写者（ADR 20260908172231）
+
+走廊要加的东西（活物、时间线墙、招聘官路线、墨迹记忆、三扇窗、第二圈变化…）
+读的是同一组量：导轨在哪、多快、加载到哪、去过哪、第几圈、要不要减少动效。
+它们现在住在一处：
+
+| 层 | 文件 | 职责 |
+|----|------|------|
+| domain | `lib/lab/domain/corridor/world.ts` | 形状 + 纯派生（`lapAt` / `smoothVelocity` / `motionOf` / `nearestDoorAhead` / `visitedNow`） |
+| domain | `lib/lab/domain/corridor/landmarks.ts` | **一切有位置的东西**的一张表（门 / 家具 / 欢迎区 / 彩蛋 / 段末门，将来加窗与年份刻度） |
+| domain | `lib/lab/domain/corridor/ink.ts` | 显形策略（稳态 `max(记忆, 圈数, 悬停)`；过场 `loadIntroInk` 单独导出） |
+| app | `lib/lab/app/stores/corridorStore.ts` | 运行时持有者（zustand）。每帧量在模块级对象里，离散量走 selector |
+| app | `lib/lab/app/motion.ts` | `prefers-reduced-motion` 的唯一入口 |
+| app | `lib/lab/app/memory.ts` | `visited` / `inked` 持久化，带版本号 |
+
+**四条硬规则**：
+
+1. **`setRail` 只有 `hooks/useCorridorCamera.ts` 能调**（门禁 `railWriter.test.ts`，无棘轮）。
+   两个写者会让"玩家在哪、多快"有两个答案，而哪个生效取决于 `useFrame` 的注册顺序。
+   读取用 `getRail()` / `getWorld()`（每帧、不订阅）或 `useCorridorStore(selector)`（离散量）。
+2. **store 不写相机。** 它是导轨状态的镜像；相机所有权（ADR 20260903211244）不变，
+   写点棘轮不动。
+3. **每帧量不进 zustand。** `rail` 住模块级可变对象——60fps 的 `set` 会遍历所有
+   listener 比较 selector，即使没人订阅也是每秒 60 次无用功；一旦有人订阅就是每帧
+   全树重渲染（成就 `TICK` 让 15 个 `DoorSection` 每秒渲染 10 次那次事故的形态）。
+   `lap` / `visited` 由 `setRail` 派生，**只在真的变化时**才 `set`。
+4. **记忆从 localStorage 恢复必须显式、且在客户端 effect 里**（`hydrateCorridorMemory`，
+   `LabScene` 挂载时调）。store 初值不读 storage：回访者盘上有记忆而服务端没有，
+   那正是 hydration 不匹配——`LocaleProvider` 当年因此把读 storage 推迟到 `useEffect`。
+   落盘一律走 `mergeCorridorMemory`（与盘上取并集），**不要用 `saveCorridorMemory` 覆盖**：
+   hydrate 之前内存是空的，覆盖式写入会把盘上已有的记忆擦成空（实现时实测过）。
+
+**动效开关的语义**：`motionScale` 为 0 时停掉**由时间驱动**的自发运动（涂鸦漂浮、
+虫子游走、头像逐帧、标题字母漂浮），保留**由用户动作驱动**的响应（hover 上色、
+相机侧瞄、点击反馈、相机距离触发的裂开）。停的时候回到**基准姿态**而不是当前姿态
+——停在半空中歪着的涂鸦看起来像加载失败。门禁 `motionConsumers.test.ts` 守
+「走廊层每个时间驱动的 `useFrame` 都读过开关」，房间层还有 9 个未接，逐个列在
+`ROOM_LEVEL_PENDING` 里（只能变短）。
+
+**显形（墨迹）**：`RevealMaterial` 的 `uProgress` 有四个来源，而 uniform 只有一个，
+所以它是一条策略而不是三处各写。稳态 = `max(记忆, 圈数, 悬停)`；**加载显形不在
+稳态里**——加载进度在加载完成后恒为 1，并进 `max` 会让所有门永久上色，「只有看过的
+才上色」直接失效（ADR 的索引已就此追加修订注记）。门的基线变化时只"推不拉"
+（`uProgress < baseInk` 才写），否则会打断正在进行的 hover 动画。
+
 ## `next dev` 跑着的时候不要 `pnpm build`（栽过）
 
 两者共用 `.next/`。`next build` 会覆盖 dev server 的产物，dev 之后发出的 HTML 引用的
@@ -347,12 +394,12 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 128 个用例（64 条 spec × chromium / mobile-safari 两个形态），分两个文件：
+`e2e/` 下 152 个用例（76 条 spec × chromium / mobile-safari 两个形态），分三个文件：
 
 | 文件 | 覆盖 |
 |------|------|
 | `staticExport.spec.ts` | 静态导出的产物形态：路由可达性、`trailingSlash` 的目录结构、主题与语言的持久化、门户页语言切换 |
-| `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 首访 / 无 JS 兜底 |
+| `lab.spec.ts` | Lab 的**行为**：进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 首访 / 无 JS 兜底 / 走廊世界状态（动效开关取值、墨迹记忆跨刷新） |
 | `classicReveal.spec.ts` | Classic 滚动显形的**全部进入路径**：四个 hash 直达、详情 → 返回 → 上滚（原始事故路径）、浏览器后退、切语言、reduced-motion、顶部滚到底。断言对象是每个显形目标的 computed opacity，选择器从 `lib/animations/revealSpecs.ts` 导入 |
 
 `lab.spec.ts` 是 ADR
@@ -395,8 +442,15 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 排查时用的是 Playwright 截图 + CDP CPU 采样 + WebGL 调用打桩（脚本形态见 PR #21
 说明）。**改 Lab 的视觉或性能之前，先跑一遍这种带截图的复现，再看 E2E。**
 
-**Classic 同理，而且有现成工具**：`node scripts/qa/walkthrough.mjs` 像用户一样把门户 →
-Classic → 三种详情页 → 返回 → 上下滚全走一遍，每步一张整屏（`scripts/qa/AGENTS.md`）。
+**两边都有现成工具了**（`scripts/qa/AGENTS.md`）：
+`node scripts/qa/walkthrough.mjs` 走 Classic（门户 → 三种详情页 → 返回 → 上下滚）；
+`node scripts/qa/lab-walkthrough.mjs` 走 Lab（走廊 8 屏 → 地图 → 四个房间进出 → 地图 →
+刷新回访），加 `REDUCED=1` 再跑一遍对比动效开关。都是每步一张整屏。
+
+**验证"动画停了"不要用整幅截图比较**（实测踩过两次）：整幅截图包含 DOM 覆盖层
+（教程气泡、成就倒计时条）的动画，只截 3D 区域又会被相机插值的长尾干扰——两次都会
+把"还在收敛"误判成"动画没停"。3D 物体的 transform 不在 DOM 里，所以先看
+`data-lab-motion` 这个诊断属性（E2E 断言它），再用巡检截图看画面。
 2026-09-07 滚动显形那次，E2E 与复现脚本全绿，截图里卡片半透明、hash 落在半路、卡片扭成
 88°——都是看一眼就能发现的。改了视觉，**提 PR 前跑一遍并逐张看完**；断言守已知的坏法，
 巡检抓没想到的坏法。
@@ -443,8 +497,10 @@ node scripts/media/optimize-credentials.mjs  # 荣誉与证书页图片（原图
 python3 scripts/media/subset-fonts.py        # 字体子集 + woff2
 pnpm build && node scripts/media/entry-firstframe.mjs   # 手机端入口的静态首帧
 
-# 验收（给人看，不断言）：像用户一样走一遍 Classic，每步一张截图到 .qa/walk，然后逐张看
-node scripts/qa/walkthrough.mjs
+# 验收（给人看，不断言）：像用户一样走一遍，每步一张截图，然后逐张看
+node scripts/qa/walkthrough.mjs                # Classic → .qa/walk
+node scripts/qa/lab-walkthrough.mjs            # Lab → .qa/lab
+REDUCED=1 node scripts/qa/lab-walkthrough.mjs  # Lab，模拟"减少动效"（对比用）
 ```
 
 > `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D

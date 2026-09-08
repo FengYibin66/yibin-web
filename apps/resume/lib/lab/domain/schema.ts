@@ -49,6 +49,75 @@ export const corridorFurnitureSchema = z.object({
   side: z.enum(['left', 'right']),
 })
 
+/**
+ * 地标（ADR 20260908172231）。
+ *
+ * 校验的是类型系统表达不了的那部分：
+ *
+ * - `relativeZ` 必须在段内（正数或超出段长说明写错了，与门 / 家具同规则）
+ * - `visitRadius` / `keepOut.radius` 必须为正（0 或负数会让"经过"判定永假 /
+ *   避让区反转，两者都不报错，只表现为"记忆不生效"或"画压在门上"）
+ * - `id` 非空且不含空白：它是 localStorage 里的键，也是壁画避让的 `reason`
+ * - `segments` 若是数组则非空且都是非负整数（段号从 0 起；空数组等于"这个地标
+ *   永不出现"，那是声明错误而不是一种配置）
+ */
+const wallSide = z.enum(['left', 'right'])
+
+const landmarkCommonShape = {
+  id: z.string().min(1).regex(/^[a-z0-9-]+$/, '只允许小写字母 / 数字 / 连字符'),
+  relativeZ: z.number().lt(0).gt(-100),
+  segments: z.union([
+    z.literal('all'),
+    z.array(z.number().int().nonnegative()).min(1, '空数组等于永不出现，属声明错误'),
+  ]),
+  inkable: z.boolean(),
+  visitRadius: z.number().positive().optional(),
+  keepOut: z
+    .object({
+      side: z.union([wallSide, z.literal('both')]),
+      radius: z.number().positive(),
+    })
+    .optional(),
+}
+
+export const landmarkSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...landmarkCommonShape,
+    kind: z.literal('door'),
+    slot: doorSlot,
+    roomId,
+    side: wallSide,
+    textureType: z.enum(DOOR_TEXTURE_TYPES),
+  }),
+  z.object({
+    ...landmarkCommonShape,
+    kind: z.literal('furniture'),
+    side: wallSide,
+    variant: z.enum(['desk', 'cabinet', 'potted-tree']),
+  }),
+  z.object({ ...landmarkCommonShape, kind: z.literal('hero') }),
+  z.object({ ...landmarkCommonShape, kind: z.literal('segment-door') }),
+  z.object({ ...landmarkCommonShape, kind: z.literal('easter'), variant: z.literal('bug') }),
+  z.object({
+    ...landmarkCommonShape,
+    kind: z.literal('window'),
+    side: wallSide,
+    city: z.string().min(1),
+  }),
+  z.object({
+    ...landmarkCommonShape,
+    kind: z.literal('year-mark'),
+    side: wallSide,
+    year: z.number().int().gte(1900).lte(2200),
+  }),
+  z.object({
+    ...landmarkCommonShape,
+    kind: z.literal('companion-anchor'),
+    side: wallSide,
+    companion: z.literal('cat'),
+  }),
+])
+
 // ─── 音频 ────────────────────────────────────────────────────────────────────
 
 export const spatialSchema = z.object({

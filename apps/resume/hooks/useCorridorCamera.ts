@@ -6,6 +6,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
 import { registerCorridorRail } from '@/lib/lab/app/camera/corridorRail'
+import { setRail } from '@/lib/lab/app/stores/corridorStore'
 import { hasExploredCorridor } from '@/lib/lab/domain/corridor/exploration'
 import { useWheelRouter } from '@/hooks/useWheelRouter'
 import { nextTargetZ, nextLookX } from '@/lib/lab/touchControls'
@@ -196,9 +197,20 @@ export function useCorridorCamera({
     }
   }, [handleKeyDown, handleMouseMove, handleTouchStart, handleTouchMove])
 
-  useFrame(() => {
-    if (!scrollEnabledRef.current) return
-    if (cameraOverrideRef.current) return
+  useFrame((_, delta) => {
+    /*
+      导轨此刻不驱动相机（房间内、或壁画停靠接管了相机）。
+
+      仍然要发布一次导轨状态：位置没变，于是速度按 EMA 衰减到 0。不发布的话
+      `rail.velocity` 会**冻在**接管那一刻的值——玩家在跑动中点开一幅画，
+      走廊里的速度消费者（活物步频、脚步声、纸张摆动）会一直以为他还在跑。
+      「事件驱动的值停下就冻住」是 `scrollSkew` 那次事故的结构性成因
+      （skewY 被推到 88° 后再没有东西把它拉回来），这里不再重复。
+    */
+    if (!scrollEnabledRef.current || cameraOverrideRef.current) {
+      setRail(currentZ.current, delta)
+      return
+    }
 
     // Smooth Z (no lower bound — infinite)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
@@ -260,6 +272,18 @@ export function useCorridorCamera({
 
     const lookX = look.current.x + glance.current * 3
     camera.lookAt(lookX, 0.13 + look.current.y * 0.1, currentZ.current - 10)
+
+    /*
+      发布导轨状态（ADR 20260908172231）。
+
+      **这里是全仓唯一的 `setRail` 调用点**，门禁 `__tests__/railWriter.test.ts`
+      全禁第二个写者：两个写者会让"玩家在哪、多快"出现两个答案，而那种 bug 的
+      表现是"活物偶尔跑到墙里"这类无法复现的怪事。
+
+      放在 `camera.lookAt` 之后是刻意的：发布的是**这一帧最终的**导轨位置，
+      与相机实际被写入的值同源。
+    */
+    setRail(currentZ.current, delta)
   })
 
   return {

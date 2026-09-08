@@ -1,4 +1,5 @@
 import { galleryRooms, type GalleryImage } from '@/lib/gallery/data'
+import { muralKeepOuts } from '@/lib/lab/domain/corridor/landmarks'
 
 /**
  * Corridor mural placement (computed keep-outs)
@@ -50,6 +51,16 @@ export const DOOR_KEEP_RADIUS = DOOR_HALF_SPAN + DOOR_EDGE_CLEARANCE // 6.5
 /**
  * Keep-outs — doors only block their own wall.
  * Furniture / ends as documented in CorridorDecorations / CorridorSegment.
+ *
+ * ⚠️ **迁移期对照表，不要再改它。**
+ *
+ * 生产代码（`getMuralCollision`）已改用 `domain/corridor/landmarks.ts` 的
+ * `muralKeepOuts()` —— 避让区由地标的 `keepOut` 声明派生，那里才是坐标的
+ * 单一来源（ADR 20260908172231）。这份手写表保留一个版本作为**等价性证据**：
+ * `__tests__/corridorLandmarks.test.ts` 断言两者逐项相等。
+ *
+ * 为什么要留这一步而不是直接删：壁画位置的变化在单测里看不见，只会在实机
+ * 截图上表现为"画压在门上"。两个独立来源比对过一次之后，下一个 PR 删掉它。
  */
 export const MURAL_KEEP_OUTS: readonly MuralKeepOut[] = [
   { side: 'both', z: -2, radius: 4.0, reason: 'welcome-avatar' },
@@ -138,7 +149,8 @@ export function getMuralCollision(
   const m0 = z - half
   const m1 = z + half
 
-  for (const zone of MURAL_KEEP_OUTS) {
+  // 避让区从地标派生（ADR 20260908172231）；上面那张手写表只是迁移期的对照物
+  for (const zone of muralKeepOuts()) {
     if (zone.side !== 'both' && zone.side !== side) continue
     const k0 = zone.z - zone.radius
     const k1 = zone.z + zone.radius

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cameraWrites,
   colorLiterals,
+  functionCalls,
   importsModule,
   userStrings,
 } from './helpers/sourceScan'
@@ -309,5 +310,47 @@ describe('importsModule', () => {
 
   it('不做前缀匹配', () => {
     expect(importsModule("import x from 'camera-controls-extra'", 'camera-controls')).toBe(false)
+  })
+})
+
+describe('functionCalls', () => {
+  it('抓到裸函数调用', () => {
+    const hits = functionCalls('function f() { setRail(1, 2) }', 'setRail')
+    expect(hits).toHaveLength(1)
+    expect(hits[0]!.line).toBe(1)
+  })
+
+  it('抓到多处调用，行号可用于定位', () => {
+    const source = ['setRail(0, 0)', '// noop', 'if (x) setRail(1, 1)'].join('\n')
+    expect(functionCalls(source, 'setRail').map(h => h.line)).toEqual([1, 3])
+  })
+
+  /*
+    下面这几组是「不该抓」的形态。它们全是正则版会误报的东西——而误报会逼人往
+    豁免表里塞条目，等于逐步关掉门禁（ADR 20260903211320）。
+  */
+  it('不抓注释里的同形文本', () => {
+    expect(functionCalls('// 以前这里写 setRail(z, dt)\nconst a = 1', 'setRail')).toEqual([])
+  })
+
+  it('不抓字符串里的同形文本', () => {
+    expect(functionCalls('const msg = "call setRail(z) here"', 'setRail')).toEqual([])
+  })
+
+  it('不抓 import 里的同名标识符（导入不等于调用）', () => {
+    expect(functionCalls("import { setRail } from '@/x'", 'setRail')).toEqual([])
+  })
+
+  it('不抓同名的成员调用（obj.setRail() 是另一个函数）', () => {
+    expect(functionCalls('store.setRail(1, 2)', 'setRail')).toEqual([])
+  })
+
+  it('不抓仅作为值传递的引用（未调用）', () => {
+    expect(functionCalls('useEffect(setRail)', 'setRail')).toEqual([])
+  })
+
+  it('抓到 JSX 回调里的调用（.tsx 也能解析）', () => {
+    const source = 'const A = () => <b onClick={() => setRail(1, 1)}>x</b>'
+    expect(functionCalls(source, 'setRail', 'input.tsx')).toHaveLength(1)
   })
 })

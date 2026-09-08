@@ -4,6 +4,7 @@ import {
   cameraWrites,
   colorLiterals,
   eventTypeLiterals,
+  functionCalls,
   userStrings,
 } from './helpers/sourceScan'
 
@@ -322,13 +323,77 @@ describe('事件发送方扫描', () => {
   })
 })
 
+// ────────────────────────────────────────────── 导轨单写者（ADR 20260908172231）
+
+/**
+ * 「导轨状态只有一个写者」门禁（`railWriter.test.ts`）的变异形态。
+ *
+ * 这条门禁是新的，没有"当年"——下面每条都是**这次**写门禁时手工验证过的：
+ * 把样本喂给 `functionCalls`，看它是否命中。`then` 记的是**正则版会怎样**，
+ * 因为下一个人最可能的"优化"就是把 AST 换成一行 grep。
+ */
+const RAIL_WRITER_MUTATIONS: readonly Mutation[] = [
+  {
+    id: 'R1',
+    then: 'survived',
+    what: '注释里写 setRail( —— grep 版会误报，逼人往豁免表里加文件',
+    code: '// 旧实现在这里 setRail(z, dt)\nconst a = 1',
+  },
+  {
+    id: 'R2',
+    then: 'survived',
+    what: '字符串里出现 setRail( —— 同上',
+    code: 'const hint = "别在组件里 setRail(z, dt)"',
+  },
+  {
+    id: 'R3',
+    then: 'survived',
+    what: 'import 了但没调用 —— grep `setRail` 会命中导入行，等于禁止读源码',
+    code: "import { setRail } from '@/lib/lab/app/stores/corridorStore'",
+  },
+  {
+    id: 'R4',
+    then: 'killed',
+    what: '真的第二个写者 —— 必须抓到',
+    code: 'function tick(z: number, dt: number) { setRail(z, dt) }',
+  },
+  {
+    id: 'R5',
+    then: 'killed',
+    what: '藏在 JSX 回调里的写者 —— 组件里最可能的形态',
+    code: 'const A = () => <b onPointerDown={() => setRail(1, 0.016)}>x</b>',
+  },
+]
+
+describe('导轨单写者扫描', () => {
+  it('R1：注释里的 setRail( 不算写者', () => {
+    expect(functionCalls(RAIL_WRITER_MUTATIONS[0]!.code, 'setRail', 'm.ts')).toEqual([])
+  })
+
+  it('R2：字符串里的 setRail( 不算写者', () => {
+    expect(functionCalls(RAIL_WRITER_MUTATIONS[1]!.code, 'setRail', 'm.ts')).toEqual([])
+  })
+
+  it('R3：只 import 不调用不算写者', () => {
+    expect(functionCalls(RAIL_WRITER_MUTATIONS[2]!.code, 'setRail', 'm.ts')).toEqual([])
+  })
+
+  it('R4：真的第二个写者被抓到', () => {
+    expect(functionCalls(RAIL_WRITER_MUTATIONS[3]!.code, 'setRail', 'm.ts')).toHaveLength(1)
+  })
+
+  it('R5：JSX 回调里的写者被抓到', () => {
+    expect(functionCalls(RAIL_WRITER_MUTATIONS[4]!.code, 'setRail', 'm.tsx')).toHaveLength(1)
+  })
+})
+
 describe('清单本身', () => {
-  it('三组变异都保留了当年存活的形态 —— 清单只能增不能删', () => {
+  it('各组变异都保留了当年存活的形态 —— 清单只能增不能删', () => {
     const all = [
       ...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS,
-      ...EVENT_WIRING_MUTATIONS,
+      ...EVENT_WIRING_MUTATIONS, ...RAIL_WRITER_MUTATIONS,
     ]
-    expect(all.filter(m => m.then === 'survived').length).toBeGreaterThanOrEqual(16)
+    expect(all.filter(m => m.then === 'survived').length).toBeGreaterThanOrEqual(19)
     for (const m of all) {
       expect(m.what.length, m.id).toBeGreaterThan(10)
       expect(m.code.length, m.id).toBeGreaterThan(5)
@@ -338,7 +403,7 @@ describe('清单本身', () => {
   it('编号不重复', () => {
     const ids = [
       ...CAMERA_MUTATIONS, ...I18N_MUTATIONS, ...CONTRAST_MUTATIONS,
-      ...EVENT_WIRING_MUTATIONS,
+      ...EVENT_WIRING_MUTATIONS, ...RAIL_WRITER_MUTATIONS,
     ].map(m => m.id)
     expect(new Set(ids).size).toBe(ids.length)
   })

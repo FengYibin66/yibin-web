@@ -33,6 +33,12 @@ import { SceneProvider, useScene } from '@/context/SceneContext'
 import { AchievementsProvider, useAchievementActions } from '@/context/AchievementsContext'
 import { WheelRouterProvider } from '@/hooks/useWheelRouter'
 import { useLabLabels } from '@/hooks/useLabLabels'
+import { subscribeMotionScale } from '@/lib/lab/app/motion'
+import {
+  hydrateCorridorMemory,
+  resetCorridorWorld,
+  useCorridorStore,
+} from '@/lib/lab/app/stores/corridorStore'
 
 // Camera controller lives inside Canvas so it has access to R3F context
 function CameraController({
@@ -96,6 +102,33 @@ function LabCanvas() {
 
   // Mark as entered immediately — /lab route means the user has entered the corridor
   useEffect(() => { markEntered() }, [markEntered])
+
+  /*
+    走廊世界状态的生命周期（ADR 20260908172231）。
+
+    两件事都**必须在客户端 effect 里**做：
+
+    1. `hydrateCorridorMemory()` 从 localStorage 恢复"去过哪、哪些已显形"。
+       store 的初值刻意不读 storage——回访者盘上有记忆而服务端没有，那正是
+       React hydration 不匹配。`LocaleProvider` 当年因此把读 storage 推迟到
+       `useEffect`（见 AGENTS.md「语言：一份偏好，三处按钮」）。
+    2. 订阅 `prefers-reduced-motion`。Lab 在此之前完全不响应这个设置，而它是
+       全站动效最密的地方。
+
+    卸载时 `resetCorridorWorld()` 清内存态（盘上的记忆不动）：`railInitialized`
+    必须归零，否则下次进 Lab 相机又从 Z=28 开始，而 `rail.z` 还是上次离开时的
+    值——第一帧会算出一个巨大的速度。
+  */
+  useEffect(() => {
+    hydrateCorridorMemory()
+    const unsubscribe = subscribeMotionScale(scale => {
+      useCorridorStore.getState().setMotionScale(scale)
+    })
+    return () => {
+      unsubscribe()
+      resetCorridorWorld()
+    }
+  }, [])
 
   /*
     `corridor_explore` 的解锁点在**走廊导轨的位移**上，不在输入事件上

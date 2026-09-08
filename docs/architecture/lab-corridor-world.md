@@ -122,13 +122,19 @@ type Landmark =
 `RevealMaterial`（`uProgress` 0→1 从下往上把草稿擦成上色）今天只有一个用途：门 hover。它是"加载时画出走廊"、"看过的永久上色"、"第二圈全上色"三件事的公共机制。定义一条策略而不是三个特例：
 
 ```
-inkLevel(id, world) = max(
-  loadInk(id, world.loadProgress),      // 加载期：按地标 z 顺序依次 0→1（地板线 → 墙 → 门）
+稳态（inkLevel）= max(
   world.inked.has(id) ? 1 : 0,          // 记忆：看过就永久
   lapInk(world.lap),                    // 圈数：第 2 圈起全 1
   hoverInk(id)                          // 悬停：瞬态，组件本地
 )
+
+过场（loadIntroInk，不进 inkLevel）：按地标 z 顺序依次 0→1，由加载动画自己驱动
 ```
+
+> **加载显形为什么不在 `max` 里**（2026-09-08 实现时修正，ADR 20260908172231 索引已追加注记）：
+> 加载进度在加载完成后**恒为 1**，并进 `max` 会让走廊里所有门永久上色 ——
+> 「只有看过的才上色」直接失效，而那正是墨迹记忆的全部意义。加载显形是一段
+> **过场表演**（纸撕开之前走廊被一笔笔画出来），演完退回稳态。
 
 - 组件用一个 hook：`useInk(id)` 返回每帧的 `uProgress`（在 `useFrame` 里读 store、写材质，不经 React）。
 - `inked` 何时置位：`visitTargets()` 的地标在相机进入 `visitRadius` 时 → `visited`；门被进入、壁画被 docked、猫被点 → `inked`。规则在 domain，触发在一个 `useVisitTracker`。

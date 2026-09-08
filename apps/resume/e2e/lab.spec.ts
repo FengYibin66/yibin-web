@@ -745,3 +745,72 @@ test.describe('无 JS 时的 Lab', () => {
     expect(body.length).toBeGreaterThan(200)
   })
 })
+
+/**
+ * 走廊世界状态（ADR 20260908172231）。
+ *
+ * 这一组守的是**用 DOM 能验证的那部分**：动效开关的取值、墨迹记忆在地图上的
+ * 反映。3D 物体的 transform 不在 DOM 里，"涂鸦真的停了"只能靠巡检截图
+ * （`scripts/qa/lab-walkthrough.mjs`，跑 `REDUCED=1` 那遍对比）——
+ * 这正是 AGENTS.md 那句「E2E 看不见画面」的具体含义。
+ *
+ * 排查这件事时踩过两个坑，记在这里免得下一个人重来：整幅截图比较会把
+ * **DOM 覆盖层的动画**（教程气泡、成就倒计时条）算进"画面在动"；只截 3D 区域
+ * 又会被**相机插值的长尾**干扰。所以先有诊断属性，再谈像素。
+ */
+test.describe('走廊世界状态', () => {
+  test('动效开关：系统要求减少动效时 data-lab-motion 为 0', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-motion', '0')
+  })
+
+  test('动效开关：默认设置下为 1', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-motion', '1')
+  })
+
+  test('墨迹记忆：进过的房间在地图上不再标问号，且刷新后仍然如此', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+
+    // 进房之前：五个房间都是"没去过"
+    await page.getByTestId('nav-map').click()
+    await expect(page.getByTestId('map-room-about')).toHaveAttribute('data-visited', 'false')
+    await page.getByTestId('map-close').click()
+
+    await teleportTo(page, 'about')
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-room', 'about')
+
+    /*
+      退回走廊再看地图。退房要 2–3 秒（两段 gsap 加关门），所以用
+      `toHaveAttribute` 等而不是猜一个 `waitForTimeout`。
+    */
+    await page.getByTestId('nav-back').click()
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false', {
+      timeout: ROOM_ENTER_TIMEOUT,
+    })
+
+    await page.getByTestId('nav-map').click()
+    await expect(page.getByTestId('map-room-about')).toHaveAttribute('data-visited', 'true')
+    // 没进过的房间仍然是 false —— 否则"标记"就没有区分度
+    await expect(page.getByTestId('map-room-contact')).toHaveAttribute('data-visited', 'false')
+    await page.getByTestId('map-close').click()
+
+    // 刷新：记忆存在 localStorage 里，必须活过一次重载（`hydrateCorridorMemory`）
+    await page.reload()
+    await expect(page.getByTestId('lab-ui')).toBeAttached({ timeout: LAB_READY_TIMEOUT })
+    await page.getByTestId('nav-map').click()
+    await expect(page.getByTestId('map-room-about')).toHaveAttribute('data-visited', 'true')
+    await expect(page.getByTestId('map-room-contact')).toHaveAttribute('data-visited', 'false')
+  })
+})

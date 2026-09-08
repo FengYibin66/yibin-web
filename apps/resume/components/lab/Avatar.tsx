@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 
 const TOTAL_FRAMES = 9
 const FPS           = 20
@@ -35,6 +36,12 @@ export function Avatar({ position = [0, -0.61, -0.3] }: AvatarProps) {
 
   const [dimensions, setDimensions] = useState({ width: 1.2, height: 2.3 })
   const { camera } = useThree()
+  /*
+    动效开关（ADR 20260908172231）。头像的 9 帧 ping-pong 是走廊第一屏唯一
+    一直在动的东西。`motionScale` 为 0 时**停在第一帧**（挥手的起始姿态），
+    但**保留侧身闪避** —— 那是对相机靠近的响应，不是自发运动。
+  */
+  const motionScale = useCorridorStore(state => state.motionScale)
 
   useEffect(() => {
     textures.forEach(tex => { tex.colorSpace = THREE.SRGBColorSpace })
@@ -72,7 +79,8 @@ export function Avatar({ position = [0, -0.61, -0.3] }: AvatarProps) {
     groupRef.current.position.x = position[0] + dodgeX.current
     groupRef.current.position.y = position[1]
 
-    // Ping-pong frame animation
+    // Ping-pong frame animation（reduced 下不推进，停在挂载时那一帧）
+    if (motionScale === 0) return
     frameTimer.current += delta
     if (frameTimer.current >= 1 / FPS) {
       frameTimer.current = 0

@@ -12,8 +12,10 @@
 ## 内容
 
 ```
-walkthrough.mjs   用户路径巡检：门户 → Classic 滚到底 → 论文详情 → 返回 → 上滚 →
-                  经历详情 → 返回 → 证书页 → 返回。每步一张整屏截图（默认 .qa/walk）
+walkthrough.mjs       Classic 巡检：门户 → Classic 滚到底 → 论文详情 → 返回 → 上滚 →
+                      经历详情 → 返回 → 证书页 → 返回。每步一张整屏（默认 .qa/walk）
+lab-walkthrough.mjs   Lab 巡检：门户 → 走廊走到底（8 屏）→ 地图 → 四个房间进出 →
+                      地图 → 成就 → 刷新回访。每步一张整屏（默认 .qa/lab）
 ```
 
 ## 规则
@@ -26,7 +28,19 @@ walkthrough.mjs   用户路径巡检：门户 → Classic 滚到底 → 论文�
 - 程序化滚动一律 `behavior: 'instant'`（Lenis 在场）；用户滚动用 `mouse.wheel`。
 - 不要为了让脚本跑得快而减少截图步数：漏掉的那一屏就是没看的那一屏。
 
+## Lab 巡检的三条附加规则
+
+- **看三件事**：构图有没有错位（房间穿出走廊墙、壁画压在门上）、**门的上色对不对**
+  （进过的房间那扇门应当保持上色，没进过的是草稿）、有没有该动却不动的东西。
+- **跑两遍对比动效开关**：`REDUCED=1` 那遍里涂鸦、虫子、头像逐帧、标题字母漂浮
+  都应当**静止**，而 hover 上色、相机侧瞄、点击反馈照常 —— 那些是对用户动作的
+  响应，不是自发运动（ADR 20260908172231）。
+- **软渲染是必须的**：脚本给 Chromium 传了 `--use-angle=swiftshader`。不传时
+  headless 拿不到 WebGL 上下文，`LabClient` 渲染兜底页，截图里看不到 Lab。
+
 ```bash
-node scripts/qa/walkthrough.mjs                              # 打 dev
-BASE=http://127.0.0.1:4321 node scripts/qa/walkthrough.mjs    # 打 E2E 的静态服务
+node scripts/qa/walkthrough.mjs                              # Classic，打 dev
+BASE=http://127.0.0.1:4321 node scripts/qa/walkthrough.mjs    # Classic，打静态产物
+node scripts/qa/lab-walkthrough.mjs                          # Lab
+REDUCED=1 node scripts/qa/lab-walkthrough.mjs                # Lab，模拟"减少动效"
 ```

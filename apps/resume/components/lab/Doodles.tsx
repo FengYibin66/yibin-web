@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 
 interface DoodleConfig {
   texture: string
@@ -28,9 +29,22 @@ const CORRIDOR_DOODLES: DoodleConfig[] = [
 function SketchElement({ texture, position, scale, rotSpeed, floatSpeed, floatAmount, initialRot }: DoodleConfig) {
   const tex = useTexture(texture)
   const ref = useRef<THREE.Mesh>(null)
+  /*
+    动效开关（ADR 20260908172231）。涂鸦是走廊里唯一一直在漂的东西，
+    对前庭敏感的访客是"进去就晃"的主要来源之一。
+    `motionScale` 为 0 时停在**基准姿态**——不是停在当前姿态：停在半空中
+    歪着的涂鸦看起来像加载失败。
+  */
+  const motionScale = useCorridorStore(s => s.motionScale)
 
   useFrame((state) => {
     if (!ref.current) return
+    if (motionScale === 0) {
+      ref.current.position.y = position[1]
+      ref.current.rotation.z = initialRot
+      ref.current.scale.setScalar(scale)
+      return
+    }
     const time = state.clock.elapsedTime
     ref.current.position.y = position[1] + Math.sin(time * floatSpeed + position[0]) * floatAmount
     ref.current.rotation.z = initialRot + Math.sin(time * rotSpeed) * 0.1

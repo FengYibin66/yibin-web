@@ -754,3 +754,35 @@ export function memberCalls(
   visit(sf)
   return out
 }
+
+/**
+ * 文件里所有 `<name>(` 形态的**裸函数调用**（如 `setRail(`）。
+ *
+ * 给「同一个量只有一个写者」那类门禁用：`__tests__/railWriter.test.ts` 断言
+ * 全仓只有 `hooks/useCorridorCamera.ts` 调 `setRail`（ADR 20260908172231）。
+ *
+ * 与 `memberCalls` 的分工：那个认 `obj.method(`，这个认独立标识符的调用。
+ * 两者都只认**调用表达式** —— 注释、字符串、类型注解、`import { setRail }`
+ * 里的同名文本都不算。这正是这个仓库的门禁一律走 AST 的理由
+ * （ADR 20260903211320：正则版对 20 个变异漏掉 10 个，其中包括仓库自己
+ * 白名单里登记过的写法）。
+ *
+ * `obj.setRail()` **不算**命中 —— 那是成员调用，语义上是另一个函数。
+ * 想同时覆盖两种形态就把两个查询都跑一遍。
+ */
+export function functionCalls(source: string, name: string, fileName = 'input.ts'): Hit[] {
+  const sf = parse(source, fileName)
+  const out: Hit[] = []
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === name
+    ) {
+      out.push({ file: fileName, line: lineOf(node, sf), text: snippet(node, sf, 80) })
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}

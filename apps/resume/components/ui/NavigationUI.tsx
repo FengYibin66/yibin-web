@@ -13,6 +13,7 @@ import { useLocale } from '@/hooks/useLocale'
 import { nextLocaleLabel } from '@/lib/content/localeToggle'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 
 /*
   地图里的房间名来自 `labUi.doors`，与走廊门牌是同一份（审计 E7）。
@@ -39,6 +40,13 @@ export function NavigationUI() {
   const { locale, toggle: toggleLocale } = useLocale()
 
   const [mapOpen, setMapOpen]               = useState(false)
+  /*
+    地图上"这间去过没有"的来源（ADR 20260908172231）。用 `inked`（真的进过）
+    而不是 `visited`（从门口路过）—— 地图要回答的是"还有哪些内容没看"。
+  */
+  const visitedRooms = useCorridorStore(state => state.inked)
+  /** 动效开关的实际取值，作为诊断属性暴露（见下方 `data-lab-motion`） */
+  const motionScale = useCorridorStore(state => state.motionScale)
   const [audioOpen, setAudioOpen]           = useState(false)
   const [achievementsOpen, setAchievementsOpen] = useState(false)
   const [isExiting, setIsExiting]           = useState(false)
@@ -173,6 +181,13 @@ export function NavigationUI() {
       /* 传送的纸动画相位。诊断"传送卡住"时唯一能分辨卡在哪一步的信息 */
       data-lab-teleport-phase={teleportPhase ?? ''}
       data-lab-phase={roomLoadState.phase}
+      /*
+        动效开关的实际取值（ADR 20260908172231）。0 = 系统要求减少动效。
+        没有它就无法验证"reduced 下持续动画真的停了"——截图比较受相机插值
+        尾巴干扰（整幅画面平移 0.1 像素会让大量子像素变化），而 3D 物体的
+        transform 不在 DOM 里。实测排查这件事时就卡在这里。
+      */
+      data-lab-motion={motionScale}
     >
       {/* Global achievement popup */}
       <AchievementPopup />
@@ -368,6 +383,12 @@ export function NavigationUI() {
                 key={roomId}
                 onClick={() => handleRoomClick(roomId)}
                 data-testid={`map-room-${roomId}`}
+                /*
+                  「这间去过没有」（ADR 20260908172231）。取自 `inked` 而不是
+                  `visited`：地图要回答的是"还有哪些内容没看"，而 `visited`
+                  只表示"从门口路过"。经过一扇门不等于看过里面。
+                */
+                data-visited={visitedRooms.has(`door-${roomId}`)}
                 disabled={isRoomNavigationDisabled}
                 aria-disabled={isRoomNavigationDisabled}
                 style={{
@@ -393,6 +414,30 @@ export function NavigationUI() {
                   </svg>
                 )}
                 {labels.doors[roomId]}
+                {/*
+                  没进过的房间标一个手写问号 —— 与线稿风一致，也比挂锁诚实
+                  （内容并没有被锁住，只是还没看）。已进过的不标，避免地图
+                  变成一排图标。
+                */}
+                {!visitedRooms.has(`door-${roomId}`) && (
+                  <span
+                    aria-hidden
+                    style={{
+                      marginLeft: 'auto',
+                      fontFamily: 'var(--font-sketch-bold)',
+                      fontSize: 13,
+                      /*
+                        不加 `opacity`：`#6b5744` 本身在纸面板上是 4.6，乘 0.75
+                        之后掉到 3.48，低于 WCAG AA 的 4.5 —— 对比度门禁
+                        （`__tests__/labContrast.test.ts`，棘轮刻意留空）会直接红。
+                        想让它更弱就换更浅的颜色并重新算，不要用透明度绕。
+                      */
+                      color: '#6b5744',
+                    }}
+                  >
+                    ?
+                  </span>
+                )}
               </button>
             ))}
           </div>

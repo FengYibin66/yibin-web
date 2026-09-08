@@ -14,6 +14,8 @@ import { isDoorEntryOwner } from '@/lib/lab/domain/machines/room.machine'
 import { segmentIndexAtZ } from '@/lib/lab/domain/corridor/layout'
 import { LAB_FONT_LATIN_BOLD, fontForText } from '@/lib/lab/domain/labFonts'
 import { preloadRoomAssets } from '@/lib/lab/app/assets/preload'
+import { inkLevel } from '@/lib/lab/domain/corridor/ink'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 import '@/components/lab/shaders/RevealMaterial'
 import { RoomInterior } from './RoomInterior'
 import { useDoorEntryOrchestrator } from './useDoorEntryOrchestrator'
@@ -172,6 +174,22 @@ export function DoorSection({
   const glowRef          = useRef<THREE.Mesh>(null)
   const doorRevealRef    = useRef<{ uProgress: number } | null>(null)
   const handleRevealRef  = useRef<{ uProgress: number } | null>(null)
+
+  /*
+    ── 显形基线（ADR 20260908172231）────────────────────────────────────────
+    这扇门"不被悬停时"该显形到什么程度：进过的门永久上色，第二圈起全部上色。
+    此前 hover 离开一律回到 0，于是走廊看不出哪些房间去过。
+
+    `baseInk` 是 React 订阅（`inked` / `lap` 变化不频繁），但 gsap 回调与
+    `useFrame` 里要读它——那些回调的闭包捕获的是创建时的值，所以另存一份 ref。
+    这不是重复状态：ref 是给"非 React 时序"的读取口。
+  */
+  const landmarkId = `door-${roomId}`
+  const baseInk = useCorridorStore(state =>
+    inkLevel(landmarkId, { inked: state.inked, lap: state.lap }),
+  )
+  const baseInkRef = useRef(baseInk)
+  baseInkRef.current = baseInk
   const handlePaintedRef = useRef<THREE.Mesh>(null)
   const doorPaintedRef   = useRef<THREE.Mesh>(null)
 
@@ -350,14 +368,16 @@ export function DoorSection({
       onComplete,
     })
 
-    // Reverse reveal materials
+    // Reverse reveal materials —— 退回**基线**（进过的房间那扇门保持上色）
+    const target = baseInkRef.current
     for (const ref of [doorRevealRef, handleRevealRef]) {
-      if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.6, ease: 'power2.out', overwrite: true })
+      if (ref.current) gsap.to(ref.current, { uProgress: target, duration: 0.6, ease: 'power2.out', overwrite: true })
     }
     if (hideDelayRef.current) hideDelayRef.current.kill()
     hideDelayRef.current = gsap.delayedCall(0.65, () => {
-      if (handlePaintedRef.current) handlePaintedRef.current.visible = false
-      if (doorPaintedRef.current) doorPaintedRef.current.visible = false
+      const keepPainted = baseInkRef.current > 0
+      if (handlePaintedRef.current) handlePaintedRef.current.visible = keepPainted
+      if (doorPaintedRef.current) doorPaintedRef.current.visible = keepPainted
     })
   }, [play])
 
@@ -369,8 +389,10 @@ export function DoorSection({
     setIsAnimating(false)
     setIsInsideRoom(true)
     unlockAchievement('corridor_enter')
+    // 墨迹记忆：进过的房间那扇门永久上色（ADR 20260908172231）
+    useCorridorStore.getState().markInked(landmarkId)
     if (useFastMode) signalRoomReady()
-  }, [tryRoom, enterRoom, roomId, signalRoomReady, unlockAchievement])
+  }, [tryRoom, enterRoom, roomId, landmarkId, signalRoomReady, unlockAchievement])
 
   const flyIntoRoom = useCallback((useFastMode: boolean) => {
     const direction = new THREE.Vector3()
@@ -496,6 +518,8 @@ export function DoorSection({
         if (roomId === 'gallery') {
           setCameraOverride(false)
           unlockAchievement('corridor_enter')
+          // Gallery 走独立路由，不经 finishRoomEntry —— 记忆要在这里落一次
+          useCorridorStore.getState().markInked(landmarkId)
           router.push('/gallery?from=lab')
           return
         }
@@ -521,10 +545,11 @@ export function DoorSection({
       doorRef.current.rotation.y = 0
     }
     for (const ref of [doorRevealRef, handleRevealRef]) {
-      if (ref.current) ref.current.uProgress = 0
+      if (ref.current) ref.current.uProgress = baseInkRef.current
     }
-    if (handlePaintedRef.current) handlePaintedRef.current.visible = false
-    if (doorPaintedRef.current) doorPaintedRef.current.visible = false
+    const keepPainted = baseInkRef.current > 0
+    if (handlePaintedRef.current) handlePaintedRef.current.visible = keepPainted
+    if (doorPaintedRef.current) doorPaintedRef.current.visible = keepPainted
     isOpenRef.current = false
     isTiltLockedRef.current = false
   }, [])
@@ -697,14 +722,40 @@ export function DoorSection({
     if (doorRef.current) {
       gsap.to(doorRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
+    /*
+      回到**基线**而不是 0：进过的房间那扇门保持上色（ADR 20260908172231）。
+      基线为 0 时行为与此前完全一致。
+    */
+    const target = baseInkRef.current
     for (const ref of [doorRevealRef, handleRevealRef]) {
-      if (ref.current) gsap.to(ref.current, { uProgress: 0.0, duration: 0.5, ease: 'power2.out', overwrite: true })
+      if (ref.current) gsap.to(ref.current, { uProgress: target, duration: 0.5, ease: 'power2.out', overwrite: true })
     }
     hideDelayRef.current = gsap.delayedCall(0.55, () => {
-      if (handlePaintedRef.current) handlePaintedRef.current.visible = false
-      if (doorPaintedRef.current) doorPaintedRef.current.visible = false
+      // 基线 > 0 时上色层必须留着，否则擦除后面是空的
+      const keepPainted = baseInkRef.current > 0
+      if (handlePaintedRef.current) handlePaintedRef.current.visible = keepPainted
+      if (doorPaintedRef.current) doorPaintedRef.current.visible = keepPainted
     })
   }, [isAnimating])
+
+  /*
+    基线变化时把材质推上去（ADR 20260908172231）。
+
+    两个时机：① 记忆从 localStorage 恢复（`LabScene` 挂载时的
+    `hydrateCorridorMemory`，比门的首次渲染晚）；② 本次会话刚进过这个房间。
+
+    只推不拉（`<` 判断）：hover 中 `uProgress` 已是 1，不能被基线打断。
+  */
+  useEffect(() => {
+    if (isOpenRef.current || isAnimating) return
+    for (const ref of [doorRevealRef, handleRevealRef]) {
+      if (ref.current && ref.current.uProgress < baseInk) ref.current.uProgress = baseInk
+    }
+    if (baseInk > 0) {
+      if (handlePaintedRef.current) handlePaintedRef.current.visible = true
+      if (doorPaintedRef.current) doorPaintedRef.current.visible = true
+    }
+  }, [baseInk, isAnimating])
 
   // ─── Wall fill x positions ───────────────────────────────────────────────────
   const leftFillX  = wallOffsetX + (side === 'left'

@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import { LAB_FONT_LATIN_BOLD } from '@/lib/lab/domain/labFonts'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 
 const CEILING_Y = 1.75  // CORRIDOR_HEIGHT(3.5) / 2
 
@@ -23,9 +24,15 @@ export function BugEaster({ position = [0, 0, -70] }: BugEasterProps) {
 
   const bugTex = useTexture('/textures/corridor/bug_sketch.webp')
   const inkTex = useTexture('/textures/corridor/ink_splash.webp')
+  /*
+    动效开关（ADR 20260908172231）。虫子的双频游走是天花板附近唯一的持续运动。
+    `motionScale` 为 0 时它停在基准位置，**但仍然可以点**——彩蛋是内容，
+    减少动效不该把内容拿走。
+  */
+  const motionScale = useCorridorStore(s => s.motionScale)
 
   useFrame((state) => {
-    if (clicked || !bugRef.current) return
+    if (clicked || !bugRef.current || motionScale === 0) return
     const t = state.clock.elapsedTime
     bugRef.current.position.x = 2 + Math.sin(t * 0.8) * 0.3 + Math.sin(t * 1.5) * 0.1
     bugRef.current.position.y = (CEILING_Y - 0.5) + Math.cos(t * 0.6) * 0.2 + Math.cos(t * 1.1) * 0.1

@@ -4,6 +4,7 @@ import { useRef, useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
 
 const RUBIK_SCRIBBLE_URL = '/fonts/RubikScribble-Regular.ttf'
 const CABIN_SKETCH_URL   = '/fonts/CabinSketch-Regular.ttf'
@@ -29,6 +30,14 @@ interface HeroTextProps {
 }
 
 export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextProps) {
+  /*
+    动效开关（ADR 20260908172231）。存一份 ref 是因为 `useFrame` 的回调不重建
+    （见本文件下方的依赖说明），闭包里读 state 会拿到挂载时的旧值。
+  */
+  const motionScale = useCorridorStore(state => state.motionScale)
+  const motionScaleRef = useRef(motionScale)
+  motionScaleRef.current = motionScale
+
   const groupRef    = useRef<THREE.Group>(null)
   const letterRefs  = useRef<(THREE.Object3D | null)[]>([])
   const taglineRefs = useRef<(THREE.Object3D | null)[]>([])
@@ -83,23 +92,30 @@ export function HeroText({ visible = true, position = [0, 0.3, -2] }: HeroTextPr
     }
     splitAmount.current = THREE.MathUtils.lerp(splitAmount.current, targetSplit.current, 0.08)
 
+    /*
+      动效开关（ADR 20260908172231）：`motionScale` 为 0 时字母只保留**由相机
+      距离驱动的裂开**（那是对用户动作的响应，不是自发运动），去掉所有随时间
+      漂浮的项。走廊第一屏的这组字是"进去就晃"的主要来源之一。
+    */
+    const float = motionScaleRef.current
+
     letterRefs.current.forEach((ref, i) => {
       if (!ref) return
       const l = letters[i]
       ref.position.x = l.baseX + l.splitDir * splitAmount.current
-      ref.position.y = 0.2 + Math.sin(time * 0.7 + i * 0.5) * 0.015
-      ref.rotation.z = Math.sin(time * 0.5 + i) * 0.02 * (1 + splitAmount.current)
+      ref.position.y = 0.2 + Math.sin(time * 0.7 + i * 0.5) * 0.015 * float
+      ref.rotation.z = Math.sin(time * 0.5 + i) * 0.02 * (1 + splitAmount.current) * float
     })
 
     taglineRefs.current.forEach((ref, i) => {
       if (!ref) return
       const w = taglineWords[i]
       ref.position.x = w.baseX + w.splitDir * splitAmount.current * 0.6
-      ref.position.y = -0.45 + Math.sin(time * 0.6 + i * 0.3) * 0.008
+      ref.position.y = -0.45 + Math.sin(time * 0.6 + i * 0.3) * 0.008 * float
     })
 
     // Subtle float
-    groupRef.current.position.y = position[1] + Math.sin(time * 0.5) * 0.02
+    groupRef.current.position.y = position[1] + Math.sin(time * 0.5) * 0.02 * float
     groupRef.current.visible = visible
   })
 

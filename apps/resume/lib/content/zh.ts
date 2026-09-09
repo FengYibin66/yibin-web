@@ -16,6 +16,8 @@ export const zh: SiteContent = {
       { label: '荣誉证书', href: '/classic/#credentials' },
       { label: '联系我', href: '/classic/#contact' },
     ],
+    menu: '打开导航菜单',
+    closeMenu: '关闭导航菜单',
   },
 
   labUi: {

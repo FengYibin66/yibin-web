@@ -3,6 +3,14 @@ export type Locale = 'en' | 'zh'
 export interface NavContent {
   brand: string
   links: { label: string; href: string }[]
+  /**
+   * 窄屏汉堡菜单的无障碍名（ADR 20260909182319 第三批）。
+   *
+   * 原先 `<768` 下那 9 个导航入口是 `hidden md:flex`——**隐藏了，没有替代入口**。
+   * 而 `/classic/` 在 390px 上高 18056px，用户只能靠滑。
+   */
+  menu: string
+  closeMenu: string
 }
 
 export interface HeroContent {

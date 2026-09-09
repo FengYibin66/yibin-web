@@ -16,6 +16,8 @@ export const en: SiteContent = {
       { label: 'Credentials', href: '/classic/#credentials' },
       { label: 'Contact', href: '/classic/#contact' },
     ],
+    menu: 'Open navigation menu',
+    closeMenu: 'Close navigation menu',
   },
 
   labUi: {

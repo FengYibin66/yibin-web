@@ -55,7 +55,12 @@ export const en: SiteContent = {
       gallery: 'Gallery: four countries studied in, three worked in.',
       contact: 'Contact: the fastest ways to reach me, one click each.',
       timeline: 'The wall is the résumé: school, company, city, year.',
-      end: "That's the hall. Step through a door, or open the full résumé top-left.",
+      // 不要再写「top-left」：左上角是 `← Exit Lab`（去 `/` 入口页），Lab 里
+      // **没有任何**通往 `/classic` 的入口（唯二两处在 WebGL 兜底与加载页，
+      // 走廊跑起来后都不存在）。这条字幕曾指向一个不存在的入口——而它出现在
+      // 招聘官刚看完 56 秒导览、最愿意看简历的那一刻。
+      // 完整简历的入口在 Lab 顶栏重构那批里补，届时再把指路加回来。
+      end: "That's the hall. Step through a door to see the rooms.",
     },
     timeline: {
       present: 'Present',
@@ -111,7 +116,7 @@ export const en: SiteContent = {
       imagePreview: 'Image preview',
       previewImage: 'Preview image',
       previewNamed: 'Preview {name}',
-      visitProject: 'Visit →',
+      visitProject: 'Visit',
       skipTutorial: 'Skip',
       startExploring: 'Start exploring',
       back: 'Back',
@@ -231,7 +236,10 @@ export const en: SiteContent = {
         qsRank: '#2',
         qsLabel: 'QS World Rank',
         location: 'London, UK',
-        logo: '/education/imperial horizontal.png',
+        // 换用 Imperial.png：'imperial horizontal.png' 的透明背景被烤成了棋盘格像素
+        // （无 tRNS 块），页面上是一块灰白格子；Imperial.png 一直在仓库里没被用，
+        // 它是干净的白底校徽。见 2026-09-09 的资产核查。
+        logo: '/education/Imperial.png',
         keyModules: [
           'Structural Analysis',
           'Cementitious Materials',
@@ -721,6 +729,10 @@ export const en: SiteContent = {
 
   classicUi: {
     learnMore: 'Learn more',
-    backToClassic: '← Back to resume',
+    // 不带 `←`：装饰性字符属于组件，不属于本地化文案。
+    // 曾经写成 '← Back to resume'，于是 PublicationDetailView 那个 `← {label}` 的
+    // 调用点渲染出「← ← Back to resume」。修调用点只能治一处，下一个调用者照样中招。
+    // 正确先例：LabScene 的 `← {labels.panels.exitLab}`，文案是裸的 'Exit Lab'。
+    backToClassic: 'Back to resume',
   },
 }

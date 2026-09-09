@@ -18,10 +18,13 @@ import { GalleryLightbox } from './GalleryLightbox'
 // per Next.js requirement for static export.
 function ExitBackLink() {
   const params = useSearchParams()
-  const isFromClassic = params.get('from') === 'classic'
+  // 只有明确 `?from=lab` 才回走廊；无 query 或其他值都回 `/classic`。
+  // 原先是「不是 classic 就回 /lab」，于是直接打开相册链接的人被送进 3D 走廊——
+  // 他没进过走廊，那是意外跳转。判据反过来写，默认值才是安全的那一个。
+  const isFromLab = params.get('from') === 'lab'
   return (
     <Link
-      href={isFromClassic ? '/classic' : '/lab'}
+      href={isFromLab ? '/lab' : '/classic'}
       style={{
         display: 'inline-block',
         padding: '12px 24px',
@@ -45,7 +48,7 @@ function ExitBackLink() {
         e.currentTarget.style.borderColor = 'rgba(200,169,110,0.3)'
       }}
     >
-      ← {isFromClassic ? 'Back to Portfolio' : 'Back to Corridor'}
+      ← {isFromLab ? 'Back to Corridor' : 'Back to Portfolio'}
     </Link>
   )
 }

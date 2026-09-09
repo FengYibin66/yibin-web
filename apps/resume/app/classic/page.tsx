@@ -40,21 +40,15 @@ export default function ClassicPage() {
 
   return (
     <>
+      {/*
+        这里曾有一个 `position: fixed; top:20; left:20` 的「← Home」链接，已删除。
+        它与 Navbar 的品牌指向同一个 URL（`brandHref="/"`），是功能重复；而且它不在
+        任何布局容器里，桌面上「刚好不撞」纯属巧合——Navbar 的 `max-w-6xl mx-auto px-6`
+        把品牌推到 x≈88，而手机上容器不再约束、品牌落在 x=24，与它 92% 重叠
+        （实测 2026-09-09：品牌 [24,18 90×28] × 链接 [20,20 49×18]）。
+        回首页的职责由品牌承担，这是 web 上最强的既有约定。
+      */}
       <Navbar brandHref="/" />
-      <a
-        href="/"
-        style={{
-          position: 'fixed', top: '20px', left: '20px', zIndex: 100,
-          fontFamily: 'var(--font-mono)', fontSize: '12px',
-          color: 'var(--text-secondary)', textDecoration: 'none',
-          letterSpacing: '0.08em', opacity: 0.7,
-          transition: 'opacity 0.2s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
-      >
-        ← Home
-      </a>
       <main>
         <HeroSection />
         <AboutSection />

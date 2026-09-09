@@ -228,7 +228,10 @@ export function ProjectMonitor({
             document.body.style.cursor = 'auto'
           }}
         >
-          {labels.hints.visitProject}
+          {/* 箭头在这里拼、不在文案里（见 lib/content/en.ts 的 backToClassic 注释）。
+              用模板字符串而非 JSX 相邻节点：troika 的 <Text> 需要单一字符串 children，
+              `{label} →` 会传进一个数组。 */}
+          {`${labels.hints.visitProject} →`}
         </Text>
       ) : null}
     </group>

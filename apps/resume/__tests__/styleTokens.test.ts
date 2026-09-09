@@ -96,17 +96,34 @@ function fontFamilyValue(line: string, isCss: boolean): string | null {
  * 它们通过 CSS 变量（`--font-display` 等）使用；真实 family 名是构建期生成的
  * 哈希串，所以代码里写的字面量 `"Cormorant Garamond"` 其实永远不会命中——但那
  * 只是无用的 fallback 文本，不是本测试要抓的"字体根本没加载"。放进白名单。
+ *
+ * 两条来源：
+ * - `next/font/google` 的导入名（`Space_Grotesk` → "space grotesk"）。ADR 20260909163155
+ *   之后 layout.tsx 不再用它（构建机在大陆不可达 Google），但解析保留——若有人加回来，
+ *   本测试不该因此失明。
+ * - `next/font/local` 引用的 `@fontsource` 包名（`@fontsource-variable/space-grotesk`
+ *   → "space grotesk"）。包名就是族名的 slug，这是 fontsource 的命名约定，比去猜
+ *   woff2 文件名可靠。**只认 @fontsource 路径**：要是有人把裸 woff2 放进仓库走
+ *   next/font/local，这里识别不到，测试会把对应族名报成「未声明」——那正是提醒
+ *   他来更新这份约定的时机，不是误报。
  */
 function nextFontFamilies(): Set<string> {
   const layout = readFileSync(join(APP_ROOT, 'app/layout.tsx'), 'utf8')
-  const m = layout.match(/import\s*\{([^}]*)\}\s*from\s*['"]next\/font\/google['"]/)
-  if (!m) return new Set()
-  return new Set(
-    m[1]!
-      .split(',')
-      .map((name) => name.trim().replace(/_/g, ' ').toLowerCase())
-      .filter(Boolean),
-  )
+  const families = new Set<string>()
+
+  const google = layout.match(/import\s*\{([^}]*)\}\s*from\s*['"]next\/font\/google['"]/)
+  if (google) {
+    for (const name of google[1]!.split(',')) {
+      const family = name.trim().replace(/_/g, ' ').toLowerCase()
+      if (family) families.add(family)
+    }
+  }
+
+  for (const m of layout.matchAll(/@fontsource(?:-variable)?\/([a-z0-9-]+)\//g)) {
+    families.add(m[1]!.replace(/-/g, ' ').toLowerCase())
+  }
+
+  return families
 }
 
 interface Reference {

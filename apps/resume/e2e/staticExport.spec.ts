@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import { expect, test } from '@playwright/test'
@@ -103,6 +103,47 @@ test.describe('静态产物可达性', () => {
     }
     expect(new Set(titles.values()).size, `title 重复：${[...titles]}`).toBe(titles.size)
   })
+})
+
+/**
+ * 产物里的字体必须是字体（ADR 20260909163155）。
+ *
+ * 2026-09-09 发现线上四款界面字体的 woff2 全是 **89 字节的 URL 字符串**：
+ * `pnpm build` 带着 NEXT_FONT_GOOGLE_MOCKED_RESPONSES，Next 在该模式下把 mock CSS
+ * 里的 `https://fonts.gstatic.com/...` 地址原样 `Buffer.from(url)` 写成了「字体」。
+ * 浏览器报 `OTS parsing error: invalid sfntVersion: 1752462448`（= ASCII "http"），
+ * 全部回退到系统字体——**自 mock 引入以来每次构建都如此**，而所有测试都绿着：
+ * 没有一处断言过「产物里的字体是字体」。
+ *
+ * 这里直接读 out/ 里的文件而不走 HTTP：要验的是构建产物本身，与服务器无关。
+ * woff2 的魔数是 `wOF2`（0x77 0x4F 0x46 0x32）。
+ */
+test.describe('产物里的字体是真字体', () => {
+  const mediaDir = resolve(__dirname, '../out/_next/static/media')
+  const woff2s = existsSync(mediaDir)
+    ? readdirSync(mediaDir).filter(f => f.endsWith('.woff2')).sort()
+    : []
+
+  test('至少有四款界面字体的 woff2 进了产物', () => {
+    // layout.tsx 声明 Space Grotesk / Inter / JetBrains Mono（各 1 个可变字重文件）
+    // + Cormorant Garamond（400/500/600 三个静态字重）= 至少 6 个文件。
+    // 少于这个数说明 next/font/local 的引用丢了或 out/ 不是完整构建。
+    expect(woff2s.length, `out/_next/static/media 里只有 ${woff2s.length} 个 woff2`).toBeGreaterThanOrEqual(6)
+  })
+
+  for (const file of woff2s) {
+    test(`${file} 以 wOF2 魔数开头且体积像一个字体`, () => {
+      const buf = readFileSync(join(mediaDir, file))
+      const magic = buf.subarray(0, 4).toString('latin1')
+      expect(
+        magic,
+        `${file} 前四字节是 ${JSON.stringify(magic)}（${buf.length} bytes）——` +
+          (magic === 'http' ? '这是一个 URL 字符串，不是字体；见 ADR 20260909163155' : '不是 woff2')
+      ).toBe('wOF2')
+      // latin 子集的可变字重文件通常 20–100 KB；1 KB 以下不可能是字体
+      expect(buf.length, `${file} 只有 ${buf.length} bytes`).toBeGreaterThan(1024)
+    })
+  }
 })
 
 test.describe('Classic 简历页', () => {

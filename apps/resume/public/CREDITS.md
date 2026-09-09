@@ -24,6 +24,23 @@ ADR [20260903140619](https://github.com/FengYibin66/yibin-web/blob/main/docs/adr
 **待补**：Cabin Sketch / Fredericka the Great / Rubik Scribble 三款的 OFL 全文尚未随仓库装船
 （Patrick Hand 与 ZCOOL KuaiLe 已有）。OFL 要求随字体分发许可全文，这三份需要补上。
 
+### 界面字体（Classic 形态的 DOM 文字）
+
+以下四款**不在** `public/fonts/`，而是 npm 依赖，经 `next/font/local` 在构建时打进 `_next/static/media/`
+（ADR 20260909163155）。版本由 `pnpm-lock.yaml` 锁定；OFL 全文随每个包内的 `LICENSE` 装船。
+只引 latin 子集文件。
+
+| 字体 | npm 包 | 版权 | 许可 | 用途 |
+|------|--------|------|------|------|
+| [Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk) | `@fontsource-variable/space-grotesk` | Copyright 2020 The Space Grotesk Project Authors | OFL 1.1 | 标题、展示字（`--font-display`） |
+| [Inter](https://fonts.google.com/specimen/Inter) | `@fontsource-variable/inter` | Copyright 2020 The Inter Project Authors | OFL 1.1 | 正文（`--font-sans`） |
+| [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) | `@fontsource-variable/jetbrains-mono` | Copyright 2020 The JetBrains Mono Project Authors | OFL 1.1 | 等宽（`--font-mono`） |
+| [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond) | `@fontsource/cormorant-garamond` | Copyright 2015 The Cormorant Project Authors | OFL 1.1 | 画廊标题（`--font-gallery`，400/500/600） |
+
+**历史注记**：这四款在 2026-09-09 之前通过 `next/font/google` + 构建期 mock 引入，线上产物里的
+woff2 是 URL 字符串而非字体，从未真正生效。上面「待补」那三款的 OFL 全文，也可以用同样的办法
+——换成 `@fontsource` 包——顺带解决。
+
 ## 音频
 
 | 文件 | 用途 | 来源与许可 |

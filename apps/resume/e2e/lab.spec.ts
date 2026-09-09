@@ -183,7 +183,15 @@ test.afterEach(async () => {
  *
  * `toPass()` 重试整个块，是 Playwright 给这类"重试直到稳定"场景的工具。
  * 不用 `waitForTimeout` 猜一个固定延迟：那要么不够、要么白等。
+ *
+ * **内层的等待必须比外层的总预算短得多**（`ESC_SETTLE_TIMEOUT` vs `ESC_TOTAL_TIMEOUT`）。
+ * 两者相同（都是 20 s）时第一次尝试就吃光预算，`toPass` 一次都不重试——那正是这个
+ * 辅助函数要解决的问题，而它自己有过这个 bug：mobile WebKit 上第一次 ESC 若落在
+ * 房间相位刚好还不是 `entered` 的那一瞬，就再没有第二次机会（实测抓到）。
  */
+const ESC_SETTLE_TIMEOUT = 4_000
+const ESC_TOTAL_TIMEOUT = 45_000
+
 async function pressEscapeUntil(
   page: import('@playwright/test').Page,
   settled: () => Promise<void>,
@@ -191,7 +199,7 @@ async function pressEscapeUntil(
   await expect(async () => {
     await page.keyboard.press('Escape')
     await settled()
-  }).toPass({ timeout: 20_000, intervals: [300, 600, 1_000] })
+  }).toPass({ timeout: ESC_TOTAL_TIMEOUT, intervals: [300, 600, 1_000] })
 }
 
 /** 通过地图面板传送进一个房间 */
@@ -241,7 +249,7 @@ test.describe('Lab 进入与退出', () => {
     await teleportTo(page, 'contact')
     await pressEscapeUntil(page, async () => {
       await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false', {
-        timeout: ROOM_ENTER_TIMEOUT,
+        timeout: ESC_SETTLE_TIMEOUT,
       })
     })
   })

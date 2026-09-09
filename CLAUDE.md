@@ -88,6 +88,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 | resume 纹理加载瀑布 | `ProjectsRoom` 每张卡无条件声明 26 个纹理 loader（其余 3 条 P1 已修，见 `apps/resume/AGENTS.md` 的状态表） | 报告 `docs/reviews/2026-07-12-resume-lab-room-audit.md` **已陈旧**，以 AGENTS.md 为准 |
 | resume Lab 加载期不能「边加载边画」 | 规格 `lab-corridor-story.md` §1 的决定 D 初稿要 30% 提前撕开、看走廊一笔笔画出来；实测走廊整个在一个 Suspense 边界里，撕开后是空白。现在是撕纸时 1.8 s 把门画出来 | 要做到边加载边画得把 Suspense 边界拆到每个物件，需先写 ADR |
 | resume Lab `dockMachine` 只有 Projects 用 | Publications 仍是 `publicationMotionMachine`（ADR 20260903211338 登记；`corridor.machine` 那项已由 20260908204302 清偿） | 接线时另写 ADR 或并入 Publications 的下一次改动 |
+| nginx 容器的健康检查从未通过 | 线上 `nginx` 常年 `(unhealthy)` 而站点正常。检查是 `wget --spider http://localhost/`，而 80 端口的 server 块无条件 `301` 到 `https://$host`（此处 `$host` = `localhost`），443 上没有 `localhost` 的 server 块 → 证书名不匹配 → 失败。**它从写下来那天就不可能通过** | 2026-09-09 手工上线时发现。修法是让检查打 `-H 'Host: www.yibinfeng.com'` 或直连 443 带 SNI；并入平台路线图计划 A 第 1 期（那期要重写健康检查） |
+| 证书续期在仓库内无机制 | `scripts/AGENTS.md` 列了 `ssl-renew.sh`，**文件不存在**（Gitee 上有个未合的 `worktree-fix-ssl-autorenew` 分支）。docker nginx 占着 80/443，`--standalone` 续不了；webroot 的 acme location 与 `certbot-webroot` 卷都在，但**只读挂载**，缺写入侧 | 证书 2026-10-08 到期。这是有时限的一笔 |
 
 ## 分支与发布
 
@@ -107,7 +109,7 @@ scripts/                 # 部署、环境构建、文档索引生成
 | `apps/resume/e2e/` | 162（81 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态 + Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物 / 招聘官路线）+ Classic 滚动显形的全部进入路径。Lab 那批的坑见 `apps/resume/AGENTS.md` 与 `apps/resume/scripts/qa/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
-| `apps/auto-wechat/backend` | 14 文件 | Go 单测 |
+| `apps/auto-wechat/backend` | 15 文件 | Go 单测（含 `internal/toolchain` 的 Go 版本一致性门禁） |
 | `.claude/hooks/tests/` | 75 | 门禁脚本回归（含 push-main 各种绕过形态） |
 | `scripts/ci/gate-test.sh` | 14 | 门禁汇总逻辑 |
 | `scripts/ci/lint-workflows.py --self-test` | 10 | workflow 接线检查 |

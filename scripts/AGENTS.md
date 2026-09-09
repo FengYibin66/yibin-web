@@ -8,7 +8,7 @@
 | `env-migrate-legacy.sh` | 旧环境变量格式迁移 |
 | `build-prod-assets.sh` | 构建 portal / resume / auto-wechat 前端静态产物 |
 | `deploy-prod.sh` | 生产部署（构建 + compose 重建） |
-| `ssl-renew.sh` | Let's Encrypt 零停机续期（webroot 模式），配 cron 使用 |
+| ~~`ssl-renew.sh`~~ | **计划中，文件尚不存在**。曾在此列出但从未落地（Gitee 上有未合的 `worktree-fix-ssl-autorenew` 分支）。证书 2026-10-08 到期，登记在根 `CLAUDE.md` 负债表 |
 | `verify-local.sh` / `verify-local-compose.sh` / `verify-local-complete.sh` | 本地验证（渐进三档） |
 | `docs/gen_docs_index.py` | 生成 `docs/adr/AGENTS.md` 的 ADR 索引表（单测：`docs/test_gen_docs_index.py`） |
 | `ci/evaluate-gate.sh` | 汇总 CI 各 job 结果（单测：`ci/gate-test.sh`） |
@@ -41,8 +41,10 @@ C2 尤其值得有：漏传一个 job 名**没有任何症状**——门禁照�
 ## 写脚本的约定
 
 - **`set -euo pipefail`**：静默失败的部署脚本比没有脚本更危险
-- **幂等**：可安全重复执行。`ssl-renew.sh` 在证书剩余 >30 天时自动跳过就是这个意思
-- **顶部注释写清「为什么」而非只写「做什么」**。反例参考：`ssl-renew.sh` 开头解释了为什么不能用 `--standalone`（要独占 80 端口、与常驻 nginx 冲突、导致无人值守续期静默失败）——这个"为什么"比命令本身重要，缺了它下一个人会改回去
+- **幂等**：可安全重复执行。比如续期脚本应在证书剩余 >30 天时自动跳过
+- **顶部注释写清「为什么」而非只写「做什么」**。这个"为什么"比命令本身重要，缺了它下一个人会把它改回去
+
+> **给将来写 `ssl-renew.sh` 的人**：别用 `certbot --standalone`。它要独占 80 端口，而生产的 nginx 是常驻容器且占着 80/443——冲突的表现不是报错，是**无人值守续期静默失败**，直到某天证书过期。要用 webroot 模式：`nginx-prod.conf` 里已有 `/.well-known/acme-challenge/` 指向 `/var/www/certbot`，`certbot-webroot` 卷也已挂进 nginx，但**目前是只读挂载**，缺的是能写入该卷的一侧。这段推理原先写在一个并不存在的脚本头部注释里，现在挪到这儿，免得随那份不存在一起丢掉。
 - **不在脚本里硬编码 secret**，从 `.env.*` 或环境变量读
 
 ## 生成物纪律

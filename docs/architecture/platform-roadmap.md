@@ -20,6 +20,24 @@
 结论：CI 门禁（`ci.yml`）一直认真跑，**发布这一步从来是手工的，而且两个月没做过**。
 根 `CLAUDE.md` 的「不手动部署、不手动改线上配置」是原则，至今没有机制。
 
+## 2026-09-09 更新：手工上线已执行，暴露了四件事
+
+用户明确授权走「路线一」（人工 SSH 跑 `deploy-prod.sh`）先把积压上线，自动化改造作为第二步。
+本节记录**那次上线实际撞到的东西**——它们是计划 A 第 1 期的真实输入，不是设想：
+
+| 撞到的 | 性质 | 处置 |
+|--------|------|------|
+| `.env.shared.local` 里 `DATABASE_URL` 是 `CHANGE_ME`，真值只存在于派生产物 `.env.production` 里 | **配置的来源与产物反了**。任何人重跑一次生成器都会打坏 auto-wechat（`config.go` 要求该键非空） | 当场把真值搬回 `.env.shared.local`。第 1 期「env 由 GitHub Environment secrets 生成」正是为消除这种反向依赖 |
+| `apps/portal/client/tsconfig.tsbuildinfo` 被跟踪且服务器上被改过，`git merge --ff-only` 拒绝前进 | 服务器上有 git checkout 就会攒本地状态 | 该文件已在新版本移出版本控制。第 1 期「CVM 上不再有 git checkout」根除此类 |
+| `backend/Dockerfile` 的 `golang:1.23-alpine` 低于 `go.mod` 的 `go 1.24`，镜像构建失败 | CI **不构建镜像**，所以版本漂移零症状地埋了六天，在上线当口才现形 | 已修并补机械门禁（`backend/internal/toolchain`）。第 1 期把四个镜像纳入 CD 后，构建失败会在 PR 阶段暴露 |
+| 内存 3.4 G、swap 0，Next.js SSG 有 OOM 风险 | 「在生产机上构建」这一形态的固有代价 | 当场加 4 G swap（未写 fstab，重启即失效）。第 1 期镜像化后生产机不再构建，此项消失 |
+
+另外确认了两件与发布无关但有时限的事，已登记进根 `CLAUDE.md` 的负债表：nginx 容器健康检查
+**从写下来那天就不可能通过**；证书 2026-10-08 到期而仓库内没有续期机制。
+
+上线结果：三站均 200，`resume.yibinfeng.com` 的 `last-modified` 从 `12 Jul` 变为 `09 Sep`，
+portal 的 `0001` 迁移（整表重建）跑完后 `project` 行数与备份前一致。
+
 ## 计划 A：交付流水线与基础设施即代码
 
 目标形态（缩到一台 CVM 的尺度，原则不缩）：

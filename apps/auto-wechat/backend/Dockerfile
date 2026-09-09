@@ -1,5 +1,5 @@
 # 国内构建：Hub 个人加速器常 403，基础镜像走 DaoCloud 公共代理
-FROM docker.m.daocloud.io/library/golang:1.23-alpine AS builder
+FROM docker.m.daocloud.io/library/golang:1.24-alpine AS builder
 
 WORKDIR /src
 RUN apk add --no-cache git
@@ -32,7 +32,7 @@ EXPOSE 8081
 CMD ["/app/worker"]
 
 # 开发热更新：挂载源码 + air 自动编译重启
-FROM docker.m.daocloud.io/library/golang:1.23-alpine AS dev
+FROM docker.m.daocloud.io/library/golang:1.24-alpine AS dev
 
 RUN apk add --no-cache git
 ENV GOPROXY=https://goproxy.cn,direct

@@ -23,6 +23,7 @@ backend/                 # Go + Gin
 │   ├── worker/          # 任务消费逻辑
 │   ├── config/
 │   ├── textutil/ wechatarticle/
+│   ├── toolchain/       # 只有门禁测试：守 Go 版本在 go.mod/Dockerfile/ci.yml 三处一致
 │   └── migrations/
 frontend/                # Vue 3 + Vite
 llm-service/             # Python FastAPI，封装 LLM 调用
@@ -66,9 +67,19 @@ interface  →  application  →  domain
 
 `backend/go.mod` 声明 `go 1.24`。这不是随手写的上限而是**实际下限**：`internal/infrastructure/rss/collector_test.go` 用了 `testing.Context`（Go 1.24 引入）。
 
-**踩过的坑**：go.mod 原先声明 `go 1.22.0`，与实际所需不符。症状是分裂的——现代工具链下 `go test` 照常通过（stdlib API 可用），但 `go vet` 会报 `testing.Context requires go1.24 or later (file is go1.22)` 并以 rc=1 失败；而在真正的 1.23 工具链上则直接编译失败。CI 的 `setup-go` 版本也必须 ≥1.24。
+**踩过的坑（一）**：go.mod 原先声明 `go 1.22.0`，与实际所需不符。症状是分裂的——现代工具链下 `go test` 照常通过（stdlib API 可用），但 `go vet` 会报 `testing.Context requires go1.24 or later (file is go1.22)` 并以 rc=1 失败；而在真正的 1.23 工具链上则直接编译失败。
 
-教训：**`go.mod` 的 `go` 指令是声明，不是事实**。它低于代码实际所需时，故障会以"vet 红而 test 绿"这种令人困惑的形态出现。改 CI 的 Go 版本前先看这里。
+教训：**`go.mod` 的 `go` 指令是声明，不是事实**。它低于代码实际所需时，故障会以"vet 红而 test 绿"这种令人困惑的形态出现。
+
+**踩过的坑（二）**：修上面那条时抬了 go.mod 与 `ci.yml` 的 `setup-go`，**漏了 `backend/Dockerfile`** 的 `golang:1.23-alpine`。这个洞埋了六天零症状——CI 只跑 lint + test，**不构建 Docker 镜像**，而 runner 上的 Go 本来就 ≥1.24。它在 2026-09-09 手工上线、真正重建镜像时才现形：
+
+```
+go: go.mod requires go >= 1.24 (running go 1.23.12; GOTOOLCHAIN=local)
+```
+
+教训：**版本要一致的地方有三处，不是两处**。而"记住一份三项清单"这种要求本身就是缺陷——所以现在由 `backend/internal/toolchain/version_consistency_test.go` 机械地守：它读 go.mod 的 `go` 指令作基准，断言 Dockerfile 的每个 `golang:` 标签与 ci.yml 的 `go-version` 都不低于它，并且在任一处**解析不到内容时直接失败**（静默匹配为空的门禁等于没有门禁）。
+
+改 Go 版本时只需改 go.mod，其余两处由这条测试告诉你该跟着改。
 
 ## 命令
 

@@ -50,6 +50,7 @@ const CORRIDOR_TEXTURE_LITERALS: readonly string[] = [
   '/textures/corridor/texturadoprogow.webp',
   '/textures/corridor/texturadrewnadonozekbiurka.webp',
   '/textures/corridor/wall_texture.webp',
+  '/textures/entrance/window_sketch.webp',
 ] as const
 
 /** 首屏只载前 1 段的壁画；更深的段在 idle 时预取（审计 G1：原先要下完 7.6MB 才退场） */
@@ -256,6 +257,7 @@ export const ALL_ASSETS: readonly string[] = [
   '/textures/corridor/texturadoprogow.webp',
   '/textures/corridor/texturadrewnadonozekbiurka.webp',
   '/textures/corridor/wall_texture.webp',
+  '/textures/entrance/window_sketch.webp',
   '/textures/gallery/bioprzod.webp',
   '/textures/gallery/bioprzod_painted.webp',
   '/textures/gallery/bird_gray.webp',

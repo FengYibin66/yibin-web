@@ -546,6 +546,8 @@ pnpm build               # 静态导出到 out/
 
 # 素材流水线（改了 media-src/ 下的源才需要跑；--check 只报告）
 node scripts/lab/gen-asset-manifest.mjs      # 纹理预载表（派生生成物）
+#   ↑ 改过任何 useTexture / useLoader 的引用就要重跑：它按 import 可达性派生，
+#     漏跑时本地一切正常、CI 的 resume 步骤直接红（栽过：CorridorWindow 复活后漏了窗框纹理）
 node scripts/media/encode-audio.mjs          # 音频重编码
 node scripts/media/gallery-door.mjs          # Gallery 门贴纸
 node scripts/media/optimize-textures.mjs     # 入口页纹理

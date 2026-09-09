@@ -535,6 +535,66 @@ pnpm exec playwright install chromium webkit   # 首次需装浏览器
 - **选择器用 `aria-label` 等可访问性属性**，别用 class。本项目 class 是 Tailwind 生成的长串，一改样式就断。
 - **断言要基于真实机制，别照直觉猜**。主题不是改 `body` 的 backgroundColor（那是透明的），而是 `<html data-theme>`；且深色是"属性缺失"而非 `data-theme="dark"`——详见 `e2e/staticExport.spec.ts` 主题那一节的注释。
 
+## 屏角挂件：先登记，再用 `<EdgeItem>`，别自己写 `position: fixed`
+
+ADR 20260909182319。**唯一有权写 `fixed` / `sticky` 的文件是
+`components/layout/EdgeLayer.tsx`**，由 `__tests__/overlayOwnership.test.ts` 守着
+（棘轮，数字只能往下）。
+
+要加一个钉在屏幕角上的东西，两步：
+
+1. 在 `lib/layout/overlays.ts` 的 `OVERLAY_REGISTRY` 登记
+   （`slot` / `layer` / `presence` / `order` / `interactive`）
+2. 用 `<EdgeItem id="...">` 包起来，放进页面的 `<EdgeLayerRoot>` 里
+
+### 为什么不能自己写坐标
+
+屏幕的四个角是**共享资源**。此前全站 15 处 `position: fixed` 各自写坐标与 z
+（15 个互不共享的数），撞不撞取决于内容宽度——2026-09-09 审计实测出四处真实重叠，
+其中一处**在桌面上**：入口页的域名水印与底部提示条逐字同坐标、z 差 70，
+水印 100% 被盖住，从那条提示上线那天起没人见过。
+
+而这个仓库已经为同一个抽象缺失付过一次钱：`globals.css` 里
+`.achievement-popup { bottom: 88px }` 的注释写着
+`88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距`——**一个组件手算另一个
+组件的高度**。被算的那个改一行字，这个数就悄悄错了，而没有任何东西会报警。
+
+同槽位的挂件是同一个 flex 容器的**兄弟**（不是各自绝对定位），所以
+「两组绝对定位撞 80px」变成「一行里第二个的可用宽度变窄」，几何上不可能重叠。
+
+### 三个容易踩的点
+
+- **`interactive` 必须显式声明，不能从 `layer` 推断。** 我第一版让包装层无条件
+  `pointerEvents: 'auto'`，把入口页那条自己写着 `none` 的提示盖掉了，于是它从
+  「视觉遮挡但点得穿」变成**真的挡住主按钮**——实测点下去不跳转，比原样更糟。
+  而按 `layer === 'hint'` 推断也会错：路线引导的 coach mark 就是一个**可点的提示**。
+- **全屏覆盖层不进这张表**（`LabLoader` 9999 / `PaperTransition` 9998 /
+  `LabTutorial` 200 / lightbox 与图片预览）。它们的语义是「盖住一切」而不是
+  「占一个角」，重新定序会让画面出错，而 `lab.spec.ts` 那 61 条断言读的是
+  `data-lab-*` 属性、**对 z 序完全失明**。ADR 明确划为第二期、不做。
+- **视口判据用 `hooks/useViewport()`，不要自己调 `matchMedia`**
+  （`__tests__/viewportReaders.test.ts` 棘轮）。返回的三个字段
+  `isNarrow` / `isTouch` / `canHover` **不许压成一个布尔**——历史上已有两次回归：
+  只看宽度会让拖窄的桌面窗口掉进手机静态图路径；只看 pointer 会让 iPad 横屏掉进去。
+  `null` 是「还没判定」，调用方必须处理（否则手机上会闪一下桌面版）。
+
+### 横向 flex 头部的收缩约束
+
+与屏角无关，但同属这次审计修掉的一类（education 详情页标题被挤成 31px 宽、
+字形越出自身盒 137px）：
+
+- 刚性项必须有宽度上限。**横版图按宽度限制，不按高度**——
+  `NUS SOC.png` 是 5.6:1，`h-12 w-auto` 下宽 269px，320px 视口内容宽 272，
+  它一个人就吃光。视口越宽 logo 越宽、文字列越窄，所以 390px 比 320px 更糟。
+- **`flex-wrap` 与 `min-w-0` 不得同时出现在同一容器**：`min-w-0` 把可缩项的
+  min-content 贡献抹成 0，容器于是永远认为「一行放得下」，`flex-wrap` 永不触发。
+- 需要「要么并排、要么换行」的多栏用 grid + 断点显式声明；中栏写
+  `minmax(0,1fr)` 而不是 `1fr`（后者的 min 是 `auto`，长单词会撑破网格）。
+- 判断溢出**不要只看 `documentElement.scrollWidth`**。它在被 `overflow` 裁掉时
+  仍等于视口宽——我就是这样漏掉了「日期行冲出右边缘」那一处，只有整页截图
+  （宽 557 CSS px > 390）才暴露。要逐元素查右边界，含 `Range.getClientRects()`
+  的**字形**矩形：QS 卡与 h1 的**盒子并不相交**（ix = −16px），越界的是字形。
+
 ## 命令
 
 ```bash

@@ -786,3 +786,79 @@ export function functionCalls(source: string, name: string, fileName = 'input.ts
   visit(sf)
   return out
 }
+
+/**
+ * 文件里所有把元素**钉在视口上**的写法：`position: 'fixed' | 'sticky'`
+ * 与 Tailwind className 里的 `fixed` / `sticky` token（含 `md:fixed` 这类前缀）。
+ *
+ * 给 ADR 20260909182319 的屏角单写者门禁用（`__tests__/overlayOwnership.test.ts`）：
+ * 屏幕的四个角是共享资源，只有 `components/layout/EdgeLayer.tsx` 有权写坐标。
+ *
+ * ## 为什么必须同时认两种写法
+ *
+ * 这个仓库两种都在用：`ExplorerBar` 写内联 `position: 'fixed'`，
+ * `Navbar` 写 `className="fixed top-0"`。只认一种的门禁**恰好会漏掉另一半**，
+ * 而漏掉没有任何症状——这是本仓库反复付过钱的失效形态
+ * （ADR 20260903211320：正则版门禁对 20 个变异漏掉 10 个）。
+ *
+ * ## 刻意不认的
+ *
+ * - `position` 之外的属性名。`{ overflow: 'fixed' }` 不是定位。
+ * - 非 `className` / `class` 的 JSX 属性里的 'fixed' 字面量。
+ * - 模板字符串里由变量拼出的类名（`` `${cond ? 'fixed' : ''}` `` 的静态部分
+ *   仍会被认到，但完全由变量决定的认不到）。变量拼类名不在本门禁的覆盖内，
+ *   与 H1/H2 只看命令字面量是同一条边界。
+ * - CSS 文件。`globals.css` 里的 `position: fixed` 由那份文件自己的注释与
+ *   review 管；AST 扫的是 TS/TSX。
+ */
+export function fixedPositions(source: string, fileName = 'input.tsx'): Hit[] {
+  const sf = parse(source, fileName)
+  const out: Hit[] = []
+
+  const isPinned = (v: string) => v === 'fixed' || v === 'sticky'
+  // Tailwind：裸 token 或带前缀（md:fixed / hover:sticky）
+  const classTokenPinned = (token: string) => {
+    const bare = token.includes(':') ? token.slice(token.lastIndexOf(':') + 1) : token
+    return isPinned(bare)
+  }
+
+  const visit = (node: ts.Node) => {
+    // ① 内联样式对象：{ position: 'fixed' }
+    if (ts.isPropertyAssignment(node)) {
+      const name = ts.isIdentifier(node.name)
+        ? node.name.text
+        : ts.isStringLiteral(node.name) ? node.name.text : ''
+      if (name === 'position' && ts.isStringLiteral(node.initializer)
+          && isPinned(node.initializer.text)) {
+        out.push({ file: fileName, line: lineOf(node, sf), text: snippet(node, sf, 80) })
+      }
+    }
+
+    // ② className / class 属性里的 Tailwind token
+    if (ts.isJsxAttribute(node)) {
+      const attr = ts.isIdentifier(node.name) ? node.name.text : ''
+      if ((attr === 'className' || attr === 'class') && node.initializer) {
+        const literals: string[] = []
+        const collect = (n: ts.Node) => {
+          if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) literals.push(n.text)
+          else if (ts.isTemplateExpression(n)) {
+            literals.push(n.head.text)
+            for (const span of n.templateSpans) literals.push(span.literal.text)
+          }
+          ts.forEachChild(n, collect)
+        }
+        collect(node.initializer)
+        for (const lit of literals) {
+          if (lit.split(/\s+/).some(classTokenPinned)) {
+            out.push({ file: fileName, line: lineOf(node, sf), text: snippet(node, sf, 80) })
+            break
+          }
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}

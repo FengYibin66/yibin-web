@@ -9,27 +9,20 @@ import { LocaleToggle } from '@/components/ui/LocaleToggle'
  * `localStorage.resume-locale`）。此前门户只**读**语言没有切换入口，用户得先进
  * Classic 再在 Navbar 里切——入口页上做不了的选择，等于没有入口。
  *
- * 这里不重写按钮，只把 Classic 页那个 `LocaleToggle` 固定到右上角：同一个组件、
- * 同一个 `data-testid`、同一套文字规则（`nextLocaleLabel`）。
+ * 这里不重写按钮，只包一层稳定的标识：同一个组件、同一个 `data-testid`、
+ * 同一套文字规则（`nextLocaleLabel`）。
  *
- * `data-entry-locale-toggle` 是给 `scripts/media/entry-firstframe.mjs` 的：它截
- * `/` 的首帧当手机端占位图，要把不属于"那扇门"的 UI 藏掉。靠内联样式匹配太脆，
- * 底部提示条用的也是同一种做法（`data-explorer-bar`）。
+ * **定位不在这里。** 它由 `EdgeItem id="entry-locale"` 放进 `top-right` 槽位
+ * （ADR 20260909182319）。原先本组件自己写 `fixed; top:16; right:16; z:40`，
+ * 而屏角是无主的共享资源——那正是入口页底部提示盖住主按钮、域名水印被完全盖住
+ * 那一类缺陷的成因。
  *
- * `zIndex` 要压过两块面板（Lab 面板的文案链接 z 10、分隔线 z 20），但低于
- * `ExplorerBar` 的 100 —— 它们不会重叠，只是保持层级可读。
+ * `data-entry-locale-toggle` 必须保留：`scripts/media/entry-firstframe.mjs` 截
+ * `/` 的手机端静态首帧时靠它把不属于"那扇门"的 UI 藏掉。靠内联样式匹配太脆。
  */
 export function EntryLocaleToggle() {
   return (
-    <div
-      data-entry-locale-toggle=""
-      style={{
-        position: 'fixed',
-        top: 16,
-        right: 16,
-        zIndex: 40,
-      }}
-    >
+    <div data-entry-locale-toggle="">
       <LocaleToggle />
     </div>
   )

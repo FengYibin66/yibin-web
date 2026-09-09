@@ -128,8 +128,9 @@ export const zh: SiteContent = {
       classicCta: '打开简历',
       classicTags: ['AI 研究', '前端', '结构工程'],
       explorerBar: '探索者',
-      explorerHint: '点一扇门进入。音频当前',
-      explorerHintTouch: '轻点一扇门进入。音频当前',
+      // 句末不再拼 [ON]/[OFF]，理由见 en.ts 同一处
+      explorerHint: '点一扇门进入。',
+      explorerHintTouch: '轻点一扇门进入。',
     },
     fallback: {
       webglTitle: 'Lab 需要 WebGL',

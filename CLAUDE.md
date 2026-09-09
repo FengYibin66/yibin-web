@@ -161,6 +161,7 @@ python3 scripts/docs/test_gen_docs_index.py    # ADR 索引生成器单测
 python3 scripts/docs/gen_docs_index.py         # 重新生成 ADR 索引
 python3 scripts/docs/gen_docs_index.py --check # 校验索引同步（CI 用）
 ./scripts/env-build.sh production --check      # 校验生产环境变量完整
+./scripts/probe-routes.sh                      # 探线上路由（状态码 + 内容类型），nginx 层的唯一验证手段
 ```
 
 ## 文档诚实性

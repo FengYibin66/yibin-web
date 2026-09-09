@@ -10,6 +10,7 @@
 | `deploy-prod.sh` | 生产部署（构建 + compose 重建） |
 | ~~`ssl-renew.sh`~~ | **计划中，文件尚不存在**。曾在此列出但从未落地（Gitee 上有未合的 `worktree-fix-ssl-autorenew` 分支）。证书 2026-10-08 到期，登记在根 `CLAUDE.md` 负债表 |
 | `verify-local.sh` / `verify-local-compose.sh` / `verify-local-complete.sh` | 本地验证（渐进三档） |
+| `probe-routes.sh` | 对着**真实部署**断言一组 URL 的状态码与内容类型（默认探生产）。单测和 E2E 都测不到 nginx——Playwright 用自己的静态服务器，CI 又不部署 |
 | `docs/gen_docs_index.py` | 生成 `docs/adr/AGENTS.md` 的 ADR 索引表（单测：`docs/test_gen_docs_index.py`） |
 | `ci/evaluate-gate.sh` | 汇总 CI 各 job 结果（单测：`ci/gate-test.sh`） |
 | `ci/lint-workflows.py` | 校验 workflow **接线**（自测：`--self-test`） |

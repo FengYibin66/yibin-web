@@ -15,7 +15,8 @@
 | [partner-api.md](./partner-api.md) | Partner 小程序 API — **Phase T www 分流** |
 | [resume-site.md](./resume-site.md) | 交互式简历站 |
 | [lab-corridor-complete-spec.md](./lab-corridor-complete-spec.md) | Resume `/lab` 走廊实现清单 |
-| [lab-companions.md](./lab-companions.md) | Resume `/lab` 走廊活物（引路的小狗、守相框的猫）行为与实现约束 — **设计稿，随 ADR 20260908160918 待接受** |
+| [lab-companions.md](./lab-companions.md) | Resume `/lab` 走廊活物（引路的小狗、走廊尽头的猫）行为与实现约束 — ADR 20260908160918 已接受；猫已落地，狗按 §2 实现 |
+| [lab-corridor-story.md](./lab-corridor-story.md) | Resume `/lab` 走廊的时间线 · 窗 · 加载显形 · 第二圈 · 招聘官路线 · 声音 — ADR 20260908204302 / 204303 / 204304 |
 
 **Auto-Wechat** 无独立 Spec 文件；产品与运维文档在 [`apps/auto-wechat/docs/`](../../apps/auto-wechat/docs/)，平台约束见 [platform.md §1、§4](./platform.md)。
 

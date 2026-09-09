@@ -128,9 +128,9 @@
 | 项 | 内容 |
 |----|------|
 | 成就 `pet_cat` | 点猫一次。`unlockedBy: { kind: 'corridor-interaction', target: 'cat' }`（新 trigger 类型），persisted |
-| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-companion' }`，persisted |
-| 教程气泡 | `labUi.tutorials.pet_cat`（作用域 `corridor`）：en "Curious" / "The cat is guarding a photo"；zh "好奇" / "猫在守着一张照片"。`dog_companion`：en "Good Company" / "Keep walking, the dog will follow"；zh "有伴" / "继续走，小狗会跟着你" |
-| 音效（第 2 期） | `cat_meow`（点猫，冷却 1 s）、`dog_bark`（点狗，冷却 8 s）、`footstep`（`|camV|` > ε 时按位移每 1.6 单位一步，**3–5 个变体轮播不连播同一条**）。音量随速度用**不对称 easing**：起步快（×10）、停下慢（×2.5），照 folio-2025 的引擎音（调研 §3.4）。声像按侧道给 ±0.3 的左右偏移，不用 `PositionalAudio`。全部 sfx 总线、尊重静音、窗口失焦静音；素材 CC0，许可进 `public/CREDITS.md` |
+| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-interaction', landmarkId: 'guide-dog' }`（与 `pet_cat` 同一 trigger 类型；累计计时在 reducer 里，满 30 s 输出一次事件），persisted |
+| 教程气泡 | `labUi.tutorials.pet_cat`（作用域 `corridor`）：en "Curious" / "A cat naps at the end of the hall"；zh "好奇" / "走廊尽头有只猫在打盹"（已随猫的位置改）。`dog_companion`：en "Good Company" / "Keep walking, the dog will follow"；zh "有伴" / "继续走，小狗会跟着你" |
+| 音效 | **改为仓库内脚本离线合成，不用外部 CC0**（ADR 20260908204304，参数与触发规则见 `lab-corridor-story.md` §6）：`cat_meow`（`stretch` 进入帧）、`dog_bark`（`greet` 进入帧）、`paw_a/b`（狗 `trot`/`run` 每 0.9 单位一声，spatial 在狗）、`footstep_a/b`（玩家每 1.8 单位一步、a/b 交替、音量按速度分档）、`bubble_pop`（气泡出现）。全部 sfx 总线、经既有 3D 定位、尊重静音；reduced motion 不影响声音 |
 
 ---
 
@@ -145,15 +145,19 @@
 
 ## 6. 素材
 
+> **来源已定（2026-09-08，用户拍板）**：狗的线稿**由仓库内的 SVG 手写**，不等外部画稿，也不用 AI 生图切层。
+> 理由：① 分层是原生的——每个部件就是 SVG 里的一个 `<g id>`，不存在「从整张栅格图里切缝」的问题；
+> ② 与猫（细线、白填充、透明底）同一风格可控；③ 自有、无许可问题；④ 改一笔重跑即得。
+> 免费生图（Pollinations）只用作**造型参考**，产物不进仓库。
+
 | 文件 | 内容 | 产出方式 |
 |------|------|----------|
-| `media-src/textures/companion/dog.png` | 一张侧面站姿狗线稿（与 `cat_body.webp` 同风：细线、白填充、无色、透明底） | 现有猫 / 头像同一生成流程 |
-| `public/textures/corridor/companion/dog_{body,head,leg_front,leg_back,tail}.webp` | 从上图切出的 5 个部件（前后腿各一张，左右腿共用同一张镜像） | `scripts/media/companion-parts.mjs`（sharp 按声明的裁切框切图，`--check` 指纹） |
-| `public/textures/corridor/companion/dog_sit.webp` | 坐姿正面（一张整图，不分部件） | 同一流程，第二张线稿 |
-| `public/textures/corridor/companion/cat_sleep.webp` | 睡姿闭眼 | 第三张线稿 |
-| 复用 | `cat_body.webp`（醒态） | 已有 |
+| `media-src/textures/companion/dog.svg` | 一张侧面站姿狗线稿，部件各在一个 `<g id="body|head|leg-front|leg-back|tail">`（前后腿各一组，左右腿共用同一张镜像）；线宽 6 / 画布 1024，白填充、`#2b2b2b` 描边、轻微手抖（路径上加 1–2 px 的随机偏移，种子固定） | 手写 |
+| `media-src/textures/companion/dog_sit.svg` | 坐姿正面（一张整图，不分部件） | 手写 |
+| `public/textures/corridor/companion/dog_{body,head,leg_front,leg_back,tail,sit}.webp` | 由 SVG **逐组**栅格化：脚本对每个 `<g id>` 单独出图（其余组隐藏），画布统一 512，透明底 | `scripts/media/companion-parts.mjs`（sharp 渲染 SVG，`--check` 指纹进 `mediaFreshness.test.ts`） |
+| 复用 | `cat_body.webp`（醒态；睡态用两条线画闭眼，见 §3） | 已有 |
 
-裁切框是 domain 声明（`companion.ts` 的 `DOG_PARTS`：每个部件的源图矩形、枢轴点、在身体坐标系里的位置），切图脚本与渲染组件**读同一份声明**，改一处两边同步。
+部件的**枢轴点与在身体坐标系里的位置**是 domain 声明（`companion.ts` 的 `DOG_PARTS`），渲染组件读它；SVG 里每组的几何中心与 `DOG_PARTS` 的枢轴对齐由脚本在渲染时校验（偏差 > 4 px 报错），改一处两边同步。
 
 ---
 
@@ -205,12 +209,13 @@ E2E 只能读 DOM，视觉靠巡检。**提 PR 前跑巡检并逐张看**（`scr
 
 ## 9. 分期
 
-| 期 | 内容 | 验收 |
-|----|------|------|
-| 0 | `motion.ts` + 接入 Doodles / BugEaster；`lab-walkthrough.mjs` | reduced 下涂鸦不浮；巡检 20+ 张可用 |
-| 1 | 狗 + 猫 + 两个成就 + 纹理预算 + 切图流水线 | §1 成功标准 1–6 |
-| 2 | 三条音效 | 静音键有效；连点不叠音 |
-| 3 | 房间小物（Projects 台灯 / Publications 晾衣绳 / Contact 纸船） | 另写规格 |
+| 期 | 内容 | 验收 | 状态 |
+|----|------|------|------|
+| 0 | `motion.ts` + 接入 Doodles / BugEaster；`lab-walkthrough.mjs` | reduced 下涂鸦不浮；巡检 20+ 张可用 | ✅ PR #33 |
+| 1a | 猫 + `pet_cat` | §3 三态、气泡、成就 | ✅ PR #34（尺寸 1.15、气泡纸片见 §3） |
+| 1b | 狗（SVG 手写线稿 + 逐组栅格化流水线）+ `dog_companion` + 纹理预算 + `speech.ts` 统一气泡 | §1 成功标准 1–6；reducer 2000 步随机不变量 | ⬜ |
+| 2 | 五类音效（离线合成，ADR 20260908204304） | 静音键有效；连点不叠音；静止 / 房间内不响 | ⬜ |
+| 3 | 房间小物（Projects 台灯 / Publications 晾衣绳 / Contact 纸船） | 另写规格 | 未排期 |
 
 ---
 
@@ -218,4 +223,9 @@ E2E 只能读 DOM，视觉靠巡检。**提 PR 前跑巡检并逐张看**（`scr
 
 **已按调研建议取默认值**（用户未反对即视为接受）：素材走分层纸偶；狗在前方引路；音效放第 2 期；第 0 期先行。
 
-**待定**：狗线稿的具体形象（品种 / 大小 / 有没有项圈）——需要用户挑一张；猫要不要给名字（若给，进 `labUi`，中英各一）。
+**2026-09-08 补决**：
+
+- 狗的形象：**中小型、柴犬式轮廓**（立耳、卷尾、短吻），无项圈——调研 §3.5 里 Jay Ransijn 的柴犬是被记住的那一个，且卷尾在纸偶里摆起来比垂尾好看；站高 0.6 单位（见 §2.5）。
+- 素材来源：仓库内 SVG 手写（§6），不等外部画稿。
+- 猫不给名字：气泡里它只说「……喵」，名字会把「走廊尽头一只猫」变成一个需要解释的角色。
+- 第二圈：猫 lap ≥ 1 初始 `awake` 并说一次 `catAgain`；狗 lap 切换帧 `greet` 一次说 `dogLap`（`lab-corridor-story.md` §4）。

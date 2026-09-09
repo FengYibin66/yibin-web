@@ -492,3 +492,87 @@ test.describe('Gallery 路由', () => {
     }
   })
 })
+
+
+test.describe('Classic 顶栏导航（ADR 20260909182319 第三批）', () => {
+  /*
+    这一批修的缺陷是「功能在某一档消失」：改动前 `<768` 下那 9 个导航入口是
+    `hidden md:flex`——藏起来了而没有替代入口，而 `/classic/` 在 390px 上高
+    18056px。
+
+    单测（`__tests__/navbarMenu.test.tsx`）守的是结构与行为，**测不了可见性**
+    ——jsdom 不算 CSS，`hidden md:flex` 与 `md:hidden` 在那里都无效，两组元素
+    都在 DOM 里。所以"哪一档真的看得见、点得到"必须在这里量渲染结果。
+    两层各守一半，缺任一层都会漏。
+  */
+  test('窄屏有汉堡入口且能到达锚点；宽屏平铺那一排', async ({ page }) => {
+    await page.goto('/classic/')
+    const narrow = (page.viewportSize()?.width ?? 1280) < 768
+
+    const toggle = page.getByTestId('navbar-menu-toggle')
+    if (!narrow) {
+      // 宽屏：汉堡在 DOM 里但被 `md:hidden` 隐藏；那 9 个链接是平铺可见的
+      await expect(toggle).toBeHidden()
+      await expect(page.locator('nav a[href="/classic/#about"]').first()).toBeVisible()
+      return
+    }
+
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+
+    const panel = page.getByTestId('navbar-menu')
+    await expect(panel).toBeVisible()
+    // 9 个入口全在，且真的可见（不是 display:none 还在 DOM 里）
+    await expect(panel.locator('a')).toHaveCount(9)
+    for (const a of await panel.locator('a').all()) await expect(a).toBeVisible()
+
+    // 点一个真的跳到锚点：只断言"在 DOM 里"时跳转没发生也是绿的
+    await panel.locator('a[href="/classic/#contact"]').click()
+    await expect(panel).toBeHidden()
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 10_000 })
+      .toBeGreaterThan(100)
+  })
+
+  test('顶栏所有可点元素的触摸目标不小于 44 高', async ({ page }) => {
+    await page.goto('/classic/')
+    const narrow = (page.viewportSize()?.width ?? 1280) < 768
+    if (narrow) await page.getByTestId('navbar-menu-toggle').click()
+
+    /*
+      量渲染结果而不是源码里的数字：这一批改小的三处是
+      主题按钮 `w-8 h-8`（32×32）、`LocaleToggle` 的 `px-3 py-1`（约 54×30）、
+      菜单里 9 行的行高——**只有第一处是内联方形声明**，源码级棘轮看不见另两处。
+    */
+    /*
+      判据的范围要说准，否则它会逼出一次没有用户收益的改版。
+
+      **控件**（主题、语言、汉堡按钮）两档都要 ≥44：它们是按钮，在触屏上要点。
+      **窄屏菜单里的 9 行**要 ≥44：那是触屏上的主导航。
+      **宽屏平铺的那 9 个文字链接豁免**：实测高 20px，而它们是 hover 指针下的
+      文字链接——WCAG 2.5.8（AA，下限 24×24）对行内文字链接明确豁免，44 是
+      2.5.5（AAA）针对触摸目标的要求。把 44 套到桌面 hover 链接上，
+      等于为一个不存在的问题重做桌面顶栏。品牌名同理。
+
+      第一版没做这个区分，于是门禁在**桌面**上报出那 9 个链接——这正是
+      `.claude/hooks/AGENTS.md` 说的那种误报：它会训练人给判据加豁免。
+    */
+    const small = await page.evaluate(() => {
+      const out: string[] = []
+      const targets: Element[] = [
+        ...document.querySelectorAll('nav button'),
+        ...document.querySelectorAll('[data-testid=navbar-menu] a'),
+      ]
+      for (const el of targets) {
+        const r = el.getBoundingClientRect()
+        if (r.width === 0 && r.height === 0) continue       // 该档隐藏的不算
+        if (getComputedStyle(el).display === 'none') continue
+        if (r.height < 44) {
+          const t = (el.textContent ?? '').trim().slice(0, 14)
+          out.push(`${el.tagName}"${t}" ${Math.round(r.width)}x${Math.round(r.height)}`)
+        }
+      }
+      return out
+    })
+    expect(small, `这些触摸目标高度小于 44：\n${small.join('\n')}`).toEqual([])
+  })
+})

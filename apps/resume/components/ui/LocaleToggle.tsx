@@ -12,7 +12,10 @@ export function LocaleToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium border transition-all duration-200
+      /* min-h/w-11 = 44px：原先 px-3 py-1 实测约 54×30，低于触摸目标下限。
+         这个组件同时用在 Classic 顶栏与门户右上角，两处都受益——门户那边
+         它与 44×44 的静音开关并排，尺寸一致才不显得歪。 */
+      className="inline-flex items-center justify-center px-3 min-h-11 min-w-11 rounded-full text-sm font-medium border transition-all duration-200
         hover:border-[#00d4ff] hover:text-[#00d4ff] hover:shadow-[0_0_12px_#00d4ff33]"
       style={{
         background: 'var(--bg-surface)',

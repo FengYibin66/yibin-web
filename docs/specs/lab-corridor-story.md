@@ -121,7 +121,12 @@ relativeZOfYear(y) = fromRelativeZ + (y − startYear) / (endYear − startYear)
 - `corridor.machine`：`corridor --TOUR_START--> touring`；`touring --INPUT | TOUR_END--> corridor`；`touring --DOOR_CLICK--> entering`。`teleporting` / `inRoom` 无 `TOUR_START` 边。
 - 任何滚轮 / 方向键 / 触摸 / ESC → `INPUT` → 当帧退出，`rail.release('tour')`，正在进行的 `scrollTo` 中止在当前位置（不回弹）。
 - `html[data-lab-mode]` ∈ `free | touring | teleporting | inRoom`；`world.mode` 同源。
-- 入口：`NavigationUI` 顶栏按钮（图标：一只小脚印，`aria-label` 「带我走一遍 / Show me around」，`data-testid="nav-tour"`）；路线中按钮变为「停止 / Stop」。教程气泡在加载完成后提一次（`labUi.tutorials.tour`，作用域 `corridor`，不持久化）。
+- 入口：`NavigationUI` 顶栏按钮（图标：一只**爪印**——掌垫 + 三趾，不是脚印；`aria-label` 「带我走一遍 / Show me around」，`data-testid="nav-tour"`）；路线中按钮变为「停止 / Stop」。
+- 引导（**2026-09-09 修订**，本行原写的「教程气泡提一次」已不是实现）：
+  - 宽屏按钮带可见文字 `labUi.panels.tourLabel`；窄屏不带（顶栏三个按钮已贴着 320px 边界）。
+  - 首访一次的 coach mark（`components/lab/TourCoachMark.tsx`）：贴按钮下方、箭头指向它、**整块可点直接开始路线**；`localStorage.lab_tour_hinted`，6 秒淡出，`pointerdown` / `touchstart` / `wheel` / `keydown` 任一发生立刻收起，路线中不显示，`prefers-reduced-motion` 下无过渡。
+  - **决定：不走教程队列。** 原方案是 `labUi.tutorials.tour` 排进队列，实现过并被删掉——它挤掉了原有队列（「开始探索」关掉说明后立刻又冒一条，一条 E2E 断言因此红过；退房后房间教程被占位），当时改为「入口由按钮自己表达（实心反白 + aria-label）」。该结论不成立：`aria-label` 只有读屏用户听得到，而唯一的文字广告是**锁着的成就**的说明，在一个默认关闭的面板里。
+  - 门禁：`__tests__/tourCoachMark.test.tsx`（淡出时机）+ `e2e/lab.spec.ts`（渲染几何与命中判定）。
 - 成就：完整走完解锁 `tour_complete`（en `Guided` / zh `被带着走了一遍`），中途退出不解锁。
 - E2E：点 `nav-tour` → `data-lab-mode=touring` → 发一次滚轮 → `free`；再点 → 等到第 2 站字幕出现（`data-tour-stop="door-about"`）。走完全程**不在 E2E 里测**（软渲染 60 秒不可靠），由 `tour.test.ts` 用注入时间跑完，巡检脚本截 8 站。
 

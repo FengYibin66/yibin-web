@@ -450,7 +450,7 @@ Node 25 内置了一个实验性 `localStorage` 全局，未带 `--localstorage-
 
 ## E2E（Playwright）
 
-`e2e/` 下 184 个用例（92 条 spec × chromium / mobile-safari 两个形态），分三个文件：
+`e2e/` 下 188 个用例（94 条 spec × chromium / mobile-safari 两个形态），分三个文件：
 
 | 文件 | 覆盖 |
 |------|------|
@@ -654,6 +654,25 @@ ADR 20260909182319。**唯一有权写 `fixed` / `sticky` 的文件是
 内联 `width: 40, height: 40`、只有 `padding: 4` 的关闭按钮（24×24）、
 纯文字链接（高 18–20）。AST 只认第一种，另两种看不见，
 于是门禁会在「已经全绿」的情况下漏掉真正咬人的那两种。
+
+### 路线入口的引导
+
+`components/lab/TourCoachMark.tsx` + `lib/lab/tourHintStorage.ts`
+（规格 `lab-corridor-story.md` §5.2）。
+
+- **不进屏角声明表**：它贴着按钮，那张表管「各占一个角」的挂件
+- **不进教程队列**：那条路走过并被删掉过（挤掉了原有队列，有一条 E2E
+  断言「关掉说明后教程数为 0」因此红过）
+- **三角相对按钮居中，不写死偏移**：按钮宽度随视口变（窄屏 44、宽屏带文字 143）
+- **绝对定位只给 `right` 时收缩宽度按包含块算**：包含块是 44px 的按钮包装层，
+  气泡会被挤成 83×113 的细长条。要 `width: 'max-content'` + `maxWidth`
+- **6 秒淡出在 E2E 里抓不稳**（软渲染下 Playwright 轮询被长任务饿死）：
+  用 `lab_tour_hint_hold` 冻住，淡出时机归单测，渲染几何与命中判定归 E2E
+
+`openLab()` 默认预置 `lab_tour_hinted`（`skipTourHint`）——不预置的话这条提示会
+出现在每一条 Lab 用例里，而它 `pointerEvents: auto`、第一次任意 `pointerdown`
+就收起。**别手搓 Lab 的打开等待**：`openLab` 会区分「没有 WebGL」与「还没加载完」，
+手搓过一次，mobile-safari 上静默跳过、报告只显示 skipped。
 
 ### 三个容易踩的点
 

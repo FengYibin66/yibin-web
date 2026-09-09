@@ -55,6 +55,12 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 # Next.js/Vite builds delete and recreate dist/out directories. Docker bind
 # mounts keep the old inode, so nginx would keep serving an empty root
 # (403/404) until the container is recreated. Always remount after a build.
+#
+# 同一个 inode 陷阱也适用于 **配置文件本身**：nginx-prod.conf 是单文件 bind-mount，
+# 而 git pull 是「写新文件再改名」，所以只 `nginx -s reload` 不够——容器会继续读
+# 旧 inode，连 `nginx -t` 都在测那份旧配置（于是"检查通过"毫无信息量）。
+# 2026-09-09 为此绕了一圈。只改配置时的正确做法与这里相同：--force-recreate nginx。
+# 详见 docker/AGENTS.md。
 echo "==> 5/5 Remount nginx static volumes"
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nginx
 

@@ -79,8 +79,12 @@ export function NavigationUI() {
       showTutorial('corridor_enter', 'corridor')
     } else if (hasEntered && !isTeleporting && !isInRoom) {
       showTutorial('corridor_explore', 'corridor')
-      // 会走了之后再提"不想走可以让它带你"——排在探索提示后面（ADR 20260908204302）
-      showTutorial('tour_complete', 'corridor')
+      /*
+        这里曾经再排一条"按脚印带你走"。它挤掉了原有的教程队列——「开始探索」关掉说明后
+        立刻又冒一条（那条 E2E 断言关掉后为 0），退房后房间教程也被它占位。
+        路线的入口改由按钮自己表达（实心反白 + aria-label，UX 评审的建议），不再占教程通道；
+        `tour_complete` 仍是成就，文案在成就面板里用。
+      */
     }
   }, [labLoaded, tour.running, hasEntered, isTeleporting, isInRoom, showTutorial])
 

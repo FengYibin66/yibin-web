@@ -55,9 +55,30 @@ const TAIL_SWING = 0.25
 
 const SIDE_PART_IDS = Object.keys(DOG_SIDE_PARTS) as DogSidePart[]
 
-const partUrl = (file: string) => `/textures/corridor/companion/${file}.webp`
-/** 五个部件 + 坐姿，顺序与 SIDE_PART_IDS 一致；模块级，别每次渲染重建 */
-const PART_URLS = SIDE_PART_IDS.map(id => partUrl(DOG_PART_FILES[id])).concat(partUrl(DOG_PART_FILES.sit))
+/**
+ * 六张部件纹理，顺序与 `SIDE_PART_IDS` + 坐姿一致。
+ *
+ * **必须是字面量**：预载表生成器（`scripts/lab/gen-asset-manifest.mjs`）扫的是源码里的
+ * 字符串字面量。第一版用 `partUrl(DOG_PART_FILES[id])` 拼出来，生成器收不到 → 加载期不预载
+ * → CI 上走廊已经可见而狗还在等纹理，`data-lab-dog` 属性都还没写（两条 E2E 因此红）。
+ * 文件名与 `dogParts.mjs` 的 `DOG_PART_FILES` 一致，下面那条断言守着两者不漂移。
+ */
+const PART_URLS: string[] = [
+  '/textures/corridor/companion/dog_body.webp',
+  '/textures/corridor/companion/dog_head.webp',
+  '/textures/corridor/companion/dog_leg_front.webp',
+  '/textures/corridor/companion/dog_leg_back.webp',
+  '/textures/corridor/companion/dog_tail.webp',
+  '/textures/corridor/companion/dog_sit.webp',
+]
+
+if (process.env.NODE_ENV !== 'production') {
+  const expected = [...SIDE_PART_IDS.map(id => DOG_PART_FILES[id]), DOG_PART_FILES.sit]
+  const actual = PART_URLS.map(u => u.replace(/^.*\//, '').replace(/\.webp$/, ''))
+  if (expected.join() !== actual.join()) {
+    throw new Error(`GuideDog 的纹理字面量与 dogParts.mjs 不一致：${actual.join()} vs ${expected.join()}`)
+  }
+}
 /** 叫声定位用的临时数组：每帧只写不新建 */
 const _worldPos: [number, number, number] = [0, 0, 0]
 

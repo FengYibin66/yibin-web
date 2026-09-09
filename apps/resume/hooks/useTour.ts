@@ -135,11 +135,16 @@ export function useTour() {
   }, [state.running, finish])
 
   /*
-    状态机侧被别的边带走（路线中点门 → entering）：控制器跟着收尾，
+    状态机侧被别的边带走（路线中点门 → entering / 传送）：控制器跟着收尾，
     否则导轨还被 hold 着、字幕还在。
+
+    **只认冲突模式（inRoom / teleporting），不能写成 `mode !== 'touring'`**：
+    `running` 在本次渲染就为 true，而 `mode` 要等 SceneProvider 拿到新快照后的下一次
+    渲染才变成 `touring`，中间那一帧 `mode` 还是 `free` —— 于是路线刚开始就被自己掐掉
+    （CI 的 mobile-safari 上稳定复现：点了脚印，`data-lab-mode` 立刻回 `free`）。
   */
   useEffect(() => {
-    if (state.running && mode !== 'touring') finish('input')
+    if (state.running && (mode === 'inRoom' || mode === 'teleporting')) finish('input')
   }, [mode, state.running, finish])
 
   useEffect(() => () => { corridorRailRelease(OWNER) }, [])

@@ -810,11 +810,15 @@ test.describe('走廊世界状态', () => {
       return
     }
     const html = page.locator('html')
-    await expect(html).toHaveAttribute('data-lab-dog', 'offstage')
+    /*
+      先等属性**出现**再断言初始态：狗的六张部件纹理要等加载（虽已进预载表，软渲染下仍有
+      几秒），属性在 `GuideDog` 第一帧才写。直接断言 'offstage' 会在 CI 上抓到"属性还不存在"。
+    */
+    await expect(html).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
     // 方向键而不是滚轮：mobile WebKit 不支持 mouse.wheel；先点画布让焦点离开按钮（AGENTS 的坑 E4）
     await page.mouse.click(720, 450)
     for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowDown')
-    await expect(html).toHaveAttribute('data-lab-dog', /arrive|trot|run|sit/)
+    await expect(html).toHaveAttribute('data-lab-dog', /arrive|trot|run|sit/, { timeout: 20_000 })
   })
 
   test('猫：挂载在走廊里，初始是睡着的', async ({ page }) => {

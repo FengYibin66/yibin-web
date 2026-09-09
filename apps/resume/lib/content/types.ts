@@ -322,6 +322,9 @@ export interface LabUiLabels {
     closeMap: string
     /** 「带我走一遍」按钮的可访问名，路线中变为「停止」 */
     tour: string
+    /** 路线入口的引导与按钮可见文字（规格 §5.2）。`tour` 是 aria-label，这两个是看得见的字 */
+    tourHint: string
+    tourLabel: string
     stopTour: string
     /** 窄屏顶栏的「更多」按钮与它展开的面板标题（ADR 20260909182319） */
     more: string

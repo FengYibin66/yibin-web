@@ -38,7 +38,7 @@ export const en: SiteContent = {
       publications_read: { title: 'Scholar',     label: 'Read a publication' },
       pet_cat:           { title: 'Curious',     label: 'A cat naps at the end of the hall' },
       dog_companion:     { title: 'Good Company', label: 'Keep walking, the dog will follow' },
-      tour_complete:     { title: 'Guided',       label: 'Press the footprint to be shown around' },
+      tour_complete:     { title: 'Guided',       label: 'Press the paw print to be shown around' },
     },
     cities: {
       sichuan: 'Sichuan',
@@ -96,6 +96,8 @@ export const en: SiteContent = {
       openMap: 'Open map',
       closeMap: 'Close map',
       tour: 'Show me around',
+      tourHint: 'New here? Let me show you around',
+      tourLabel: 'Show me around',
       stopTour: 'Stop the tour',
       more: 'More',
       moreTitle: 'More',

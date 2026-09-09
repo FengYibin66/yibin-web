@@ -105,8 +105,8 @@ scripts/                 # 部署、环境构建、文档索引生成
 
 | 位置 | 数量 | 内容 |
 |------|------|------|
-| `apps/resume/__tests__/` | 1575（101 文件） | 组件与逻辑单测（vitest）：含走廊 domain 的纯函数（狗 reducer 2000 步随机不变量、气泡规则、时间线落点、世界时钟、路线计划）与 AST 门禁 |
-| `apps/resume/e2e/` | 184（92 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态（含「产物里每个 woff2 以 `wOF2` 魔数开头」的字体门禁，ADR 20260909163155）+ Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物 / 招聘官路线）+ Classic 滚动显形的全部进入路径。Lab 那批的坑见 `apps/resume/AGENTS.md` 与 `apps/resume/scripts/qa/AGENTS.md` |
+| `apps/resume/__tests__/` | 1587（103 文件） | 组件与逻辑单测（vitest）：含走廊 domain 的纯函数（狗 reducer 2000 步随机不变量、气泡规则、时间线落点、世界时钟、路线计划）与 AST 门禁 |
+| `apps/resume/e2e/` | 188（94 spec ×2 形态） | Playwright E2E（chromium + mobile-safari）：静态导出形态（含「产物里每个 woff2 以 `wOF2` 魔数开头」的字体门禁，ADR 20260909163155）+ Lab 的行为（进房 / 退房 / 传送 / ESC / 面板 / 教程 / 语言切换 / 走廊世界状态 / 活物 / 招聘官路线）+ Classic 滚动显形的全部进入路径。Lab 那批的坑见 `apps/resume/AGENTS.md` 与 `apps/resume/scripts/qa/AGENTS.md` |
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 15 文件 | Go 单测（含 `internal/toolchain` 的 Go 版本一致性门禁） |

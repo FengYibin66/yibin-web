@@ -6,6 +6,7 @@ import { useAudio } from '@/context/AudioContext'
 import { useAchievementActions } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import { AchievementPopup } from './AchievementPopup'
+import { TourCoachMark } from '@/components/lab/TourCoachMark'
 import { EdgeItem } from '@/components/layout/EdgeLayer'
 import { useViewport } from '@/hooks/useViewport'
 import { AchievementsPanel } from './AchievementsPanel'
@@ -321,6 +322,8 @@ export function NavigationUI() {
         {/* 带我走一遍 / 停止。加载完成前不显示（路线要导轨可用，状态机在 loading 会拒绝）；
             房间里与传送中不显示（状态机那时也不会接受 TOUR_START） */}
         {labLoaded && !isInRoom && !isTeleporting && (
+          // coach mark 的定位锚
+          <div style={{ position: 'relative', display: 'flex' }}>
           <NavButton
             onClick={() => {
               if (tour.running) { tour.stop(); return }
@@ -329,6 +332,7 @@ export function NavigationUI() {
             }}
             active={tour.running}
             solid={tour.running}
+            label={isNarrow || tour.running ? undefined : labels.panels.tourLabel}
             aria-label={tour.running ? labels.panels.stopTour : labels.panels.tour}
             aria-pressed={tour.running}
             data-testid="nav-tour"
@@ -339,6 +343,14 @@ export function NavigationUI() {
               <circle cx="6.6" cy="8.6" r="2" /><circle cx="12" cy="6.4" r="2" /><circle cx="17.4" cy="8.6" r="2" />
             </svg>
           </NavButton>
+          {/* 路线跑起来之后不再提 */}
+          {!tour.running && (
+            <TourCoachMark
+              label={labels.panels.tourHint}
+              onStart={() => { closeAll(); void tour.start() }}
+            />
+          )}
+          </div>
         )}
 
         {/* Map button */}
@@ -776,6 +788,7 @@ function NavButton({
   onClick,
   active,
   solid,
+  label,
   children,
   ...props
 }: {
@@ -783,6 +796,11 @@ function NavButton({
   active?: boolean
   /** 实心反白：进行中的模式（路线）要与"面板开着"的浅色 active 一眼分开 */
   solid?: boolean
+  /**
+   * 图标旁的可见文字；给了它按钮就从 44×44 方块变成自适应宽度的胶囊。
+   * 只有路线按钮用，且只在宽屏——窄屏顶栏已贴着 320px 的边界。
+   */
+  label?: string
   children: React.ReactNode
   [key: string]: unknown
 }) {
@@ -795,8 +813,10 @@ function NavButton({
         borderRadius: 8,
         // 44：WCAG 2.5.5 与 Apple HIG 的触摸目标下限。原先 40。
         // 放大它必须与窄屏折叠同批——六个 44 加间距是 304px，320 视口装不下。
-        width: 44, height: 44,
+        width: label ? 'auto' : 44, height: 44,
         minWidth: 44, minHeight: 44,
+        paddingInline: label ? 12 : 0,
+        gap: label ? 7 : 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
         color: solid ? '#fffdf7' : '#2a1f0e',
@@ -808,6 +828,14 @@ function NavButton({
       {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
     >
       {children}
+      {label && (
+        <span style={{
+          fontFamily: 'var(--font-sketch-bold)', fontSize: 12,
+          letterSpacing: '0.02em', lineHeight: 1, whiteSpace: 'nowrap',
+        }}>
+          {label}
+        </span>
+      )}
     </button>
   )
 }

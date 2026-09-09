@@ -63,6 +63,8 @@ test.describe.configure({
 })
 
 /** Lab 的启动 + 走廊入场动画有撕纸 loader，给足时间 */
+import { isKnownBrowserNoise } from './helpers/browserNoise'
+
 const LAB_READY_TIMEOUT = 30_000
 /** 进房 = 相机对齐 + 资源加载 + 开门 + 飞入 */
 /**
@@ -83,9 +85,14 @@ const ROOM_ENTER_TIMEOUT = process.env.CI ? 45_000 : 20_000
  */
 async function openLab(
   page: import('@playwright/test').Page,
-  { firstVisit = false }: { firstVisit?: boolean } = {},
+  {
+    firstVisit = false,
+    /** 留着路线入口的首访引导（默认预置成"看过了"，理由见 `skipTourHint`） */
+    tourHint = false,
+  }: { firstVisit?: boolean; tourHint?: boolean } = {},
 ): Promise<boolean> {
   if (!firstVisit) await skipFirstVisitTutorial(page)
+  if (!tourHint) await skipTourHint(page)
   await enableLabAsserts(page)
   await page.goto('/lab/')
 
@@ -123,6 +130,23 @@ async function skipFirstVisitTutorial(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('lab_tutorial_seen', '1')
+    } catch {
+      // 隐私模式等，忽略
+    }
+  })
+}
+
+/**
+ * 预置「路线入口的引导已看过」。
+ *
+ * 不预置的话它会出现在**每一条**用例里：它 `pointerEvents: auto`，
+ * 且第一次任意 `pointerdown` 就收起——「点某个东西」的结果于是取决于
+ * 上一次点击有没有先把它关掉。首访路径另有专门用例。
+ */
+async function skipTourHint(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('lab_tour_hinted', '1')
     } catch {
       // 隐私模式等，忽略
     }
@@ -174,9 +198,11 @@ test.beforeEach(async ({ page }) => {
   page.on('pageerror', error => { pageErrors.push(error.message) })
 })
 test.afterEach(async () => {
-  const unexpected = allowedPageError
-    ? pageErrors.filter(message => !allowedPageError!.test(message))
-    : pageErrors
+  // 浏览器自身的噪声一律过滤（见 helpers/browserNoise）；
+  // `allowPageErrors()` 是用例自己制造的异常的额外豁免
+  const unexpected = pageErrors
+    .filter(message => !isKnownBrowserNoise(message))
+    .filter(message => !allowedPageError || !allowedPageError.test(message))
   expect(unexpected, '页面抛了未捕获异常').toEqual([])
 })
 
@@ -200,15 +226,10 @@ const ESC_SETTLE_TIMEOUT = 4_000
 const ESC_TOTAL_TIMEOUT = 45_000
 
 /**
- * 顶栏图标在窄屏（<768）折进「更多」面板，桌面上仍是六个平铺的按钮。
+ * 顶栏图标在窄屏折进「更多」面板，宽屏仍平铺。两种形态都要能点到。
  *
- * **两种形态都要能点到，而不是给窄屏加 skip。** 这个仓库的形态是
- * chromium（1280）+ mobile-safari（390）跑同一批 spec，加 skip 等于把
- * 新增的窄屏路径变成零覆盖——而那条路径正是这次改动的全部内容。
- *
- * 每次调用都返回**新的** locator：点了「更多」面板里的行之后面板会关掉
- * （`closeAll()`），缓存的 locator 随即失效。所以不要写
- * `const t = await navItem(...)` 然后连点两次。
+ * 每次调用返回**新的** locator：点了面板里的行之后面板会 `closeAll()`，
+ * 缓存的 locator 立刻失效。
  */
 async function navItem(
   page: import('@playwright/test').Page,
@@ -716,6 +737,55 @@ test.describe('房间加载失败与重试', () => {
       timeout: 40_000,
     })
     await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-room', 'about')
+  })
+})
+
+test.describe('路线入口的引导（规格 §5.2）', () => {
+  /*
+    守的是「功能存在但没人找得到」：按钮渲染了、`aria-label` 是对的、点了真的会走，
+    每条既有断言都绿，而路线的唯一文字广告在一个默认关闭的面板里。
+  */
+  test('首访时按钮旁出现可读、可点的引导，点它就开始路线', async ({ page }) => {
+    // 一定要用 `openLab`，不要手搓等待：它会先等 `fallback.or(ui)` 附着，
+    // 再区分「没有 WebGL」与「还没加载完」。手搓过一次，mobile-safari 上静默跳过。
+    // 冻住自动淡出：6 秒窗口在软渲染下抓不稳（见 `tourHintHeld`）。
+    // 淡出时机归单测，这里断言渲染几何与命中判定。
+    await page.addInitScript(() => {
+      try { window.localStorage.setItem('lab_tour_hint_hold', '1') } catch { /* 隐私模式 */ }
+    })
+    test.skip(!(await openLab(page, { tourHint: true })), '此形态没有 WebGL')
+
+    // 定位器限定未淡出态：淡出时 `pointerEvents` 变 `none`，
+    // 用 `elementFromPoint` 探中心点会命中底下的 canvas。
+    const live = page.locator('[data-testid=tour-coach-mark][data-fading="false"]')
+    await expect(live).toBeVisible({ timeout: LAB_READY_TIMEOUT })
+
+    // 要有看得见的字：aria-label 只有读屏用户听得到
+    expect((await live.textContent())?.trim().length ?? 0).toBeGreaterThan(8)
+
+    // 不越出视口右缘（气泡朝左展开）
+    const box = (await live.boundingBox())!
+    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+
+    /*
+      `trial` 只判定可点、不派发。上一批栽过：包装层无条件 `pointerEvents: auto`
+      把提示变成真的挡住主按钮，而单测、tsc、构建全绿。
+
+      超时给足：3 秒是从「断言**不可点**」那条用例抄来的，而那里短超时是对的
+      （尽快报出「元素不可点」）。这里断言的是**可点**，短超时会把「CI 慢」
+      变成失败——实测 CI 上正好卡在 3000ms。
+    */
+    await live.click({ trial: true, timeout: 20_000 })
+
+    // 点它直接开始路线
+    await live.click()
+    await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'touring', { timeout: 15_000 })
+  })
+
+  test('回访不再出现（一次性，且立刻落盘）', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+    // openLab 预置了 lab_tour_hinted
+    await expect(page.getByTestId('tour-coach-mark')).toHaveCount(0)
   })
 })
 

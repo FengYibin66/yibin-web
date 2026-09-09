@@ -38,7 +38,7 @@ export const zh: SiteContent = {
       publications_read: { title: '学者',     label: '读一篇论文' },
       pet_cat:           { title: '好奇',     label: '走廊尽头有只猫在打盹' },
       dog_companion:     { title: '有伴',     label: '继续走，小狗会跟着你' },
-      tour_complete:     { title: '被带着走了一遍', label: '按一下脚印，带你走一遍' },
+      tour_complete:     { title: '被带着走了一遍', label: '按一下爪印，带你走一遍' },
     },
     cities: {
       sichuan: '四川',
@@ -92,6 +92,8 @@ export const zh: SiteContent = {
       openMap: '打开地图',
       closeMap: '关闭地图',
       tour: '带我走一遍',
+      tourHint: '第一次来？点这里，我带你走一遍',
+      tourLabel: '带我走一遍',
       stopTour: '停止',
       more: '更多',
       moreTitle: '更多',

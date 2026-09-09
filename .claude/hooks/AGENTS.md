@@ -10,6 +10,7 @@ Claude Code PreToolUse 拦截脚本。制度与设计约束见 ADR 2026082212080
 | H2 | `pre-no-verify.sh` | Bash | 禁止 git 命令用 `--no-verify` |
 | H3 | `pre-secret-scan.sh` | Edit / Write | 禁止写入疑似硬编码 secret |
 | H4 | `pre-generated-edit.sh` | Edit / Write | 禁止手改生成物（ADR 索引表、`*.gen.*`、`/generated/`） |
+| H5 | `pre-stale-media.sh` | Bash | `git push` 前，`apps/resume` 任一媒体流水线的指纹过期就拦下 |
 
 配置入口：`.claude/settings.json`（**入库**，区别于 `settings.local.json` 的本机配置）。
 
@@ -43,6 +44,8 @@ macOS 自带的 BSD sed **不支持 `\b` 词边界**。写了它的表达式在�
 - **H1 / H2 只看命令字符串字面量。** 经 shell 变量间接构造的（`B=main; git push origin $B`）、alias、或包在脚本里的不拦。远端分支保护与 CI 才是最终防线。
 - **H3 / H4 只挂在 Edit / Write 上。** `sed -i`、`>` 重定向、`cat <<EOF`、`rm`、`mv` 全部走 Bash，而 Bash 那一档只注册了 H1 / H2。**这是刻意的**：Bash 的改写形态漏不完（`python -c`、`perl -i`、`awk > tmp && mv` …），试图解析只会给出虚假保证。
 - **H3 只匹配有明确前缀特征的凭据**（`sk-`、`AKIA`、`ghp_`、PEM 头等），不做通用高熵检测。误报会让人关掉守卫，那比漏报更糟。
+- **H5 只在 `git push` 时跑，且「检查跑不起来」一律放行。** `--dry-run` / `-n` 不拦（push 下 `-n` 是 dry-run，不是 no-verify——H2 踩过这个坑）。缺 node / python3 / fontTools、脚本不存在、脚本自己炸 → **放行 + 警告**，因为一个「本机没装 fontTools 就拦住所有 push」的守卫第一天就会被关掉。只有「脚本 exit≠0 且输出含 `[待处理]`」才判定为产物过期并拦截。
+- **H5 的流水线清单在运行时派生**（`grep -rlE 'argv.*--check|--check.*argv'`），不写死。写死的清单会在新增流水线时静默少守一条，而少守一条没有任何症状——本 hook 第一版正是按字面量列写法，恰好漏掉了 `subset-fonts.py`（它用双引号 `"--check" in sys.argv`），也就是唯一真正咬过人的那条。
 
 **最终防线始终是 CI**：`ci.yml` 跑 `gen_docs_index.py --check` 校验索引同步。hooks 的作用是把反馈从 CI 提前到工具调用时刻，不是替代 CI。
 

@@ -189,8 +189,77 @@ expect 0 pre-generated-edit.sh "$(write_in 'docs/adr/TEMPLATE.md' 'x')"        "
 expect 0 pre-generated-edit.sh "$(write_in 'docs/AGENTS.md' 'x')"             "放行非 adr 的 AGENTS.md"
 expect 0 pre-generated-edit.sh "$(write_in 'src/api.ts' 'x')"                  "放行普通源文件"
 
+echo "H5 pre-stale-media.sh"
+#
+# H5 与 H1–H4 不同：它跑真实的 `--check`，所以结论依赖仓库当前状态。
+# 因此先断言前置条件（当前树的指纹是最新的），否则后面的「放行」用例毫无意义。
+#
+# `--check` 只报告不写文件，所以「造一个过期条件 → 断言拦截 → 删掉」不留痕迹。
+
+H5_ROOT="$(cd "$HOOKS_DIR/../.." && pwd)"
+H5_PROBE="$H5_ROOT/apps/resume/lib/__h5_probe__.ts"
+# 生僻字：字体子集的指纹是对**出现过的字符集合**求的，常见汉字不会让它过期。
+#
+# 直接写字面量，不用 `printf '\uHHHH'`——**macOS 自带 bash 是 3.2.57，
+# printf 的 \u 转义要 bash 4.2+**，3.2 下会原样输出 `\u9f98`（全是 ASCII、
+# 本来就在字符集里），于是「造过期条件」这一步静默失效、拦截用例假绿。
+# 这是本仓库 AGENTS.md 记过的 bash 3.2 陷阱的同一类。
+#
+# 把字面量写在本文件里是安全的：字体子集只扫 apps/resume 下
+# {app,components,lib,hooks,context} 里的 .ts/.tsx/.css，本文件都不在其中。
+H5_RARE='龘'
+
+cleanup_h5() { rm -f "$H5_PROBE"; }
+trap cleanup_h5 EXIT
+
+if printf '%s' "$(bash_in 'git push origin feat/probe')" \
+   | bash "$HOOKS_DIR/pre-stale-media.sh" >/dev/null 2>&1; then
+  # 前置条件满足：当前树没有过期指纹
+  expect 0 pre-stale-media.sh "$(bash_in 'git status')"                   "放行非 push 命令"
+  expect 0 pre-stale-media.sh "$(bash_in 'git commit -m x')"              "放行 commit（H5 只管 push）"
+  expect 0 pre-stale-media.sh "$(bash_in 'git push --dry-run origin x')"      "放行 --dry-run（不交出任何东西）"
+  expect 0 pre-stale-media.sh "$(bash_in 'git push -n origin x')"             "放行 -n（push 下是 dry-run，不是 no-verify）"
+  expect 0 pre-stale-media.sh "$(bash_in 'ls push')"                      "放行非 git 命令"
+  expect 0 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"           "指纹最新时放行"
+
+  # 拦截路径：造一个真实的过期条件（引入一个此前没出现过的字符）
+  printf '// %s\n' "$H5_RARE" > "$H5_PROBE"
+  expect 2 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"           "指纹过期时拦截"
+  expect 0 pre-stale-media.sh "$(bash_in 'git push --dry-run origin x')"      "过期但 --dry-run 仍放行"
+  cleanup_h5
+  expect 0 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"           "删掉过期来源后恢复放行"
+else
+  printf '  ❌ H5 前置条件不满足：当前工作树已有指纹过期，无法验证「放行」路径。\n'
+  printf '     先按拦截信息里的命令重新生成，再跑本测试。\n'
+  fail=$((fail + 1))
+fi
+
+# 少守一条没有任何症状 —— 这两条守的是**派生逻辑本身**。
+# 本 hook 第一版按字面量列了三种 `--check` 写法，恰好漏掉 subset-fonts.py
+# （它写的是双引号 `"--check" in sys.argv`），于是唯一真正咬过人的那条流水线没被守。
+# 第二版把 `.*` 写成 `[^\n]*`——POSIX ERE 的括号表达式里那是「非反斜杠且非字母 n」，
+# 而 `argv.includes` 含字母 n，于是派生成 0 条。
+# 两次错误都不会让任何 exit-code 用例变红，只有直接断言清单内容才抓得到。
+echo "H5 派生逻辑：清单必须覆盖到会咬人的那条"
+h5_derived=$(cd "$H5_ROOT/apps/resume" && grep -rlE 'argv.*--check|--check.*argv' scripts/media scripts/lab 2>/dev/null | sort)
+h5_count=$(printf '%s\n' "$h5_derived" | grep -c . )
+if printf '%s\n' "$h5_derived" | grep -q 'subset-fonts\.py'; then
+  printf '  ✅ 派生清单含 subset-fonts.py（共 %s 条）\n' "$h5_count"
+  pass=$((pass + 1))
+else
+  printf '  ❌ 派生清单**不含** subset-fonts.py（共 %s 条）——会静默少守字体子集那条\n' "$h5_count"
+  fail=$((fail + 1))
+fi
+if printf '%s\n' "$h5_derived" | grep -q 'freshness\.mjs'; then
+  printf '  ❌ 派生清单误纳 freshness.mjs（它是被 import 的库，不是可执行检查）\n'
+  fail=$((fail + 1))
+else
+  printf '  ✅ 派生清单未误纳 freshness.mjs\n'
+  pass=$((pass + 1))
+fi
+
 echo "fail-closed：守卫收到坏输入必须拦截而非放行"
-for s in pre-push-main.sh pre-no-verify.sh pre-secret-scan.sh pre-generated-edit.sh; do
+for s in pre-push-main.sh pre-no-verify.sh pre-secret-scan.sh pre-generated-edit.sh pre-stale-media.sh; do
   expect 2 "$s" 'not json at all' "$s 遇非法 JSON 拦截"
 done
 

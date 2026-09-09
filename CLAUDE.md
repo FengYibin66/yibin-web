@@ -110,7 +110,7 @@ scripts/                 # 部署、环境构建、文档索引生成
 | `apps/portal/server/__tests__/` | 98 | 认证攻击面、路由权限、库侧 CHECK、上传（存储型 XSS 防线）、档案、CORS、类型派生 |
 | `apps/portal/client/__tests__/` | 52 | 脏数据解析、保存/登录错误分类 |
 | `apps/auto-wechat/backend` | 15 文件 | Go 单测（含 `internal/toolchain` 的 Go 版本一致性门禁） |
-| `.claude/hooks/tests/` | 75 | 门禁脚本回归（含 push-main 各种绕过形态） |
+| `.claude/hooks/tests/` | 87 | 门禁脚本回归（含 push-main 各种绕过形态、H5 媒体指纹的拦截/放行/派生清单覆盖） |
 | `scripts/ci/gate-test.sh` | 14 | 门禁汇总逻辑 |
 | `scripts/ci/lint-workflows.py --self-test` | 10 | workflow 接线检查 |
 | `scripts/docs/test_gen_docs_index.py` | 29 | ADR 索引生成器 |

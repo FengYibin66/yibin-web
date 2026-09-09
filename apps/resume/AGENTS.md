@@ -569,6 +569,13 @@ REDUCED=1 node scripts/qa/lab-walkthrough.mjs  # Lab，模拟"减少动效"（�
 > 中文注释也算字符集的一部分 —— 加一段中文注释就会让指纹过期。CI 会抓
 > （`校验字体子集` 那一步），但那要等十分钟，本地一秒。同一天踩了三次。
 
+> **界面字体（Space Grotesk / Inter / JetBrains Mono / Cormorant Garamond）不走上面的
+> 子集流水线，也不用 `next/font/google`**——它们是 `@fontsource` npm 依赖，`app/layout.tsx`
+> 经 `next/font/local` 引用包内 latin 子集 woff2（ADR 20260909163155）。别把 `next/font/google`
+> 加回来：构建机在大陆，Google 不可达；曾经的 `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` mock 让
+> 线上每个 woff2 都成了 89 字节的 URL 字符串，四款字体从未生效，而所有测试全绿。
+> `e2e/staticExport.spec.ts` 现在断言产物里每个 woff2 以 `wOF2` 魔数开头——那是当时缺的那道门。
+
 > `pnpm lint` **当前跑不起来**：`eslint.config.mjs` 按 flat config 写，但装的
 > `eslint-config-next@15.5.20` 导出的是旧版 eslintrc 对象 → `nextVitals is not iterable`。
 > 这是依赖版本不匹配，从未跑通过，CI 刻意不跑（见根 `CLAUDE.md`「已知负债」）。

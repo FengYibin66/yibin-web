@@ -1,36 +1,53 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { Space_Grotesk, Inter, JetBrains_Mono, Cormorant_Garamond } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 // Lenis 官方基础样式（html.lenis 高度、lenis-stopped 的 overflow 等）。此前从未引入
 import 'lenis/dist/lenis.css'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
 import SmoothScrollProvider from '@/components/providers/SmoothScrollProvider'
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
+// 四款界面字体从 @fontsource 包自托管，不用 next/font/google（ADR 20260909163155）。
+//
+// 原因：构建机在大陆，Google 不可达；曾经用 NEXT_FONT_GOOGLE_MOCKED_RESPONSES 让构建
+// 「过」，结果 Next 把 mock 里的 https://fonts.gstatic.com/... 地址原样写成字体文件，
+// 线上每个 woff2 都是 89 字节的 URL 字符串，四款字体自那时起从未生效。
+//
+// 只引 latin 文件——等价于原先的 subsets: ['latin']（@fontsource 已按 unicode-range
+// 拆成 latin / latin-ext）。路径穿过 node_modules 是刻意的：字体版本由 pnpm-lock 锁定，
+// 许可全文随包里的 LICENSE 装船；这四个包必须是本包的**直接**依赖，pnpm 的严格
+// node_modules 下 next/font/local 的相对路径才解析得到。
+// e2e/staticExport.spec.ts 断言产物里每个 woff2 以 wOF2 魔数开头。
+const spaceGrotesk = localFont({
+  src: '../node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2',
+  weight: '300 700',
   variable: '--font-display',
   display: 'swap',
   preload: false,
 })
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: '../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+  weight: '100 900',
   variable: '--font-sans',
   display: 'swap',
   preload: false,
 })
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+const jetbrainsMono = localFont({
+  src: '../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',
+  weight: '100 800',
   variable: '--font-mono',
   display: 'swap',
   preload: false,
 })
 
-const cormorantGaramond = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const cormorantGaramond = localFont({
+  src: [
+    { path: '../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2', weight: '600', style: 'normal' },
+  ],
   variable: '--font-gallery',
   display: 'swap',
   preload: false,

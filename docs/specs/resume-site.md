@@ -356,7 +356,7 @@ zh:      system-ui（PingFang SC / Microsoft YaHei 回退）
 - `pixelRatio` 上限 2（桌面）/ 1.5（移动）
 - `next/dynamic ssr:false`：Canvas 不阻塞 FCP；LCP = Hero 文字（Server Component 即时渲染）
 - 所有动画只用 `transform` + `opacity`（GPU 合成层，无 layout 触发）
-- 字体：`next/font/google` 自动 subset + `display: swap`
+- 字体：四款界面字体（Space Grotesk / Inter / JetBrains Mono / Cormorant Garamond）来自 `@fontsource` npm 包，经 `next/font/local` 引用 latin 子集 woff2，`display: swap`。**不用 `next/font/google`**——构建机在大陆不可达 Google，曾经的 mock 让线上字体全是 URL 字符串（ADR 20260909163155）
 - 中文回退 system-ui，无字体下载
 
 ---

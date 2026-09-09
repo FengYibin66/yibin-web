@@ -9,6 +9,7 @@ import {
   corridorRailHold,
   corridorRailRelease,
   corridorRailScrollTo,
+  isCorridorRailMounted,
 } from '@/lib/lab/app/camera/corridorRail'
 import { getRail } from '@/lib/lab/app/stores/corridorStore'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
@@ -30,6 +31,14 @@ import { tourPlan, type TourCaptionKey } from '@/lib/lab/domain/corridor/tour'
  */
 
 const OWNER = 'tour'
+/**
+ * 等导轨挂载的上限。加载纸撕开（按钮出现）之后，Canvas 子树可能还在 Suspense 里
+ * ——软渲染的 CI 上尤其明显：点脚印那一刻 `useCorridorCamera` 还没注册导轨，
+ * 于是 `hold` 返回 false、`start()` 静默什么都不做（CI 的 mobile-safari 上两条 E2E 因此红）。
+ * 按早了不该没反应：等它出现，最多 3 秒。
+ */
+const RAIL_WAIT_MS = 3_000
+const RAIL_POLL_MS = 100
 
 export interface TourState {
   readonly running: boolean
@@ -87,7 +96,12 @@ export function useTour() {
   }, [state.running, state.caption])
 
   const start = useCallback(async () => {
-    // 先拿导轨再进状态机：拿不到（别人持有 / 未挂载）什么都不该变
+    // 导轨可能还没挂载（走廊子树仍在 Suspense）：等它出现，别让按钮看起来没反应
+    const deadline = Date.now() + RAIL_WAIT_MS
+    while (!isCorridorRailMounted() && Date.now() < deadline) {
+      await new Promise<void>(resolve => setTimeout(resolve, RAIL_POLL_MS))
+    }
+    // 先拿导轨再进状态机：拿不到（别人持有 / 仍未挂载）什么都不该变
     const onInput = () => finish('input')
     if (!corridorRailHold(OWNER, onInput)) return false
     if (!machineStart()) {

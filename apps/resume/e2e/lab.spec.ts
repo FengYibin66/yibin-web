@@ -885,6 +885,8 @@ test.describe('招聘官路线', () => {
     }
     const html = page.locator('html')
     await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    // 等走廊子树真的挂载（导轨随它注册）：CI 的软渲染下纸已撕开而 Canvas 还在 Suspense
+    await expect(html).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
 
     await page.getByTestId('nav-tour').click()
     await expect(html).toHaveAttribute('data-lab-mode', 'touring')
@@ -903,6 +905,7 @@ test.describe('招聘官路线', () => {
       test.skip(true, '无 WebGL')
       return
     }
+    await expect(page.locator('html')).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
     await page.getByTestId('nav-tour').click()
     await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'touring')
     await page.keyboard.press('Escape')

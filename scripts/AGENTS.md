@@ -10,6 +10,7 @@
 | `deploy-prod.sh` | 生产部署（构建 + compose 重建） |
 | `ssl-renew.sh` | Let's Encrypt 零停机续期（webroot 模式），配 cron 使用 |
 | `verify-local.sh` / `verify-local-compose.sh` / `verify-local-complete.sh` | 本地验证（渐进三档） |
+| `probe-routes.sh` | 对着**真实部署**断言一组 URL 的状态码与内容类型（默认探生产）。单测和 E2E 都测不到 nginx——Playwright 用自己的静态服务器，CI 又不部署 |
 | `docs/gen_docs_index.py` | 生成 `docs/adr/AGENTS.md` 的 ADR 索引表（单测：`docs/test_gen_docs_index.py`） |
 | `ci/evaluate-gate.sh` | 汇总 CI 各 job 结果（单测：`ci/gate-test.sh`） |
 | `ci/lint-workflows.py` | 校验 workflow **接线**（自测：`--self-test`） |

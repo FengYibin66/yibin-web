@@ -199,6 +199,28 @@ test.afterEach(async () => {
 const ESC_SETTLE_TIMEOUT = 4_000
 const ESC_TOTAL_TIMEOUT = 45_000
 
+/**
+ * 顶栏图标在窄屏（<768）折进「更多」面板，桌面上仍是六个平铺的按钮。
+ *
+ * **两种形态都要能点到，而不是给窄屏加 skip。** 这个仓库的形态是
+ * chromium（1280）+ mobile-safari（390）跑同一批 spec，加 skip 等于把
+ * 新增的窄屏路径变成零覆盖——而那条路径正是这次改动的全部内容。
+ *
+ * 每次调用都返回**新的** locator：点了「更多」面板里的行之后面板会关掉
+ * （`closeAll()`），缓存的 locator 随即失效。所以不要写
+ * `const t = await navItem(...)` 然后连点两次。
+ */
+async function navItem(
+  page: import('@playwright/test').Page,
+  id: 'audio' | 'achievements' | 'help' | 'locale',
+) {
+  const direct = page.getByTestId(`nav-${id}`)
+  if (await direct.count()) return direct
+  const row = page.getByTestId(`more-${id}`)
+  if (!(await row.count())) await page.getByTestId('nav-more').click()
+  return row
+}
+
 async function pressEscapeUntil(
   page: import('@playwright/test').Page,
   settled: () => Promise<void>,
@@ -359,14 +381,27 @@ test.describe('面板', () => {
       现在点不到：按钮被面板盖住。用 `trial: true` 只做可点性判定、不真的派发
       点击——这样失败原因是明确的"元素不可点"，而不是"点了但没反应"，
       也不必等一次完整的超时（CI 上第一版就是靠重试才勉强报出结果）。
+
+      **这里刻意不用 `navItem()`。** 那个助手在按钮不存在时会先真的点一下
+      「更多」，而这条用例测的正是"此刻还能不能点到顶栏的按钮"——助手的副作用
+      （点开更多面板会 `closeAll()` 关掉地图）会把被测条件本身改掉。
+      收编顶栏时就踩了这一下：用例从「预期失败」变成「意外通过」，
+      而实测 `elementFromPoint` 证明缺陷仍在（390px 上这个位置命中的是
+      `map-close`，1280px 上是 `map-panel`）。**用例形态变了要重新量，
+      不能因为它变绿就当成修好了。**
+
+      探测对象取顶栏里除地图之外的任一按钮：窄屏是「更多」，宽屏是「成就」。
     */
-    await page.getByTestId('nav-achievements').click({ trial: true, timeout: 3_000 })
+    const sibling = (await page.getByTestId('nav-more').count())
+      ? page.getByTestId('nav-more')
+      : page.getByTestId('nav-achievements')
+    await sibling.click({ trial: true, timeout: 3_000 })
   })
 
   test('成就面板能开，用它自己的关闭按钮能关', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-achievements').click()
+    await (await navItem(page, 'achievements')).click()
     await expect(page.getByTestId('achievements-panel')).toHaveAttribute('data-open', 'true')
 
     // 成就面板与地图面板一样盖住导航按钮行，所以切换按钮点不到（见上一条的说明）
@@ -387,7 +422,7 @@ test.describe('面板', () => {
   test('走廊里按 ESC 也关成就面板', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-achievements').click()
+    await (await navItem(page, 'achievements')).click()
     const panel = page.getByTestId('achievements-panel')
     await expect(panel).toHaveAttribute('data-open', 'true')
     await pressEscapeUntil(page, async () => {
@@ -418,7 +453,7 @@ test.describe('面板', () => {
       test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
       await teleportTo(page, 'about')
-      await page.getByTestId('nav-achievements').click()
+      await (await navItem(page, 'achievements')).click()
       await expect(page.getByTestId('achievements-panel')).toHaveAttribute('data-open', 'true')
 
       await page.keyboard.press('Escape')
@@ -451,14 +486,14 @@ test.describe('教程气泡', () => {
   test('帮助按钮能重新打开操作说明', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-help').click()
+    await (await navItem(page, 'help')).click()
     await expect(page.getByTestId('lab-tutorial')).toBeVisible()
   })
 
   test('「开始探索」按钮关掉操作说明', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-help').click()
+    await (await navItem(page, 'help')).click()
     await expect(page.getByTestId('lab-tutorial')).toBeVisible()
     /*
       不能点遮罩的中心：那里是内层卡片，它有 `onClick={e => e.stopPropagation()}`
@@ -472,7 +507,7 @@ test.describe('教程气泡', () => {
   test('「跳过」按钮也关掉操作说明', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-help').click()
+    await (await navItem(page, 'help')).click()
     await expect(page.getByTestId('lab-tutorial')).toBeVisible()
     await page.getByTestId('tutorial-skip').click()
     await expect(page.getByTestId('lab-tutorial')).toHaveCount(0)
@@ -481,7 +516,7 @@ test.describe('教程气泡', () => {
   test('ESC 也能跳过操作说明', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    await page.getByTestId('nav-help').click()
+    await (await navItem(page, 'help')).click()
     const tutorial = page.getByTestId('lab-tutorial')
     await expect(tutorial).toBeVisible()
     await pressEscapeUntil(page, async () => {
@@ -684,6 +719,58 @@ test.describe('房间加载失败与重试', () => {
   })
 })
 
+test.describe('顶栏（ADR 20260909182319 第二期）', () => {
+  /*
+    这两条量的是**渲染结果**，不是源码里的数字。
+
+    为什么不用源码棘轮：小于 44 的触摸目标在这个仓库有三种形态——内联的
+    `width: 40, height: 40`、只有 `padding: 4` 包一个 16px 图标的关闭按钮
+    （实测 24×24，全 Lab 最小）、以及纯文字链接 `← Exit Lab`（实测高 18）。
+    AST 查询只认第一种，另两种它看不见，于是门禁会在「已经全绿」的情况下
+    漏掉真正咬人的两种。`getBoundingClientRect` 三种都认。
+
+    也不给窄屏加 skip：mobile-safari 形态（390px）正是这次改动的全部内容。
+  */
+  test('顶栏所有可点元素的触摸目标不小于 44×44', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    const small = await page.evaluate(() => {
+      const out: string[] = []
+      const sel = '[data-testid^=nav-], [data-testid=lab-exit-link], [data-testid=nav-back]'
+      for (const el of document.querySelectorAll(sel)) {
+        const r = el.getBoundingClientRect()
+        if (r.width === 0 && r.height === 0) continue   // 未渲染的（如窄屏折叠掉的）不算
+        if (r.width < 44 || r.height < 44) {
+          out.push(`${(el as HTMLElement).dataset.testid} ${Math.round(r.width)}x${Math.round(r.height)}`)
+        }
+      }
+      return out
+    })
+    expect(small, `这些触摸目标小于 44：\n${small.join('\n')}`).toEqual([])
+  })
+
+  test('退出链接与导航图标排不重叠（跨槽位那处 80px）', async ({ page }) => {
+    test.skip(!(await openLab(page)), '此形态没有 WebGL')
+
+    /*
+      原先退出在 `top-left`、图标排在 `top-right`，两个**不同**的槽位，
+      互相不知道对方多宽——320px 上实测重叠 80px。现在两者是 `top-bar`
+      这个贯通槽位的 flex 兄弟。
+
+      断言水平间距 ≥ 0 而不是「盒子不相交」：它们在同一行、y 完全重合，
+      矩形相交判定对这种情形是对的，但报出来的信息不如「差多少像素」有用。
+    */
+    const gap = await page.evaluate(() => {
+      const a = document.querySelector('[data-overlay=lab-exit]')?.getBoundingClientRect()
+      const b = document.querySelector('[data-overlay=lab-nav]')?.getBoundingClientRect()
+      if (!a || !b) return null
+      return Math.round(b.left - a.right)
+    })
+    expect(gap, '取不到退出链接或图标排——它们应当都在 top-bar 槽位里').not.toBeNull()
+    expect(gap!, `退出与图标排水平间距 ${gap}px（负数即重叠）`).toBeGreaterThanOrEqual(0)
+  })
+})
+
 test.describe('语言切换', () => {
   /*
     Lab 是全站唯一没有 Navbar 的视图，此前也是唯一切不了语言的地方。按钮复用
@@ -696,12 +783,11 @@ test.describe('语言切换', () => {
   test('顶栏能切到中文，其余按钮标签跟着变，刷新后保持', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    const toggle = page.getByTestId('nav-locale')
-    await expect(toggle).toHaveText('中文')
+    await expect(await navItem(page, 'locale')).toHaveText('中文')
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
-    await toggle.click()
-    await expect(toggle).toHaveText('EN')
+    await (await navItem(page, 'locale')).click()
+    await expect(await navItem(page, 'locale')).toHaveText('EN')
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
     // 不是只有这个按钮自己变了：地图按钮的无障碍名也切了
     await expect(page.getByTestId('nav-map')).toHaveAttribute('aria-label', '打开地图')
@@ -709,17 +795,16 @@ test.describe('语言切换', () => {
     // 持久化：刷新后仍是中文（hydration 真的恢复了，不只是写了 storage）
     await page.reload()
     await expect(page.getByTestId('lab-ui')).toBeAttached({ timeout: LAB_READY_TIMEOUT })
-    await expect(page.getByTestId('nav-locale')).toHaveText('EN')
+    await expect(await navItem(page, 'locale')).toHaveText('EN')
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
   })
 
   test('切回英文同样生效', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
-    const toggle = page.getByTestId('nav-locale')
-    await toggle.click()
-    await expect(toggle).toHaveText('EN')
-    await toggle.click()
-    await expect(toggle).toHaveText('中文')
+    await (await navItem(page, 'locale')).click()
+    await expect(await navItem(page, 'locale')).toHaveText('EN')
+    await (await navItem(page, 'locale')).click()
+    await expect(await navItem(page, 'locale')).toHaveText('中文')
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   })
 })

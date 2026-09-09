@@ -91,6 +91,8 @@ export const zh: SiteContent = {
       closeMap: '关闭地图',
       tour: '带我走一遍',
       stopTour: '停止',
+      more: '更多',
+      moreTitle: '更多',
       help: '怎么玩',
       exitLab: '退出 Lab',
       toggleLanguage: 'Switch to English',

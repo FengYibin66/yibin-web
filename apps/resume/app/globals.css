@@ -265,13 +265,18 @@ body {
 }
 
 /* ─── AchievementPopup ───────────────────────────────────────────────────── */
+/*
+  两条关键帧原先带 `translateX(-50%)`——那是配合 `left: 50%` 的自定心。
+  居中现在归 `bottom-center` 槽位（flex `align-items: center`），
+  这里必须去掉，否则气泡会整体左移半个自身宽度。
+*/
 @keyframes popupEnter {
-  from { opacity: 0; transform: translateX(-50%) translateY(50px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes popupExit {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to   { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(20px); }
 }
 @keyframes drawCheck {
   to { stroke-dashoffset: 0; }
@@ -282,21 +287,19 @@ body {
   100% { transform: scale(1); }
 }
 .achievement-popup {
-  position: fixed;
   /*
-    上移，让底部的操作提示露出来。
+    **不再自己定位。** 它是 `bottom-center` 槽位里的一个 flex 兄弟
+    （`lib/layout/overlays.ts` 的 `lab-achievement`，ADR 20260909182319）。
 
-    气泡与提示原先都是 `bottom: 32px; left: 50%`，而气泡是白底、z-index 110，
-    提示是 z-index 10——**气泡把提示整个盖住**。而气泡（教程类）不自动消失，
-    所以那条提示实际上长期不可见，包括审计 E10 花力气把对比度从 2.4 提到 4.5
-    的那一条：颜色改对了，但它被压在一块白底下面。
+    此处原先是 `position: fixed; bottom: 88px`，注释逐字写着
+    「88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距」——
+    **一个组件手算另一个组件的高度**。被算的那条提示改一行字、换一种语言、
+    或在窄屏上折成两行，这个数就悄悄错了，而没有任何东西会报警。
+    这是那份 ADR 里举的原型例子，现在它自己没了。
 
-    88px = 32（提示的底距） + 提示自身高度（约 20）+ 一段间距。
+    `relative` 要保留：`::before` 的纸纹是 `absolute; top:-20%` 定位到它上面的。
   */
-  bottom: 88px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 110;
+  position: relative;
   background: #ffffff;
   padding: 12px 24px;
   display: flex;
@@ -376,9 +379,18 @@ body {
   color: #444;
   line-height: 1.4;
 }
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .achievement-popup {
-    bottom: 24px;
+    /*
+      这里原先还有一条 `bottom: 24px`——**第二个手写偏移**，与上面那个
+      `bottom: 88px` 是同一个病的窄屏分支。去掉 fixed 定位后它没被一起去掉，
+      而 `position: relative` 下 `bottom` 会把元素**往上顶 24px**：
+      实测 320px 上气泡从 553 挪到 529，正好压住 530–545 的滚动提示，
+      100% 覆盖——和收编之前一模一样的缺陷，只是换了实现路径。
+
+      桌面上量到「不重叠」，窄屏上量到「100% 重叠」，两者差的就是这一行。
+      这是「看数字 + 分档量」才抓得到的：只看桌面截图会以为已经修好。
+    */
     padding: 10px 16px;
   }
   .achievement-popup .popup-title { font-size: 13px; }
@@ -494,6 +506,8 @@ body {
   font-weight: bold; font-size: 12px; letter-spacing: 1px;
   color: #1a1a1a; position: relative; z-index: 1;
 }
-@media (max-width: 768px) {
+/* 与 lib/layout/breakpoints.ts 的 NARROW_MAX 对齐：768 整点上「窄屏 CSS」与
+   Tailwind 的 `md:`（min-width 768）此前同时生效，是一条真实的 off-by-one */
+@media (max-width: 767.98px) {
   .achievements-panel { right: 16px; width: 260px; }
 }

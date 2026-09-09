@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { content } from '@/lib/content'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
+import { LabUiWrapper } from './helpers/labUiWrapper'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -144,7 +145,7 @@ describe('RoomLoadingIndicator', () => {
         onRetry={vi.fn()}
         onBack={vi.fn()}
       />,
-    { wrapper: LocaleProvider })
+    { wrapper: LabUiWrapper })
 
     /*
       断言的是**文案表里的值**，不是写死的英文串。
@@ -170,7 +171,7 @@ describe('RoomLoadingIndicator', () => {
         onRetry={onRetry}
         onBack={onBack}
       />,
-    { wrapper: LocaleProvider })
+    { wrapper: LabUiWrapper })
 
     // 标题是本地化文案，原始技术串降为次要细节行（两者都要在）
     expect(screen.getByText(content.en.labUi.loading.failedHint)).toBeVisible()
@@ -193,6 +194,8 @@ describe('RoomLoadingIndicator', () => {
         onRetry={vi.fn()}
         onBack={vi.fn()}
       />,
+    // 这条只渲染 RoomLoadingIndicator 本身，不需要屏角层——
+    // 包了 EdgeLayerRoot 的话容器里会多出九个空槽位容器，`toBeEmptyDOMElement` 必红。
     { wrapper: LocaleProvider })
 
     expect(container).toBeEmptyDOMElement()
@@ -213,7 +216,7 @@ describe('LabScene room loading indicator', () => {
   })
 
   it('mounts between the canvas and navigation and forwards scene actions', () => {
-    render(<LabScene />, { wrapper: LocaleProvider })
+    render(<LabScene />, { wrapper: LabUiWrapper })
 
     const canvas = screen.getByTestId('lab-canvas')
     const indicator = screen.getByRole('alert')
@@ -240,7 +243,7 @@ describe('LabScene room loading indicator', () => {
       ...FAILED_STATE,
       roomId: 'gallery',
     }
-    render(<LabScene />, { wrapper: LocaleProvider })
+    render(<LabScene />, { wrapper: LabUiWrapper })
 
     fireEvent.click(screen.getByRole('button', { name: content.en.labUi.loading.retry }))
 

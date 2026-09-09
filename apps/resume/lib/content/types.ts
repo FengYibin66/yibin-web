@@ -315,6 +315,9 @@ export interface LabUiLabels {
     /** 「带我走一遍」按钮的可访问名，路线中变为「停止」 */
     tour: string
     stopTour: string
+    /** 窄屏顶栏的「更多」按钮与它展开的面板标题（ADR 20260909182319） */
+    more: string
+    moreTitle: string
     help: string
     exitLab: string
     /**

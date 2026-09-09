@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
+import { LabUiWrapper } from './helpers/labUiWrapper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { en } from '@/lib/content/en'
@@ -52,7 +53,7 @@ describe('Lab 顶栏语言切换', () => {
   })
 
   it('按钮在顶栏里，默认（英文界面）显示「中文」', () => {
-    render(<NavigationUI />, { wrapper: LocaleProvider })
+    render(<NavigationUI />, { wrapper: LabUiWrapper })
     const button = screen.getByTestId('nav-locale')
     expect(button).toHaveTextContent(nextLocaleLabel('en'))
     // 标签用目标语言写：英文界面上是中文的"切换到中文"
@@ -60,7 +61,7 @@ describe('Lab 顶栏语言切换', () => {
   })
 
   it('点一下切到中文：按钮文字、aria-label、<html lang> 同时变', () => {
-    render(<NavigationUI />, { wrapper: LocaleProvider })
+    render(<NavigationUI />, { wrapper: LabUiWrapper })
     fireEvent.click(screen.getByTestId('nav-locale'))
 
     const button = screen.getByTestId('nav-locale')
@@ -72,7 +73,7 @@ describe('Lab 顶栏语言切换', () => {
   })
 
   it('切换写进 resume-locale —— 与 Classic / 入口页共用同一份偏好', () => {
-    render(<NavigationUI />, { wrapper: LocaleProvider })
+    render(<NavigationUI />, { wrapper: LabUiWrapper })
     fireEvent.click(screen.getByTestId('nav-locale'))
     expect(window.localStorage.getItem('resume-locale')).toBe('zh')
   })

@@ -6,6 +6,8 @@ import { useAudio } from '@/context/AudioContext'
 import { useAchievementActions } from '@/context/AchievementsContext'
 import type { RoomId } from '@/context/SceneContext'
 import { AchievementPopup } from './AchievementPopup'
+import { EdgeItem } from '@/components/layout/EdgeLayer'
+import { useViewport } from '@/hooks/useViewport'
 import { AchievementsPanel } from './AchievementsPanel'
 import { TUTORIAL_OPEN_EVENT } from '@/lib/lab/tutorialStorage'
 import { useLabLabels } from '@/hooks/useLabLabels'
@@ -58,6 +60,8 @@ export function NavigationUI() {
   const [achievementsOpen, setAchievementsOpen] = useState(false)
   const [isExiting, setIsExiting]           = useState(false)
   const [isUIHidden, setIsUIHidden]         = useState(false)
+  /** 窄屏「更多」面板。窄屏判据走 useViewport（门禁 viewportReaders.test.ts） */
+  const [moreOpen, setMoreOpen]             = useState(false)
 
   const mapPanelRef  = useRef<HTMLDivElement>(null)
   const mapCloseRef  = useRef<HTMLButtonElement>(null)
@@ -151,10 +155,16 @@ export function NavigationUI() {
     requestExit()
   }, [isTeleporting, requestExit])
 
+  const viewport = useViewport()
+  // 视口未判定（SSR / 首帧）时按宽屏渲染：窄屏上多显示四个图标一帧，
+  // 比反过来（宽屏上先折叠再展开）跳动小。
+  const isNarrow = viewport?.isNarrow ?? false
+
   const closeAll = useCallback(() => {
     setMapOpen(false)
     setAudioOpen(false)
     setAchievementsOpen(false)
+    setMoreOpen(false)
   }, [])
 
   /*
@@ -169,7 +179,7 @@ export function NavigationUI() {
     只在**有面板打开**时认领：常驻认领会把走廊里那次"没人认领 → 什么也不做"
     的 ESC 也吞掉，将来加别的 ESC 语义时会撞。
   */
-  const anyPanelOpen = mapOpen || audioOpen || achievementsOpen
+  const anyPanelOpen = mapOpen || audioOpen || achievementsOpen || moreOpen
   useEffect(() => {
     if (!anyPanelOpen) return
     return pushEscapeConsumer(closeAll)
@@ -203,8 +213,15 @@ export function NavigationUI() {
       */
       data-lab-motion={motionScale}
     >
-      {/* Global achievement popup */}
-      <AchievementPopup />
+      {/*
+        成就气泡进 `bottom-center` 槽位，与滚动提示成为兄弟。
+        它原先在 globals.css 里写死 `bottom: 88px`，注释逐字写着
+        「88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距」——
+        那个手算的数现在没了（ADR 20260909182319 举的原型例子）。
+      */}
+      <EdgeItem id="lab-achievement">
+        <AchievementPopup />
+      </EdgeItem>
 
       {/* 路线字幕：每站一句（规格 lab-corridor-story.md §5.1） */}
       {tour.caption && (
@@ -246,20 +263,23 @@ export function NavigationUI() {
         </div>
       )}
 
-      {/* Back button */}
-      {isInRoom && (
+      {/*
+        房间内的返回按钮。与走廊的「← 退出 Lab」同槽位、同 order，
+        靠 `in-room` / `not-in-room` 互斥——这个约定原先只活在两个 JSX 条件里，
+        没有任何地方声明过它，于是也没有任何东西能断言它。
+      */}
+      <EdgeItem id="lab-room-back" visible={isInRoom}>
         <button
           onClick={handleBackClick}
           disabled={isTeleporting}
           aria-disabled={isTeleporting}
           style={{
-            position: 'absolute',
-            top: 20, left: 20,
-            pointerEvents: 'auto',
             background: 'rgba(255,255,255,0.9)',
             border: '1.5px solid rgba(42,31,14,0.15)',
             borderRadius: 6,
-            padding: '8px 14px',
+            // 触摸目标 44：原先 `padding: 8px 14px` + 13px 字 = 高 33px。
+            minHeight: 44,
+            padding: '0 14px',
             fontFamily: 'var(--font-sketch-bold)',
             fontSize: 13,
             color: '#2a1f0e',
@@ -279,17 +299,21 @@ export function NavigationUI() {
           </svg>
           {labels.hints.back}
         </button>
-      )}
+      </EdgeItem>
 
-      {/* Right-side controls */}
+      {/*
+        导航图标排。进 `top-bar` 槽位的右端，与左端的退出/返回是 flex 兄弟。
+
+        原先它是 `absolute (16,16)`、退出链接是 `fixed (20,20)`——**两个不同的角**，
+        谁也不知道对方多宽。320px 上实测：退出占 20→104、这排占 24→304，重叠 80px。
+        「同槽位是兄弟所以不重叠」对跨角情形不成立，所以才有 `col: 'stretch'` 这个槽位。
+      */}
+      <EdgeItem id="lab-nav">
       <div
         style={{
-          position: 'absolute',
-          top: 16, right: 16,
           display: 'flex',
           gap: 8,
           alignItems: 'center',
-          pointerEvents: 'auto',
           opacity: isUIHidden ? 0 : 1,
           transition: 'opacity 0.3s ease',
         }}
@@ -332,6 +356,22 @@ export function NavigationUI() {
           </svg>
         </NavButton>
 
+        {/*
+          窄屏只留「路线 + 地图 + 更多」三个。
+
+          为什么必须收：320px 上六个 40px 图标加间距是 280px，退出链接 84px，
+          两者相加 364 > 320——这才是那 80px 重叠的**根因**，收进同一个槽位
+          只能把「重叠」变成「挤压」，修不了「放不下」。而把触摸目标提到 44
+          会让这排变成 6×44+5×8 = 304，一个人就吃掉整个视口。
+          所以**收编与放大触摸目标是同一件事的两半，不能分批**。
+
+          留下的两个是按「进了走廊之后最可能想干什么」选的：
+          路线（用户点名要它更显眼）与地图（唯一的房间入口）。
+          其余四个是设置类，藏一层不损失可达性——而且「更多」面板里它们有**文字**，
+          比 18px 的图标更容易认。
+        */}
+        {!isNarrow && (
+        <>
         {/* Audio button */}
         <NavButton
           onClick={() => { setAudioOpen(o => !o); setMapOpen(false); setAchievementsOpen(false) }}
@@ -395,7 +435,112 @@ export function NavigationUI() {
             {nextLocaleLabel(locale)}
           </span>
         </NavButton>
+        </>
+        )}
+
+        {/* 窄屏：把音频 / 成就 / 帮助 / 语言收进「更多」。见 NARROW_KEEP 的注释 */}
+        {isNarrow && (
+          <NavButton
+            onClick={() => { setMoreOpen(o => !o); setMapOpen(false); setAudioOpen(false); setAchievementsOpen(false) }}
+            active={moreOpen}
+            aria-label={labels.panels.more}
+            aria-expanded={moreOpen}
+            data-testid="nav-more"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+            </svg>
+          </NavButton>
+        )}
       </div>
+      </EdgeItem>
+
+      {/*
+        窄屏「更多」面板：音频 / 成就 / 帮助 / 语言。
+
+        它不是把四个图标竖着排一遍——面板里给的是**文字**。18px 的奖杯与问号
+        在手机上要猜，而这四个是设置类功能、不是高频操作，多一次点击换来能读懂
+        是划算的。（顶栏留下的两个反过来：路线与地图是高频，图标 + 一次点击更好。）
+
+        样式与地图面板同源（`TORN_EDGE_CLIP`）：同一个视图里两种纸边会显得像 bug。
+      */}
+      {moreOpen && (
+        <div
+          role="dialog"
+          aria-label={labels.panels.moreTitle}
+          data-testid="more-panel"
+          style={{
+            position: 'absolute',
+            top: 68, right: 12,
+            width: 200,
+            background: '#ffffff',
+            padding: '12px 12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            fontFamily: 'var(--font-sketch-bold)',
+            pointerEvents: 'auto',
+            zIndex: 100,
+            clipPath: TORN_EDGE_CLIP,
+            filter: 'drop-shadow(0 4px 15px rgba(0,0,0,0.12))',
+          }}
+        >
+          <div style={{
+            position: 'absolute', inset: '-20%',
+            background: "url('/textures/paper-texture.webp') center center / cover",
+            zIndex: -1,
+          }} />
+
+          {[
+            {
+              key: 'audio',
+              label: labels.panels.audio,
+              onClick: () => { setMoreOpen(false); setAudioOpen(true) },
+              icon: <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none" />,
+            },
+            {
+              key: 'achievements',
+              label: labels.panels.achievements,
+              onClick: () => { setMoreOpen(false); setAchievementsOpen(true) },
+              icon: <path d="M8 21h8M12 17v4M5 4h14v5a7 7 0 0 1-7 7 7 7 0 0 1-7-7z" />,
+            },
+            {
+              key: 'help',
+              label: labels.panels.help,
+              onClick: () => { closeAll(); window.dispatchEvent(new Event(TUTORIAL_OPEN_EVENT)) },
+              icon: <path d="M9 9a3 3 0 1 1 4.6 2.5c-1 .6-1.6 1.2-1.6 2.5M12 17.5h.01" />,
+            },
+            {
+              key: 'locale',
+              label: nextLocaleLabel(locale),
+              onClick: () => { closeAll(); toggleLocale() },
+              icon: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" /></>,
+            },
+          ].map(row => (
+            <button
+              key={row.key}
+              onClick={row.onClick}
+              data-testid={`more-${row.key}`}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 10,
+                // 44：面板里的行同样是触摸目标，不因为在面板里就可以更小
+                minHeight: 44, padding: '0 4px',
+                // 写死族名而不是 'inherit'：门禁 styleTokens.test.ts 要求每个
+                // font-family 引用都能落到一条 @font-face 或系统字体上，
+                // 'inherit' 让它无法验证（实测被抓）。
+                fontFamily: 'var(--font-sketch-bold)', fontSize: 13, letterSpacing: '0.03em',
+                color: '#2a1f0e', textAlign: 'left',
+                position: 'relative', zIndex: 1,
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                {row.icon}
+              </svg>
+              {row.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Map panel — drops from top */}
       {mapOpen && (
@@ -417,18 +562,7 @@ export function NavigationUI() {
             fontFamily: 'var(--font-sketch-bold)',
             pointerEvents: 'auto',
             zIndex: 100,
-            clipPath: `polygon(
-              0% 0%, 100% 0%,
-              99% 3%, 100% 6%, 98% 10%, 100% 14%, 99% 18%, 100% 22%, 98% 26%, 100% 30%,
-              99% 35%, 100% 40%, 98% 45%, 100% 50%, 99% 55%, 100% 60%, 98% 65%, 100% 70%,
-              99% 75%, 100% 80%, 98% 85%, 100% 90%, 99% 95%, 100% 100%,
-              96% 99%, 92% 100%, 88% 98%, 84% 100%, 80% 99%, 76% 100%, 72% 98%, 68% 100%,
-              64% 99%, 60% 100%, 56% 98%, 52% 100%, 48% 99%, 44% 100%, 40% 98%, 36% 100%,
-              32% 99%, 28% 100%, 24% 98%, 20% 100%, 16% 99%, 12% 100%, 8% 98%, 4% 100%, 0% 99%,
-              1% 95%, 0% 90%, 2% 85%, 0% 80%, 1% 75%, 0% 70%, 2% 65%, 0% 60%,
-              1% 55%, 0% 50%, 2% 45%, 0% 40%, 1% 35%, 0% 30%, 2% 26%, 0% 22%,
-              1% 18%, 0% 14%, 2% 10%, 0% 6%, 1% 3%, 0% 0%
-            )`,
+            clipPath: TORN_EDGE_CLIP,
             filter: 'drop-shadow(0 4px 15px rgba(0,0,0,0.12))',
           }}
         >
@@ -446,7 +580,11 @@ export function NavigationUI() {
               onClick={() => setMapOpen(false)}
               aria-label={labels.panels.closeMap}
               data-testid="map-close"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.6, display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6,
+                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                       // 触摸目标 44：原先只有 padding:4 包一个 16px 的图标 = 24×24，
+                       // 是全 Lab 最小的可点元素。负外边距抵掉多出来的尺寸，标题行不变高。
+                       minWidth: 44, minHeight: 44, margin: -10, marginLeft: 0 }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -546,7 +684,9 @@ export function NavigationUI() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '2px dashed #bbb' }}>
             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '1.5px', color: '#1a1a1a' }}>{labels.panels.audio}</h3>
-            <button onClick={() => setAudioOpen(false)} aria-label={labels.panels.closeAudio} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
+            <button onClick={() => setAudioOpen(false)} aria-label={labels.panels.closeAudio} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              minWidth: 44, minHeight: 44, margin: -10, marginLeft: 0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
@@ -614,6 +754,24 @@ export function NavigationUI() {
 
 // ─── Small reusable nav button ────────────────────────────────────────────────
 
+/**
+ * 撕纸边的裁剪路径。地图面板与窄屏「更多」面板共用——
+ * 25 行的 polygon 抄第二份的话，改一处就会两个面板边缘不一样，
+ * 而那种不一致只有把两个面板并排截图才看得出来。
+ */
+const TORN_EDGE_CLIP = `polygon(
+    0% 0%, 100% 0%,
+    99% 3%, 100% 6%, 98% 10%, 100% 14%, 99% 18%, 100% 22%, 98% 26%, 100% 30%,
+    99% 35%, 100% 40%, 98% 45%, 100% 50%, 99% 55%, 100% 60%, 98% 65%, 100% 70%,
+    99% 75%, 100% 80%, 98% 85%, 100% 90%, 99% 95%, 100% 100%,
+    96% 99%, 92% 100%, 88% 98%, 84% 100%, 80% 99%, 76% 100%, 72% 98%, 68% 100%,
+    64% 99%, 60% 100%, 56% 98%, 52% 100%, 48% 99%, 44% 100%, 40% 98%, 36% 100%,
+    32% 99%, 28% 100%, 24% 98%, 20% 100%, 16% 99%, 12% 100%, 8% 98%, 4% 100%, 0% 99%,
+    1% 95%, 0% 90%, 2% 85%, 0% 80%, 1% 75%, 0% 70%, 2% 65%, 0% 60%,
+    1% 55%, 0% 50%, 2% 45%, 0% 40%, 1% 35%, 0% 30%, 2% 26%, 0% 22%,
+    1% 18%, 0% 14%, 2% 10%, 0% 6%, 1% 3%, 0% 0%
+  )`
+
 function NavButton({
   onClick,
   active,
@@ -635,7 +793,10 @@ function NavButton({
         background: solid ? '#2a1f0e' : active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
         border: `1.5px solid ${solid ? '#2a1f0e' : active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
         borderRadius: 8,
-        width: 40, height: 40,
+        // 44：WCAG 2.5.5 与 Apple HIG 的触摸目标下限。原先 40。
+        // 放大它必须与窄屏折叠同批——六个 44 加间距是 304px，320 视口装不下。
+        width: 44, height: 44,
+        minWidth: 44, minHeight: 44,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
         color: solid ? '#fffdf7' : '#2a1f0e',

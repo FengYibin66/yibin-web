@@ -11,6 +11,7 @@ import {
   overlaysInSlot,
   zOfLayer,
   type EdgeSlot,
+  type OverlayPresence,
 } from '@/lib/layout/overlays'
 
 /**
@@ -64,16 +65,15 @@ const KNOWN: Record<string, number> = {
   'components/lab/LabLoader.tsx': 1,
   'components/lab/PaperTransition.tsx': 1,
   'components/lab/LabTutorial.tsx': 1,
-  'components/ui/NavigationUI.tsx': 3,
+  // 收编后只剩这一个 `inset: 0` 容器（它承载 E2E 读的 data-lab-* 属性、
+  // 路线字幕与三个面板）。原先是 3：还有右上那排图标与房间内返回按钮。
+  'components/ui/NavigationUI.tsx': 1,
   // 同类：全屏模态 / 灯箱。它们盖住整屏、不占某个角，也不与屏角挂件争位置。
   // （这三个是本门禁第一次运行时替我找出来的——我起草基线时漏了它们，
   //   而漏了不会有任何症状，只会让门禁少守三处。）
   'components/gallery/GalleryLightbox.tsx': 1,
   'components/rooms/contact/MessagePaper.tsx': 1,
   'components/ui/ImagePreview.tsx': 1,
-
-  // ── 下一批收编（Lab 的屏角挂件）──
-  'components/lab/LabScene.tsx': 2,
 
   // ── 其余待收编 ──
   'components/layout/Navbar.tsx': 1,
@@ -165,15 +165,31 @@ describe('屏角声明表自身自洽', () => {
       判据：同槽位的占位者要么 presence 互斥（desktop ↔ narrow），
       要么 order 互不相同（那样它们是并排的 flex 兄弟，不会重叠）。
     */
+    /** 可证互斥的 presence 对。**只列真正互斥的**——多列一对就是给自己开豁免 */
+    const EXCLUSIVE_PAIRS: readonly (readonly [OverlayPresence, OverlayPresence])[] = [
+      ['desktop', 'narrow'],
+      ['in-room', 'not-in-room'],
+    ]
+    const isExclusive = (a: OverlayPresence, b: OverlayPresence) =>
+      EXCLUSIVE_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x))
+
     const problems: string[] = []
     for (const slot of Object.keys(EDGE_SLOTS) as EdgeSlot[]) {
       const items = overlaysInSlot(slot)
       for (let i = 0; i < items.length; i++) {
         for (let j = i + 1; j < items.length; j++) {
           const a = items[i]!, b = items[j]!
-          const exclusive =
-            (a.presence === 'desktop' && b.presence === 'narrow') ||
-            (a.presence === 'narrow' && b.presence === 'desktop')
+          /*
+            不同页面的两个挂件永远不会同时在场，不构成冲突。
+
+            这一条不是为了让门禁闭嘴：入口页的底部提示与 Lab 走廊的滚动提示
+            都是 bottom-center / order 10，判成冲突是**误报**。而误报的下场是
+            被人加豁免或删掉判据（`.claude/hooks/AGENTS.md`：
+            「误报会训练人绕过守卫，那比漏报更危险」）。
+            所以 surface 是注册表的必填字段，不是分类标签。
+          */
+          if (a.surface !== b.surface) continue
+          const exclusive = isExclusive(a.presence, b.presence)
           if (!exclusive && a.order === b.order) {
             problems.push(`${slot}：${a.id} 与 ${b.id} 同 order=${a.order} 且不互斥`)
           }
@@ -181,6 +197,18 @@ describe('屏角声明表自身自洽', () => {
       }
     }
     expect(problems, problems.join('\n')).toEqual([])
+  })
+
+  it('每条挂件的 surface 与 presence 都是声明过的取值', () => {
+    // 拼错一个 presence 字符串会让「互斥」判定静默失效——TypeScript 挡得住
+    // 字面量，但挡不住 EXCLUSIVE_PAIRS 里列了一对**表里根本没人用**的组合：
+    // 那种情况下判据看起来更宽松，而没有任何症状。
+    const used = new Set(OVERLAY_REGISTRY.map(e => e.presence))
+    for (const pres of ['in-room', 'not-in-room'] as const) {
+      expect(used.has(pres), `EXCLUSIVE_PAIRS 里列了 ${pres}，但注册表里没有任何挂件用它`)
+        .toBe(true)
+    }
+    expect(new Set(OVERLAY_REGISTRY.map(e => e.surface))).toEqual(new Set(['entry', 'lab']))
   })
 
   it('层序的 z 由下标派生且严格递增（不手写数字的保证）', () => {

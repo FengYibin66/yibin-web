@@ -23,6 +23,7 @@ import { LabTutorial } from './LabTutorial'
 import { useEscapeRouter } from './useEscapeRouter'
 import { RoomLoadingIndicator } from './RoomLoadingIndicator'
 import { NavigationUI } from '@/components/ui/NavigationUI'
+import { EdgeItem, EdgeLayerRoot } from '@/components/layout/EdgeLayer'
 
 import { useCorridorCamera } from '@/hooks/useCorridorCamera'
 import {
@@ -227,37 +228,49 @@ function LabCanvas() {
         onBack={handleBackFromFailure}
       />
 
-      {!isInRoom && (
-        <div style={{
-          position: 'absolute',
-          bottom: '32px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          textAlign: 'center',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em', color: OVERLAY_COLORS.hint, margin: 0 }}>
+      <PaperTransition />
+
+      {/*
+        屏角挂件（ADR 20260909182319）。退出链接、导航图标排、底部提示、成就气泡
+        原先各自写 `fixed` / `absolute` 与 z 值：退出链接 `fixed (20,20) z50`
+        与 `NavigationUI` 右上那排 `absolute (16,16)` **分属两个角**，
+        320px 上实测重叠 80px；提示与气泡之间靠 CSS 里一个手算的 `bottom: 88px`
+        隔开。现在都是槽位里的 flex 兄弟。
+
+        `NavigationUI` 必须在这层里面——它的返回按钮与图标排是 `EdgeItem`，
+        要拿到 `SlotContext`。它自己的 DOM 仍留在原处（EdgeItem 是 portal）。
+      */}
+      <EdgeLayerRoot>
+        <EdgeItem id="lab-exit" visible={!isInRoom}>
+          <a
+            href="/"
+            style={{
+              fontFamily: 'var(--font-mono)', fontSize: '12px', color: OVERLAY_COLORS.exitLab,
+              textDecoration: 'none', letterSpacing: '0.1em',
+              // 触摸目标：文字本身只有 18px 高。padding 撑到 44 而不是给它一个
+              // 视觉边框——顶栏已经有六个带框的按钮，第七个框会让"退出"看起来
+              // 和它们同级，而它是唯一离开 Lab 的出口。
+              display: 'inline-flex', alignItems: 'center',
+              minHeight: 44, paddingInline: 4,
+            }}
+            data-testid="lab-exit-link"
+          >
+            ← {labels.panels.exitLab}
+          </a>
+        </EdgeItem>
+
+        <EdgeItem id="lab-scroll-hint" visible={!isInRoom}>
+          <p style={{
+            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.4em',
+            color: OVERLAY_COLORS.hint, margin: 0, textAlign: 'center',
+          }}>
             {(isTouch ? labels.hints.swipeUpDown : labels.hints.scroll).toUpperCase()}
           </p>
-        </div>
-      )}
+        </EdgeItem>
 
-      {!isInRoom && (
-        <a
-          href="/"
-          style={{
-            position: 'fixed', top: '20px', left: '20px', zIndex: 50,
-            fontFamily: 'var(--font-mono)', fontSize: '12px', color: OVERLAY_COLORS.exitLab,
-            textDecoration: 'none', letterSpacing: '0.1em',
-          }}
-        >
-          ← {labels.panels.exitLab}
-        </a>
-      )}
+        <NavigationUI />
+      </EdgeLayerRoot>
 
-      <PaperTransition />
-      <NavigationUI />
       <LabTutorial />
 
     </div>

@@ -95,6 +95,8 @@ export const en: SiteContent = {
       closeMap: 'Close map',
       tour: 'Show me around',
       stopTour: 'Stop the tour',
+      more: 'More',
+      moreTitle: 'More',
       help: 'How to explore',
       exitLab: 'Exit Lab',
       toggleLanguage: '切换到中文',

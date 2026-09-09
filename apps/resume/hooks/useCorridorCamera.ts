@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { corridorKeyDelta } from '@/lib/lab/domain/corridor/keyboard'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import gsap from 'gsap'
 
 import { registerCorridorRail } from '@/lib/lab/app/camera/corridorRail'
 import { setRail } from '@/lib/lab/app/stores/corridorStore'
@@ -17,6 +18,9 @@ import {
 } from '@/lib/lab/domain/corridor/layout'
 
 // 门的相对 Z 与侧墙来自 domain —— 原先这里自带一份拷贝（审计 B3）
+
+/** scrollTo 到站的容差（世界单位） */
+const ARRIVE_EPS = 0.4
 
 const GLANCE_START_DIST = 15
 const GLANCE_PEAK_DIST  = 8
@@ -70,16 +74,77 @@ export function useCorridorCamera({
     `update()` 才应用，而 `update()` 在非持有态直接 return）。
     详见 `lib/lab/app/camera/corridorRail.ts` 的说明。
   */
+  /*
+    导轨的独占者（ADR 20260908204302）。持有期间输入处理函数不写 targetZ，
+    改为通知持有者；`scrollTo` 的 tween 在 release / 新 scrollTo / 卸载时撤销。
+  */
+  const holdRef = useRef<{ owner: string; onInput: () => void } | null>(null)
+  const scrollTween = useRef<gsap.core.Tween | null>(null)
+  const scrollReject = useRef<((reason: Error) => void) | null>(null)
+  /*
+    tween 结束只说明 targetZ 到了；currentZ 以 smoothing 跟随，还差一截。到站的判定
+    放到 useFrame 里：|currentZ − z| < ARRIVE_EPS 才 resolve，字幕与 data-tour-stop
+    不会在相机还在路上时就翻成"已到站"。
+  */
+  const arriveRef = useRef<{ z: number; resolve: () => void } | null>(null)
+
+  const cancelScroll = useCallback((reason: string) => {
+    scrollTween.current?.kill()
+    scrollTween.current = null
+    arriveRef.current = null
+    const reject = scrollReject.current
+    scrollReject.current = null
+    reject?.(new Error(reason))
+  }, [])
+
   useEffect(() => registerCorridorRail({
     jumpTo(z) {
       // 目标与当前值一起设：只设目标的话相机会平滑滑过去，而传送要的是瞬移
       targetZ.current = z
       currentZ.current = z
-      // 传送本身就算"探索过了"——否则那条教程气泡会在落地后才弹出来
       exploredRef.current = true
       startZRef.current = z
     },
-  }), [])
+    scrollTo(z, { duration, ease = 'power1.inOut' }) {
+      cancelScroll('scrollTo 被新的 scrollTo 取代')
+      return new Promise<void>((resolve, reject) => {
+        scrollReject.current = reject
+        const proxy = { z: targetZ.current }
+        scrollTween.current = gsap.to(proxy, {
+          z,
+          duration,
+          ease,
+          onUpdate: () => { targetZ.current = proxy.z },
+          onComplete: () => {
+            scrollTween.current = null
+            exploredRef.current = true
+            arriveRef.current = { z, resolve }
+          },
+        })
+      })
+    },
+    hold(owner, onInput) {
+      // 已被别人持有：拒绝而不是夺权（夺权会让原持有者的 release 落空，导轨永久锁死）
+      if (holdRef.current && holdRef.current.owner !== owner) return false
+      holdRef.current = { owner, onInput }
+      return true
+    },
+    release(owner) {
+      if (holdRef.current?.owner !== owner) return
+      holdRef.current = null
+      cancelScroll(`${owner} 释放了导轨`)
+    },
+  }), [cancelScroll])
+
+  useEffect(() => () => cancelScroll('导轨卸载'), [cancelScroll])
+
+  /** 被独占时：不写 targetZ，通知持有者；返回 true 表示输入已被拦截 */
+  const interceptInput = useCallback((): boolean => {
+    const held = holdRef.current
+    if (!held) return false
+    held.onInput()
+    return true
+  }, [])
   const glance        = useRef(0)
   const targetGlance  = useRef(0)
 
@@ -96,8 +161,9 @@ export function useCorridorCamera({
   const handleWheel = useCallback((e: WheelEvent) => {
     if (!scrollEnabledRef.current) return
     e.preventDefault()
+    if (interceptInput()) return
     targetZ.current = targetZ.current - e.deltaY * scrollSpeed
-  }, [scrollSpeed])
+  }, [scrollSpeed, interceptInput])
 
   const setCameraOverride = useCallback((active: boolean) => {
     cameraOverrideRef.current = active
@@ -132,8 +198,9 @@ export function useCorridorCamera({
     const d = corridorKeyDelta(e.key, e.target as HTMLElement | null)
     if (d === null) return
     e.preventDefault()
+    if (interceptInput()) return
     targetZ.current = targetZ.current - d * scrollSpeed
-  }, [scrollSpeed])
+  }, [scrollSpeed, interceptInput])
 
   // After any touch, browsers fire a synthetic mousemove at the tap position.
   // Without this guard, tapping the left/right half of a phone screen would
@@ -178,11 +245,14 @@ export function useCorridorCamera({
     }
 
     if (s.axis === 'walk') {
+      if (interceptInput()) return
       targetZ.current = nextTargetZ(targetZ.current, deltaY, scrollSpeed)
     } else {
+      // 路线中横向滑动也算"我要接管"——否则镜头能被拧到侧墙而字幕照常推进
+      if (interceptInput()) return
       targetLook.current.x = nextLookX(targetLook.current.x, deltaX, window.innerWidth, lookIntensity)
     }
-  }, [scrollSpeed, lookIntensity])
+  }, [scrollSpeed, lookIntensity, interceptInput])
 
   useEffect(() => {
     window.addEventListener('keydown',    handleKeyDown)
@@ -214,6 +284,14 @@ export function useCorridorCamera({
 
     // Smooth Z (no lower bound — infinite)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing)
+
+    // scrollTo 的到站判定（见 arriveRef）
+    const arrive = arriveRef.current
+    if (arrive && Math.abs(currentZ.current - arrive.z) < ARRIVE_EPS) {
+      arriveRef.current = null
+      scrollReject.current = null
+      arrive.resolve()
+    }
 
     /*
       「开始探索」的判定：按**位移**，不按输入事件类型。滚轮 / 触摸 / 键盘

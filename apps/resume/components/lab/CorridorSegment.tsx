@@ -10,6 +10,9 @@ import { Avatar } from './Avatar'
 import { HeroText } from './HeroText'
 import { Doodles } from './Doodles'
 import { ResidentCat } from './companions/ResidentCat'
+import { CorridorWindow } from './CorridorWindow'
+import { YearMark } from './YearMark'
+import { TimelineNotes } from './TimelineNotes'
 import { useLabLabels } from '@/hooks/useLabLabels'
 import { SEGMENT_LENGTH, doorWallX, segmentStartZ } from '@/lib/lab/domain/corridor/layout'
 import { landmarksInSegment, type Landmark } from '@/lib/lab/domain/corridor/landmarks'
@@ -92,9 +95,12 @@ function renderLandmark(
       return null
 
     // 第 3 期：窗（三扇窗三座城）/ 年份刻度（时间线墙）
+    /* 三扇窗与年份刻度（ADR 20260908204303）：位置在地标表，这里只画 */
     case 'window':
+      return <CorridorWindow key={landmark.id} city={landmark.city} z={z} side={landmark.side} />
+
     case 'year-mark':
-      return null
+      return <YearMark key={landmark.id} year={landmark.year} z={z} side={landmark.side} />
   }
 }
 
@@ -120,6 +126,12 @@ function CorridorSegmentInner({ segmentIndex, setCameraOverride }: CorridorSegme
           setCameraOverride,
         }),
       )}
+
+      {/*
+        履历便签只在第 0 段（规格 lab-corridor-story.md §2.3）。它们不是地标——
+        位置由 timeline.ts 从简历数据派生、随语言重算文案——所以不走 renderLandmark。
+      */}
+      {segmentIndex === 0 && <TimelineNotes zStart={zStart} />}
 
       {/* ── Wall decorations (paintings, plants, lamps) ── */}
       <CorridorDecorations

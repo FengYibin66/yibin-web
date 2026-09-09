@@ -5,6 +5,10 @@ import {
   inkLevel,
   loadInkOrder,
   loadIntroInk,
+  LAP_INK,
+  introDrawLevel,
+  INTRO_TEAR_AT,
+  INTRO_DRAWN_AT,
   type InkInputs,
 } from '@/lib/lab/domain/corridor/ink'
 import { inkableLandmarkIds } from '@/lib/lab/domain/corridor/landmarks'
@@ -45,10 +49,14 @@ describe('显形策略', () => {
       expect(inkLevel(someId, { ...base, inked: new Set([someId]) })).toBe(1)
     })
 
-    it('圈数：第 2 圈（lap ≥ 1）起全部上色', () => {
-      expect(inkLevel(someId, { ...base, lap: 0 })).toBe(0)
-      expect(inkLevel(someId, { ...base, lap: 1 })).toBe(1)
-      expect(inkLevel(someId, { ...base, lap: 7 })).toBe(1)
+    it('圈数：第 2 圈（lap ≥ 1）起未访问的门有底色（LAP_INK），但不到 1 —— 记忆仍可辨', () => {
+      expect(inkLevel('door-about', { inked: new Set(), lap: 1 })).toBe(LAP_INK)
+      expect(inkLevel('door-about', { inked: new Set(), lap: 3 })).toBe(LAP_INK)
+      expect(inkLevel('door-about', { inked: new Set(['door-about']), lap: 1 })).toBe(1)
+      // 悬停仍能把它推满
+      expect(inkLevel('door-about', { inked: new Set(), lap: 1, hover: 1 })).toBe(1)
+      expect(LAP_INK).toBeGreaterThan(0.3)
+      expect(LAP_INK).toBeLessThan(0.8)
     })
 
     it('悬停：直接透传，且被夹在 0–1', () => {
@@ -103,7 +111,32 @@ describe('显形策略', () => {
     })
   })
 
-  describe('过场：loadIntroInk（已定义、未接线）', () => {
+  describe('加载期时间窗：introDrawLevel（决定 D）', () => {
+    it('30% 之前一笔没画，90% 之后画完，中间线性', () => {
+      expect(introDrawLevel(0)).toBe(0)
+      expect(introDrawLevel(INTRO_TEAR_AT)).toBe(0)
+      expect(introDrawLevel(0.6)).toBeCloseTo(0.5, 6)
+      expect(introDrawLevel(INTRO_DRAWN_AT)).toBe(1)
+      expect(introDrawLevel(1)).toBe(1)
+    })
+
+    it('坏进度夹在 0–1', () => {
+      for (const p of [Number.NaN, -1, 5]) {
+        const v = introDrawLevel(p)
+        expect(v).toBeGreaterThanOrEqual(0)
+        expect(v).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('与 loadIntroInk 串起来：30% 时所有门都还是空白，90% 时全画完', () => {
+      for (const id of inkableLandmarkIds()) {
+        expect(loadIntroInk(id, introDrawLevel(0.3))).toBe(0)
+        expect(loadIntroInk(id, introDrawLevel(0.9))).toBe(1)
+      }
+    })
+  })
+
+  describe('过场：loadIntroInk（LabLoader 经 corridorStore.loadProgress 驱动 DoorSection 的 uDraw）', () => {
     it('loadInkOrder 覆盖全部可显形地标，序号从 0 起连续', () => {
       const ids = inkableLandmarkIds()
       const orders = ids.map(id => loadInkOrder(id))

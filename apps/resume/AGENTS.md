@@ -94,7 +94,7 @@ grep -rl <模块> app components context hooks lib   # 有非测试命中才算�
 | ADR | 目标 | 实际状态 |
 |-----|------|-----------|
 | [20260903140615](../../docs/adr/20260903140615-lab-room-registry-and-derived-assets.md) | 房间由 `lib/lab/domain/rooms/` 的 `RoomDefinition` 声明；预载表是**派生生成物** | **已接线**（`20260903211338`）：`RoomInterior` 按 `components/rooms/registry.ts` 分发（`React.lazy`，没有 `switch`）、教程从 `RoomDefinition.tutorial` 读、预载走 `lib/lab/app/assets/preload.ts`（读生成物），手写的 `roomAssets.ts` 与 `texturePreload.ts` 的走廊部分已删。首屏壁画 3 段 → 1 段，**省 1466 KB**。`view` 已移出 domain（它曾让 domain import react）。<br>`entryPose` / `cameraFreedom` 三间房（Projects / About / Contact）都已消费（2026-09-04 接上 About / Contact，带截图标定；门禁 `roomCameraWiring.test.ts`）。<br>**已核实为误判**：PR #12 说「生成物未加入 hook 保护名单」是错的——`.claude/hooks/pre-generated-edit.sh` 按 `\.gen\.(ts|tsx|go|py)$` 匹配，`manifest.gen.ts` 天然受保护（实测被拦）。|
-| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **房间生命周期已接线**（`20260903211338`）：`SceneContext` 用 `useMachine(roomMachine)`，手写的 `roomLoadMachine.ts` + `doorEntryFlow.ts` 已删；8 秒超时是 `loading` 的一行 `after`（取代 `setTimeout` + 3 个互相看护的 ref），进房所有权从机器 context 派生，**审计 A8 的 `entered → failed` 边现在运行时真的存在**。`useDoorEntryOrchestrator` 从 5 个 effect / 4 个 ref 缩到 2 个 effect / 1 个 ref。`@xstate/graph` 已用于全路径覆盖（`roomMachineFlow.test.ts`）。<br>**仍未接线**：`corridor.machine` 运行时零引用（走廊传送仍是 `SceneContext` 里的手写 state + `cancelTeleport`，`teleporting.aborted` 那条边没有消费方）；`dockMachine` 只有 Projects 用，Publications 仍是 `publicationMotionMachine`。<br>**接线时发现的五个缺口**（机器定义好但从未被运行时走过，所以没人发现）：① `mounting` 缺 `READY` 边——纹理已缓存的房间不 Suspend、拿不到 `MOUNTED`，会永久卡住（即「第二次进同一间房」这条最常见路径）；② `tryRoom` 若读渲染快照而非 actor，同一 tick 内连点两下门会两次都判合法；③ **`MOUNTED` 没有发送方**（`RoomInterior.onLoading` 默认 NOOP、`DoorSection` 没传）→ `loading` 生产不可达 → **8 秒加载超时永远不启动**；④ **`EXIT_DONE` 没有发送方**——退场收尾复用了 `RESET`，现已拆成 `finishRoomExit()`；⑤ **`BACK` 4 条边全是死的**——目标与动作和 `RESET` 逐字相同且无人发送，已删。③④⑤ 由新门禁 `__tests__/machineEventWiring.test.ts` 抓出：**图上有边 ≠ 运行时有人发**，而机器测试与全路径覆盖都会自己 `send()`，照样全绿 |
+| [20260903140616](../../docs/adr/20260903140616-lab-xstate-and-zustand-replace-context.md) | 生命周期用 XState 状态图；共享状态用 zustand | **房间生命周期已接线**（`20260903211338`）：`SceneContext` 用 `useMachine(roomMachine)`，手写的 `roomLoadMachine.ts` + `doorEntryFlow.ts` 已删；8 秒超时是 `loading` 的一行 `after`（取代 `setTimeout` + 3 个互相看护的 ref），进房所有权从机器 context 派生，**审计 A8 的 `entered → failed` 边现在运行时真的存在**。`useDoorEntryOrchestrator` 从 5 个 effect / 4 个 ref 缩到 2 个 effect / 1 个 ref。`@xstate/graph` 已用于全路径覆盖（`roomMachineFlow.test.ts`）。<br>**`corridor.machine` 已接线**（[20260908204302](../../docs/adr/20260908204302-corridor-touring-mode-wires-the-corridor-machine.md)，2026-09-08）：`SceneContext` 的五个传送布尔 + `useRef` 镜像改为机器快照派生，`teleporting.aborted` 有了消费方（`cancelTeleport` → `ROOM_FAILED` / `TELEPORT_ABORT`），新增 `touring`；走廊模式 `free / touring / teleporting / inRoom` 由它派生到 `world.mode` 与 `html[data-lab-mode]`。机器从 `loading` 起步，`LabLoader` 稳定完成后经模块级信号 `lib/lab/app/labLoaded.ts` 送 `LOADED`（LabLoader 与 SceneProvider 在 `LabClient` 里是兄弟，不能用 context——第一版这么写把整个 Lab 弄崩了）。<br>**仍未接线**：`dockMachine` 只有 Projects 用，Publications 仍是 `publicationMotionMachine`。<br>**接线时发现的五个缺口**（机器定义好但从未被运行时走过，所以没人发现）：① `mounting` 缺 `READY` 边——纹理已缓存的房间不 Suspend、拿不到 `MOUNTED`，会永久卡住（即「第二次进同一间房」这条最常见路径）；② `tryRoom` 若读渲染快照而非 actor，同一 tick 内连点两下门会两次都判合法；③ **`MOUNTED` 没有发送方**（`RoomInterior.onLoading` 默认 NOOP、`DoorSection` 没传）→ `loading` 生产不可达 → **8 秒加载超时永远不启动**；④ **`EXIT_DONE` 没有发送方**——退场收尾复用了 `RESET`，现已拆成 `finishRoomExit()`；⑤ **`BACK` 4 条边全是死的**——目标与动作和 `RESET` 逐字相同且无人发送，已删。③④⑤ 由新门禁 `__tests__/machineEventWiring.test.ts` 抓出：**图上有边 ≠ 运行时有人发**，而机器测试与全路径覆盖都会自己 `send()`，照样全绿 |
 | [20260903140617](../../docs/adr/20260903140617-lab-single-camera-owner.md) | **只有 `lib/lab/app/camera/CameraDirector` 能写相机**，底层 `camera-controls`；手势用 `@use-gesture` | **部分落地，且所有权形态已被 [20260903211244](../../docs/adr/20260903211244-lab-camera-owner-is-explicit-not-suspended-flag.md) 修订**：`suspended` 布尔让三处出错——进房时导演与 DoorSection 的 gsap **同帧双写约 2 秒**（靠 rAF 顺序侥幸不出事）、传送的 `moveToWorld({duration:0})` 在挂起态是**空操作**、About 的 `setLean` 是**死代码**。手势未迁移，`@use-gesture` 未安装 |
 | [20260903140618](../../docs/adr/20260903140618-lab-audio-howler-mixer.md) | 单一 `AudioMixer`（howler + spatial），三条总线 | **已落地**：四套实现收成一套，环境音重编码 6.8MB → 1.7MB。这是五份里唯一完整落地的 |
 | [20260903140619](../../docs/adr/20260903140619-lab-external-assets-and-runtime-sketch.md) | 外部素材许可记录 + Rough.js 运行时草图；Projects 重做 | **部分落地**：手写层（roughjs）+ Projects 重做 + 平台隐喻已去 + Gallery 门贴纸已换。许可记录（`public/CREDITS.md`）当时**未创建**，已补；ADR 表里列的 Doodle Icons / Open Doodles / freesound / Excalidraw **实际一个都没用**，出入见 `public/CREDITS.md` 文末 |
@@ -325,11 +325,17 @@ StrictMode 残值那条红。
 | 层 | 文件 | 职责 |
 |----|------|------|
 | domain | `lib/lab/domain/corridor/world.ts` | 形状 + 纯派生（`lapAt` / `smoothVelocity` / `motionOf` / `nearestDoorAhead` / `visitedNow`） |
-| domain | `lib/lab/domain/corridor/landmarks.ts` | **一切有位置的东西**的一张表（门 / 家具 / 欢迎区 / 彩蛋 / 段末门，将来加窗与年份刻度） |
-| domain | `lib/lab/domain/corridor/ink.ts` | 显形策略（稳态 `max(记忆, 圈数, 悬停)`；过场 `loadIntroInk` 单独导出） |
+| domain | `lib/lab/domain/corridor/landmarks.ts` | **一切有位置的东西**的一张表（门 / 家具 / 欢迎区 / 彩蛋 / 段末门 / 三扇窗 / 年份刻度 / 猫的驻点）。窗与刻度由 `layout.ts` 的 `CORRIDOR_WINDOWS` 与 `timeline.ts` 的 `placeYearMarks()` **派生**填入，不手写坐标；壁画避让 `muralKeepOuts()` 全部从这张表来（手写对照表已删） |
+| domain | `lib/lab/domain/corridor/ink.ts` | 显形策略（稳态 `max(记忆, 圈数, 悬停)`；过场 `loadIntroInk` + `introDrawLevel`，由 LabLoader 经 `loadProgress` 驱动门的 `uDraw`） |
+| domain | `lib/lab/domain/corridor/timeline.ts` / `worldClock.ts` | 时间线映射（第 0 段 −6 → −90 铺 2017 → 2026）与刻度 / 便签的避让落点；三扇窗的当地时刻与天色（纯函数、注入 `now`） |
+| domain | `lib/lab/domain/corridor/dog.ts` / `companion.ts` / `speech.ts` / `footsteps.ts` / `tour.ts` | 狗的八态 reducer；猫的三态滞回；气泡互斥 / 冷却 / 优先级；按位移计步；招聘官路线的停靠表与计划 |
+| domain | `lib/lab/domain/machines/corridor.machine.ts` | 走廊模式（`free / touring / teleporting / inRoom`）的唯一来源；`SceneContext` 的传送字段全部由它派生 |
 | app | `lib/lab/app/stores/corridorStore.ts` | 运行时持有者（zustand）。每帧量在模块级对象里，离散量走 selector |
 | app | `lib/lab/app/motion.ts` | `prefers-reduced-motion` 的唯一入口 |
 | app | `lib/lab/app/memory.ts` | `visited` / `inked` 持久化，带版本号 |
+| app | `lib/lab/app/stores/speechStore.ts` | 气泡的持有者（规则在 domain）；`bubble_pop` 在这里响 |
+| app | `lib/lab/app/camera/corridorRail.ts` | 导轨命令面：`jumpTo` / `scrollTo` / `hold` / `release`（实现在 `useCorridorCamera` 内，不产生第二个相机写点） |
+| hooks | `hooks/useTour.ts` | 招聘官路线控制器：互斥归状态机、运动归导轨、内容归 domain，它只按计划调命令 |
 
 **四条硬规则**：
 
@@ -373,8 +379,11 @@ StrictMode 残值那条红。
 门禁 `motionConsumers.test.ts` 守「每个时间驱动的 `useFrame` 都读过开关」，走廊层
 与房间层现在都是**零例外**（`ROOM_LEVEL_PENDING` 已清空，只能变短）。
 
-**走廊的活物**（ADR 20260908160918）：目前一只猫，`components/lab/companions/`。
-两条来自实测的硬约束：
+**走廊的活物**（ADR 20260908160918）：一只猫（`ResidentCat`，走廊尽头驻守）和一只狗
+（`GuideDog`，跟着玩家跨段跑，由 `LabScene` 全局挂载，**不在地标表里**——地标表的 schema
+要求段内位置，一只会动的狗没有；成就用 `corridor-companion` trigger 引用）。狗的素材是仓库内
+手写 SVG（`media-src/textures/companion/`），`scripts/media/companion-parts.mjs` 逐组栅格化并
+校验枢轴。来自实测的硬约束：
 
 - **活物驻点距同侧门必须 > 15 单位**（门禁 `corridorLandmarks.test.ts`）。猫原本
   坐在柜顶（−49）守着相框，而 Gallery 门在 −44 —— 相机走到能看见柜子的距离时，
@@ -384,8 +393,22 @@ StrictMode 残值那条红。
 - **必须有接触阴影**。白色线稿的活物贴在白地板上像一张贴纸（HN 对 "My Room in 3D"
   的批评：椅子会动而阴影不动）。走廊全是 `meshBasicMaterial`，阴影只能手画一块
   压扁的淡色椭圆。
-- 状态写到 `html[data-lab-cat]`：3D 物件不在 DOM 里，没有它就无法断言"靠近会醒"。
-  同 `data-reveal-arrival` 的先例。
+- 状态写到 `html[data-lab-cat]` / `html[data-lab-dog]`：3D 物件不在 DOM 里，没有它就无法断言
+  "靠近会醒"。同 `data-reveal-arrival` 的先例。**每帧与 DOM 上的当前值比对再写**，不要记
+  "上次写过什么"：Suspense 在邻居加载时会把子树隐藏再显示，cleanup 跑过一次属性就没了，
+  而 ref 还在——狗第一版就这么丢过。
+- **狗不换道**。规格初稿要它走下一扇门的对侧、在相机后方换道；门每 12 单位左右交替，
+  狗就每过一扇门消失两秒。几何上侧道 x = 1.4 离墙上的门够远、翻板转 30° 也挡不到，
+  换道解决的是不存在的问题。登场选一次道，之后不换（`dog.ts` 文件头）。
+- **脚底偏移的符号**：画稿里脚底在画布中心下方，所以画布中心要放在 `FLOOR_Y` **上方**
+  `(FOOT_V − 0.5) × 边长`。第一版写成减号，狗整个埋在地板下面，三张巡检截图里一只都没有——
+  「状态机在跑、DOM 属性在变、画面里没有」这种组合，先查 y。
+
+**加载期的"画出来"（决定 D，按实测修订）**：走廊整个在一个 Suspense 边界里，墙 / 地板 / 门
+等最后一张纹理到位才一起出现——限速到 2 Mbps 实测，"30% 提前撕开"撕开后是一片空白。
+所以撕开仍在完成时，`RevealMaterial` 的 `uDraw`（透明 → 线稿）与撕纸同步把五扇门画出来
+（1.8 s），加载期 `rail.hold('loader')`：这张纸 `pointerEvents: none`，滚轮原本能穿过去把
+走廊滚跑。要真做到"边加载边画"得把 Suspense 边界拆到每个物件，那是另一次架构改动。
 
 **显形（墨迹）**：`RevealMaterial` 的 `uProgress` 有四个来源，而 uniform 只有一个，
 所以它是一条策略而不是三处各写。稳态 = `max(记忆, 圈数, 悬停)`；**加载显形不在
@@ -523,6 +546,8 @@ pnpm build               # 静态导出到 out/
 
 # 素材流水线（改了 media-src/ 下的源才需要跑；--check 只报告）
 node scripts/lab/gen-asset-manifest.mjs      # 纹理预载表（派生生成物）
+#   ↑ 改过任何 useTexture / useLoader 的引用就要重跑：它按 import 可达性派生，
+#     漏跑时本地一切正常、CI 的 resume 步骤直接红（栽过：CorridorWindow 复活后漏了窗框纹理）
 node scripts/media/encode-audio.mjs          # 音频重编码
 node scripts/media/gallery-door.mjs          # Gallery 门贴纸
 node scripts/media/optimize-textures.mjs     # 入口页纹理

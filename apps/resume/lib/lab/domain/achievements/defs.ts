@@ -28,6 +28,14 @@ export type AchievementTrigger =
    * 分开是因为走廊不是房间：`room-interaction` 需要一个 roomId，而走廊没有。
    */
   | { kind: 'corridor-interaction'; landmarkId: string }
+  /**
+   * 陪伴型活物的累计行为（狗跟跑 30 s）。它跟着玩家跨段走、不在地标表里，
+   * 所以不能用 `corridor-interaction` 的 landmarkId 引用——一只会动的狗没有
+   * "位置"这个属性。
+   */
+  | { kind: 'corridor-companion'; companion: 'dog' | 'cat' }
+  /** 招聘官路线走完（控制器上报） */
+  | { kind: 'tour-complete' }
   /** 独立路由 /gallery 里打开照片。**在 AchievementsProvider 之外**，
    *  所以必须走模块级存储——这正是 D1 的修法 */
   | { kind: 'gallery-route' }
@@ -96,6 +104,19 @@ export const ACHIEVEMENT_DEFS: Readonly<Record<AchievementId, AchievementDefinit
     titleKey: 'pet_cat',
     // 解锁源是**走廊里**的一个地标，不是房间——见 corridor-interaction 的说明
     unlockedBy: { kind: 'corridor-interaction', landmarkId: 'resident-cat' },
+    persisted: true,
+  },
+  dog_companion: {
+    id: 'dog_companion',
+    titleKey: 'dog_companion',
+    // 累计计时在狗的 reducer 里（domain/corridor/dog.ts），满 30 s 输出一次事件
+    unlockedBy: { kind: 'corridor-companion', companion: 'dog' },
+    persisted: true,
+  },
+  tour_complete: {
+    id: 'tour_complete',
+    titleKey: 'tour_complete',
+    unlockedBy: { kind: 'tour-complete' },
     persisted: true,
   },
 }

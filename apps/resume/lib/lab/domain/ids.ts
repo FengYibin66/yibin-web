@@ -34,8 +34,12 @@ export const ACHIEVEMENT_IDS = [
   'gallery_inspect',
   'contact_found',
   'publications_read',
-  /** 摸了柜子上那只守相框的猫（ADR 20260908160918） */
+  /** 摸了走廊尽头打盹的猫（ADR 20260908160918） */
   'pet_cat',
+  /** 小狗陪跑累计 30 秒（规格 lab-companions.md §4） */
+  'dog_companion',
+  /** 让路线带着走完一遍（ADR 20260908204302）；中途退出不算 */
+  'tour_complete',
 ] as const
 export type AchievementId = (typeof ACHIEVEMENT_IDS)[number]
 

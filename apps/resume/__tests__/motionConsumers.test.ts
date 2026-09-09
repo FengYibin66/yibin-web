@@ -54,13 +54,37 @@ const MOTION_MODULES = ['@/hooks/useMotionScale', '@/lib/lab/app/stores/corridor
 const ROOM_LEVEL_PENDING: readonly string[] = []
 
 /** 由时间驱动（= 自发运动）的文件 */
+/**
+ * 判据：`useFrame` 且（读时钟 **或** 用回调的第二个形参 delta）。
+ * 第一版只认时钟：`useFrame((_, delta) => …)` 用 dt 推进相位的自发运动（狗）看不见，
+ * 门禁没红只是因为作者恰好读了开关——判据要覆盖实际写法，不是覆盖当时恰好存在的写法。
+ */
+export function isTimeDriven(source: string): boolean {
+  const usesFrame = source.includes('useFrame')
+  const readsClock = source.includes('clock.elapsedTime') || source.includes('clock.getElapsedTime')
+  const usesDelta = /useFrame\(\s*\(\s*[\w$_]*\s*,\s*[\w$_]+\s*\)\s*=>/.test(source)
+  return usesFrame && (readsClock || usesDelta)
+}
+
+/**
+ * 用 delta 做**阻尼平滑**（相机 / 停靠 / hover 显形 / 轮播滚动向用户设定的目标逼近）的文件：
+ * 它们随时间变，但不是自发运动——目标由用户动作决定，停手就停。判据放宽到 delta 后会把它们
+ * 一并抓进来，所以显式豁免；每一项必须**不读时钟**（读了就是真运动，不该在这里）。
+ * 这份名单只能变短。
+ */
+const USER_DRIVEN_SMOOTHING: readonly string[] = [
+  'components/lab/CameraRig.tsx',
+  'components/lab/CorridorDecorations.tsx',
+  'components/rooms/projects/ProjectMonitor.tsx',
+  'components/rooms/publications/usePublicationCarousel.ts',
+]
+
 function timeDrivenFiles(dir: string): string[] {
   const out: string[] = []
   for (const file of walkSources(join(ROOT, dir))) {
-    const source = readFileSync(file, 'utf8')
-    const usesFrame = source.includes('useFrame')
-    const readsClock = source.includes('clock.elapsedTime') || source.includes('clock.getElapsedTime')
-    if (usesFrame && readsClock) out.push(relative(ROOT, file))
+    const rel = relative(ROOT, file)
+    if (USER_DRIVEN_SMOOTHING.includes(rel)) continue
+    if (isTimeDriven(readFileSync(file, 'utf8'))) out.push(rel)
   }
   return out.sort()
 }
@@ -108,6 +132,33 @@ describe('持续动画必须读动效开关', () => {
   it('清单里的每个文件都真实存在（防僵尸豁免）', () => {
     for (const file of ROOM_LEVEL_PENDING) {
       expect(() => readFileSync(join(ROOT, file), 'utf8'), `${file} 不存在`).not.toThrow()
+    }
+  })
+})
+
+describe('判据自测：时间驱动的两种写法都认', () => {
+  it('读时钟', () => {
+    expect(isTimeDriven("useFrame(state => { mesh.rotation.y = state.clock.elapsedTime })")).toBe(true)
+  })
+  it('用 delta 推进', () => {
+    expect(isTimeDriven("useFrame((_, delta) => { phase.current += delta })")).toBe(true)
+    expect(isTimeDriven("useFrame((state, dt) => { t += dt })")).toBe(true)
+  })
+  it('只读一次状态、不随时间变的 useFrame 不算', () => {
+    expect(isTimeDriven("useFrame(() => { mesh.visible = camera.position.z < 10 })")).toBe(false)
+    expect(isTimeDriven("useFrame(state => { syncListener(state.camera) })")).toBe(false)
+  })
+  it('没有 useFrame 就不算，哪怕有 delta 字样', () => {
+    expect(isTimeDriven("const delta = 1; setInterval(() => {}, delta)")).toBe(false)
+  })
+})
+
+describe('阻尼平滑的豁免名单', () => {
+  it('每一项都存在，用 delta，且不读时钟（读了就是真运动，不该被豁免）', () => {
+    for (const rel of USER_DRIVEN_SMOOTHING) {
+      const source = readFileSync(join(ROOT, rel), 'utf8')
+      expect(source.includes('useFrame'), rel).toBe(true)
+      expect(source.includes('clock.elapsedTime') || source.includes('clock.getElapsedTime'), `${rel} 读了时钟`).toBe(false)
     }
   })
 })

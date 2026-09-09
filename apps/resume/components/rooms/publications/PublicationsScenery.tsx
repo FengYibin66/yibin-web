@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { useMotionScale } from '@/hooks/useMotionScale'
 import * as THREE from 'three'
 import {
   usePerformance,
@@ -100,6 +101,8 @@ function FlyingBird({ texture, opacity }: {
   opacity: number
 }) {
   const ref = useRef<THREE.Mesh>(null)
+  // 鸟是自发运动：reduced 下 delta 乘 0，停在当前位置（motionConsumers 判据放宽到 delta 后抓到）
+  const motion = useMotionScale()
   const state = useRef<PublicationBirdState>({
     x: -25,
     y: 4.5,
@@ -109,7 +112,7 @@ function FlyingBird({ texture, opacity }: {
   })
 
   useFrame((_, delta) => {
-    state.current = advancePublicationBird(state.current, delta)
+    state.current = advancePublicationBird(state.current, delta * motion)
     ref.current?.position.set(state.current.x, state.current.y, -10)
     if (ref.current) ref.current.rotation.z = state.current.rotationZ
   })

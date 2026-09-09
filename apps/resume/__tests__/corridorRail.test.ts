@@ -1,11 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  corridorRailHold,
   corridorRailJumpTo,
+  corridorRailRelease,
+  corridorRailScrollTo,
   isCorridorRailMounted,
   registerCorridorRail,
   resetCorridorRail,
+  type CorridorRailHandle,
 } from '@/lib/lab/app/camera/corridorRail'
+
+/** 一个全是 mock 的导轨句柄（ADR 20260908204302 后命令面有四条） */
+function fakeHandle(): CorridorRailHandle {
+  return {
+    jumpTo: vi.fn(),
+    scrollTo: vi.fn(() => Promise.resolve()),
+    hold: vi.fn(() => true),
+    release: vi.fn(),
+  }
+}
 
 /**
  * 走廊导轨的注册表（ADR 20260903211244）。
@@ -48,7 +62,7 @@ describe('走廊导轨的注册表', () => {
 
   it('挂载后命令送达，参数原样传给导轨', () => {
     const jumpTo = vi.fn()
-    registerCorridorRail({ jumpTo })
+    registerCorridorRail({ ...fakeHandle(), jumpTo })
 
     expect(corridorRailJumpTo(-40)).toBe(true)
     expect(jumpTo).toHaveBeenCalledExactlyOnceWith(-40)
@@ -56,7 +70,7 @@ describe('走廊导轨的注册表', () => {
 
   it('注销之后命令又送不到', () => {
     const jumpTo = vi.fn()
-    const unregister = registerCorridorRail({ jumpTo })
+    const unregister = registerCorridorRail({ ...fakeHandle(), jumpTo })
     unregister()
 
     expect(isCorridorRailMounted()).toBe(false)
@@ -65,7 +79,7 @@ describe('走廊导轨的注册表', () => {
   })
 
   it('注销是幂等的', () => {
-    const unregister = registerCorridorRail({ jumpTo: vi.fn() })
+    const unregister = registerCorridorRail(fakeHandle())
     unregister()
     expect(() => unregister()).not.toThrow()
   })
@@ -75,11 +89,11 @@ describe('走廊导轨的注册表', () => {
       走廊组件重挂载时的顺序是「新的先挂、旧的后清」（React 的 effect 顺序），
       所以旧的清理函数不能无条件清空注册表，否则会把新登记的那个也清掉。
     */
-    const first = { jumpTo: vi.fn() }
+    const first = fakeHandle()
     const unregisterFirst = registerCorridorRail(first)
     unregisterFirst()
 
-    const second = { jumpTo: vi.fn() }
+    const second = fakeHandle()
     registerCorridorRail(second)
     unregisterFirst() // 旧的清理函数再跑一次
 
@@ -93,7 +107,27 @@ describe('走廊导轨的注册表', () => {
       两个 `useCorridorCamera` 同时挂载意味着两个写者在抢走廊相机，表现是抖动。
       静默覆盖前一个会让这件事很难查，所以开发态直接抛。
     */
-    registerCorridorRail({ jumpTo: vi.fn() })
-    expect(() => registerCorridorRail({ jumpTo: vi.fn() })).toThrow(/两次/)
+    registerCorridorRail(fakeHandle())
+    expect(() => registerCorridorRail(fakeHandle())).toThrow(/两次/)
+  })
+})
+
+describe('导轨命令面：scrollTo / hold / release（ADR 20260908204302）', () => {
+  it('没挂载：scrollTo reject、hold / release 返回 false', async () => {
+    await expect(corridorRailScrollTo(0, { duration: 1 })).rejects.toThrow(/没挂载/)
+    expect(corridorRailHold('tour', () => {})).toBe(false)
+    expect(corridorRailRelease('tour')).toBe(false)
+  })
+
+  it('挂载后原样转交参数', async () => {
+    const handle = fakeHandle()
+    registerCorridorRail(handle)
+    await corridorRailScrollTo(-30, { duration: 2, ease: 'power1.inOut' })
+    expect(handle.scrollTo).toHaveBeenCalledWith(-30, { duration: 2, ease: 'power1.inOut' })
+    const onInput = () => {}
+    expect(corridorRailHold('tour', onInput)).toBe(true)
+    expect(handle.hold).toHaveBeenCalledWith('tour', onInput)
+    expect(corridorRailRelease('tour')).toBe(true)
+    expect(handle.release).toHaveBeenCalledWith('tour')
   })
 })

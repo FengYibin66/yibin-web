@@ -15,12 +15,32 @@ export interface HeroContent {
   scrollHint: string
 }
 
+/**
+ * 简历条目的城市（ADR 20260908204303）。`location` 是展示文案，这是数据；
+ * 走廊三扇窗只用其中三座，其余为时间线便签的"城市 · 年份"行服务。
+ */
+export const CITY_IDS = [
+  'sichuan', 'kuala-lumpur', 'london', 'singapore', 'beijing', 'silicon-valley', 'remote',
+] as const
+export type CityId = (typeof CITY_IDS)[number]
+
+/**
+ * 结构化年份（ADR 20260908204303）。`period` 是展示文案（可以写 "Sep 2024 – Present"），
+ * 这是数据；`end` 缺省 = 至今。`__tests__/contentYears.test.ts` 守两者一致。
+ */
+export interface YearSpan {
+  start: number
+  end?: number
+}
+
 export interface EducationEntry {
   id: string
   school: string
   degree: string
   field: string
   period: string
+  years: YearSpan
+  cityId: CityId
   note?: string
   logo?: string
   /** e.g. "QS #8" — shown as a prominent badge */
@@ -98,6 +118,8 @@ export interface ExperienceItem {
   company: string
   role: string
   period: string
+  years: YearSpan
+  cityId: CityId
   location: string
   bullets: string[]
   /** Hero/cover image shown on the timeline card */
@@ -240,13 +262,33 @@ export interface LabUiLabels {
   /** 教程气泡：{标题, 说明} */
   tutorials: Record<
     'corridor_enter' | 'corridor_explore' | 'about_scroll' | 'projects_inspect'
-    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat',
+    | 'gallery_inspect' | 'contact_found' | 'publications_read' | 'pet_cat' | 'dog_companion'
+    | 'tour_complete',
     { title: string; label: string }
   >
-  /** 活物冒的一行字（ADR 20260908160918） */
+  /** 活物冒的一行字（ADR 20260908160918；规则见 domain/corridor/speech.ts） */
   companions: {
     /** 猫伸懒腰时头顶那句 */
     catStretch: string
+    /** 第二圈再见到猫 */
+    catAgain: string
+    /** 狗在门旁等你出来，见到你 */
+    dogGreet: string
+    /** 狗跑到门口坐下 */
+    dogWait: string
+    /** 走进第二圈 */
+    dogLap: string
+    /** 第三圈及以后 */
+    dogLapMore: string
+  }
+  /** 城市名：三扇窗下的字与时间线便签的"城市 · 年份"行（规格 lab-corridor-story.md §2–§3） */
+  cities: Record<CityId, string>
+  /** 招聘官路线的字幕（规格 lab-corridor-story.md §5.1），键 = TOUR_STOPS 的 captionKey */
+  tour: Record<'welcome' | 'about' | 'projects' | 'publications' | 'gallery' | 'contact' | 'timeline' | 'end', string>
+  /** 时间线便签 */
+  timeline: {
+    /** 开区间的结尾："Present" / "至今" */
+    present: string
   }
   /** 加载与失败态 */
   loading: {
@@ -270,6 +312,9 @@ export interface LabUiLabels {
     map: string
     openMap: string
     closeMap: string
+    /** 「带我走一遍」按钮的可访问名，路线中变为「停止」 */
+    tour: string
+    stopTour: string
     help: string
     exitLab: string
     /**

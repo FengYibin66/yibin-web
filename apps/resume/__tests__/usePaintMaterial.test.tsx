@@ -103,3 +103,20 @@ describe('usePaintMaterial', () => {
     expect(origin.value.toArray()).toEqual([120, 3, -40])
   })
 })
+
+describe('RevealMaterial · uDraw（加载期"画出来"，规格 lab-corridor-story.md §1）', () => {
+  it('默认 1（不接线的使用方看不出区别），setter 写到 uniform', async () => {
+    const { RevealMaterial } = await import('@/components/lab/shaders/RevealMaterial')
+    const m = new RevealMaterial()
+    expect(m.uDraw).toBe(1)
+    expect(m.uProgress).toBe(0)
+    // 未编译前只存值；模拟编译后 uniform 跟着变
+    const shader = { uniforms: {} as Record<string, { value: number }>, fragmentShader: '#include <common>\n#include <alphatest_fragment>', vertexShader: '' }
+    m.onBeforeCompile(shader as never)
+    expect(shader.uniforms.uDraw!.value).toBe(1)
+    m.uDraw = 0.25
+    expect(shader.uniforms.uDraw!.value).toBe(0.25)
+    expect(shader.fragmentShader).toContain('uniform float uDraw')
+    expect(shader.fragmentShader).toContain('drawNoise > uDraw')
+  })
+})

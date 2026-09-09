@@ -22,7 +22,6 @@ import {
   SEGMENT_DOOR_RELATIVE_Z,
   SEGMENT_LENGTH,
 } from '@/lib/lab/domain/corridor/layout'
-import { MURAL_KEEP_OUTS } from '@/lib/lab/corridorMurals'
 import { landmarkSchema } from '@/lib/lab/domain/schema'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 
@@ -141,15 +140,41 @@ describe('走廊地标表', () => {
     })
   })
 
-  describe('壁画避让由地标派生（等价性）', () => {
-    it('muralKeepOuts() 与手写的 MURAL_KEEP_OUTS 逐项相等', () => {
-      const derived = [...muralKeepOuts()]
-        .map(k => ({ side: k.side, z: k.z, radius: k.radius, reason: k.reason }))
-        .sort((a, b) => a.reason.localeCompare(b.reason))
-      const handwritten = [...MURAL_KEEP_OUTS]
-        .map(k => ({ side: k.side, z: k.z, radius: k.radius, reason: k.reason }))
-        .sort((a, b) => a.reason.localeCompare(b.reason))
-      expect(derived).toEqual(handwritten)
+  describe('壁画避让由地标派生（迁移完成）', () => {
+    /*
+      迁移期这里断言派生结果与 corridorMurals 的手写表逐项相等，证明重构没挪壁画。
+      窗进了地标表之后手写表不再等价、已删除；现在守的是反向事实：壁画模块里
+      **不再有**手写避让表，只从 `muralKeepOuts()` 读。
+    */
+    it('corridorMurals 里没有手写的 MURAL_KEEP_OUTS，且调用 muralKeepOuts()', () => {
+      const file = join(__dirname, '../lib/lab/corridorMurals.ts')
+      const source = readFileSync(file, 'utf8')
+      expect(source).not.toMatch(/export const MURAL_KEEP_OUTS/)
+      // AST：注释里出现 muralKeepOuts() 不算调用（machineEventWiring 第一版把注释当发送方栽过）
+      expect(functionCalls(source, 'muralKeepOuts', file).length).toBeGreaterThan(0)
+    })
+
+    it('门 / 家具 / 头像 / 段末门的避让区数值与迁移前一致（重构不挪壁画）', () => {
+      const byReason = new Map(muralKeepOuts().map(k => [k.reason, k]))
+      const expected: Array<[string, string, number, number]> = [
+        ['welcome-avatar', 'both', -2, 4.0],
+        ['door-about', 'left', -8, 6.5], ['door-projects', 'right', -20, 6.5],
+        ['door-publications', 'left', -32, 6.5], ['door-gallery', 'right', -44, 6.5],
+        ['door-contact', 'left', -56, 6.5],
+        ['desk', 'left', -27, 2.8], ['cabinet', 'right', -49, 2.4], ['potted-tree', 'left', -63, 2.6],
+        ['segment-door', 'both', -95, 5.5],
+      ]
+      for (const [reason, side, z, radius] of expected) {
+        const k = byReason.get(reason)
+        expect(k, reason).toBeDefined()
+        expect([k!.side, k!.z, k!.radius]).toEqual([side, z, radius])
+      }
+    })
+
+    it('三扇窗有避让区（半径 1.5）', () => {
+      const windows = muralKeepOuts().filter(k => k.reason.startsWith('window-'))
+      expect(windows).toHaveLength(3)
+      for (const w of windows) expect(w.radius).toBe(1.5)
     })
 
     it('每个 keep-out 都指向一个真实地标（不存在孤儿避让区）', () => {

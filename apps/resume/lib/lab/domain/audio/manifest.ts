@@ -63,6 +63,29 @@ export const SOUND_MANIFEST = {
   // 其余音效走同一条总线。生成命令见 scripts/media/encode-audio.mjs 顶部。
   achievement_chime: { src: ['/sounds/achievement_chime.m4a'], bus: 'sfx', pool: 1 },
 
+  /*
+    活物与脚步（ADR 20260908204304）：离线合成，m4a 在前、ogg 兜底。
+    叫声走 3D 定位（参数与门 hover 同级：近处清楚、几米外就淡）；脚步与爪音
+    不定位——脚步是玩家自己的，爪音由狗组件按位置给音量。
+  */
+  footstep_a: { src: ['/sounds/footstep_a.m4a', '/sounds/footstep_a.ogg'], bus: 'sfx', pool: 2 },
+  footstep_b: { src: ['/sounds/footstep_b.m4a', '/sounds/footstep_b.ogg'], bus: 'sfx', pool: 2 },
+  paw_a: { src: ['/sounds/paw_a.m4a', '/sounds/paw_a.ogg'], bus: 'sfx', pool: 2 },
+  paw_b: { src: ['/sounds/paw_b.m4a', '/sounds/paw_b.ogg'], bus: 'sfx', pool: 2 },
+  dog_bark: {
+    src: ['/sounds/dog_bark.m4a', '/sounds/dog_bark.ogg'],
+    bus: 'sfx',
+    pool: 1,
+    spatial: { refDistance: 3, rolloffFactor: 1.0, distanceModel: 'exponential' },
+  },
+  cat_meow: {
+    src: ['/sounds/cat_meow.m4a', '/sounds/cat_meow.ogg'],
+    bus: 'sfx',
+    pool: 1,
+    spatial: { refDistance: 3, rolloffFactor: 1.0, distanceModel: 'exponential' },
+  },
+  bubble_pop: { src: ['/sounds/bubble_pop.m4a', '/sounds/bubble_pop.ogg'], bus: 'sfx', pool: 2 },
+
   // ── 房间环境音（3D 定位，由 RoomDefinition.ambience 引用）──
   // 这三段原先经 drei 的 <PositionalAudio> 播放，那层包装走 useLoader 会
   // Suspend，于是它们**阻塞房间 READY**（审计 A5），且各自建一个

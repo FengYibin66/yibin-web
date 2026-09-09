@@ -47,7 +47,7 @@
 | `arrive` | 从 `offstage` 出 | 从起点门旁（`segmentStartZ(0) − 6`，侧道）以 `run` 速度跑进视野到 `camZ − LEAD`，0.8 s；脚下一圈淡灰墨点扩散 0.4 s（登场瞬间，调研 §3.5） | 跑姿 | 到位 → `trot`；reduced 下改为直接出现在门旁 `sit` |
 | `trot` | `|camV|` ∈ (ε, V_RUN) | `camZ − LEAD`，LEAD = 5；侧道 x = `lane` | 腿摆频率 = `k · |位移|`，尾巴中速 | 速度变化 / 静止 |
 | `run` | `|camV|` ≥ V_RUN | 同上，但若落后（`z > camZ − LEAD + 3`）则以 2× lerp 追上 | 腿摆更快，身体前倾 6° | 速度回落 |
-| `sit` | 静止（`|camV|` < ε）持续 SIT_AFTER = 2.5 s | 原地 | 坐姿部件（正面），面向相机 | 玩家再动 → 0.3 s 内回 `trot` |
+| `sit` | 静止（`|camV|` < ε）持续 SIT_AFTER = **1.2 s**（初稿 2.5 s，UX 评审：那时注意力早已离开狗） | 原地 | 坐姿部件（正面），面向相机 | 玩家再动 → 0.3 s 内回 `trot` |
 | `idle-look` | 在 `sit` 中每 6–9 s（确定性伪随机，种子取 `floor(camZ)`） | 原地 | 头部 ±12° 摆一次，0.6 s | 自动回 `sit` |
 | `wait-at-door` | `phase` 进入 `aligning` | `targetDoorZ + 1.5`，x = 门同侧 `±(WALL_X − 1.2)` | 到达后坐姿，面向门 | `phase` 回到 `idle`（退房完成） |
 | `greet` | 从 `wait-at-door` 退出的第一帧 | 原地 | 身体 y 小跳一次（0.35 s，高 0.15） | 自动回 `trot` |
@@ -56,8 +56,9 @@
 
 ### 2.3 侧道与视野中央禁区
 
-- `lane` ∈ {+1.4, −1.4}。默认取 **下一扇门的对侧**（门在左墙则狗走右道），保证狗不挡门。
-- 换道只在两门之间的空档做，而且**必须在相机后方完成**：狗先落后到 `camZ + 2`（相机看不见），换 x，再追上。任何时刻 |x| ≥ 0.6 ——这是不变量，reducer 单测用 2000 步随机输入序列断言，任何一步违反即失败。
+- `lane` ∈ {+1.4, −1.4}。**登场时**按第一扇门选对侧（第一扇门 About 在左墙 → 狗走右道），之后**不换道**。
+- **换道已取消（2026-09-08 实现时）**：初稿要求「走下一扇门的对侧、换道在相机后方完成」。实机发现门每 12 单位左右交替，狗就得每 12 单位落到相机后方换一次道——每过一扇门消失两秒。而几何上侧道 x = 1.4（狗身宽 1.15，外缘 1.97）离墙 3.5 上的门够远，门翻板转 30° 后内缘也在 2.25 以外：狗**从不挡门**，换道解决的是一个不存在的问题。
+- 任何时刻 |x| ≥ 0.6 ——这是不变量，reducer 单测用 2000 步随机输入序列断言，任何一步违反即失败。等门（§2.2 `wait-at-door`）时贴**自己这一侧**的墙，不穿过中线。
 - 与家具冲突：`CORRIDOR_FURNITURE` 在 −27（左）/ −49（右）/ −63（左）；狗侧道 x=1.4 与家具贴墙 x≈±3 不相交，不需要避让。
 
 ### 2.4 朝向与镜像
@@ -128,7 +129,7 @@
 | 项 | 内容 |
 |----|------|
 | 成就 `pet_cat` | 点猫一次。`unlockedBy: { kind: 'corridor-interaction', target: 'cat' }`（新 trigger 类型），persisted |
-| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-interaction', landmarkId: 'guide-dog' }`（与 `pet_cat` 同一 trigger 类型；累计计时在 reducer 里，满 30 s 输出一次事件），persisted |
+| 成就 `dog_companion` | 狗处于 `trot`/`run` 累计 30 s。`unlockedBy: { kind: 'corridor-companion', companion: 'dog' }`——狗跟着玩家走、不在地标表里，所以不能像 `pet_cat` 那样用 landmarkId 引用；累计计时在 reducer 里，满 30 s 输出一次事件，persisted |
 | 教程气泡 | `labUi.tutorials.pet_cat`（作用域 `corridor`）：en "Curious" / "A cat naps at the end of the hall"；zh "好奇" / "走廊尽头有只猫在打盹"（已随猫的位置改）。`dog_companion`：en "Good Company" / "Keep walking, the dog will follow"；zh "有伴" / "继续走，小狗会跟着你" |
 | 音效 | **改为仓库内脚本离线合成，不用外部 CC0**（ADR 20260908204304，参数与触发规则见 `lab-corridor-story.md` §6）：`cat_meow`（`stretch` 进入帧）、`dog_bark`（`greet` 进入帧）、`paw_a/b`（狗 `trot`/`run` 每 0.9 单位一声，spatial 在狗）、`footstep_a/b`（玩家每 1.8 单位一步、a/b 交替、音量按速度分档）、`bubble_pop`（气泡出现）。全部 sfx 总线、经既有 3D 定位、尊重静音；reduced motion 不影响声音 |
 
@@ -186,7 +187,7 @@ scripts/qa/lab-walkthrough.mjs       Lab 巡检
 
 **帧序**：`Dog` 读的是 `camera.position.z`，由走廊导轨在同一帧的 `useFrame` 里写。R3F 同优先级回调按注册顺序执行，`Dog` 在 `LabScene` 里挂在 `CameraController` 之后即可读到本帧值；即使读到上一帧也只差一帧的 lerp，可接受。**不要**给 `Dog` 的 `useFrame` 传正数 priority——那会关闭 R3F 的自动渲染。
 
-**成就进度**：`dog_companion` 是"累计 30 s"，是数值进度而非布尔。`AchievementDefinition` 需加可选 `total`（默认 1），进度累加走 `addProgress(id, seconds)`，与 folio-2025 的 group 进度同形态（调研 §3.4）。
+**成就进度**：`dog_companion` 是"累计 30 s"。**实现为布尔**（累计计时在 reducer 里，满 30 s 输出一次事件），没有做数值进度条——`total` / `addProgress` 那套要改成就面板与持久化格式，收益不抵成本；将来若做进度显示再补。
 
 ---
 
@@ -213,8 +214,8 @@ E2E 只能读 DOM，视觉靠巡检。**提 PR 前跑巡检并逐张看**（`scr
 |----|------|------|------|
 | 0 | `motion.ts` + 接入 Doodles / BugEaster；`lab-walkthrough.mjs` | reduced 下涂鸦不浮；巡检 20+ 张可用 | ✅ PR #33 |
 | 1a | 猫 + `pet_cat` | §3 三态、气泡、成就 | ✅ PR #34（尺寸 1.15、气泡纸片见 §3） |
-| 1b | 狗（SVG 手写线稿 + 逐组栅格化流水线）+ `dog_companion` + 纹理预算 + `speech.ts` 统一气泡 | §1 成功标准 1–6；reducer 2000 步随机不变量 | ⬜ |
-| 2 | 五类音效（离线合成，ADR 20260908204304） | 静音键有效；连点不叠音；静止 / 房间内不响 | ⬜ |
+| 1b | 狗（SVG 手写线稿 + 逐组栅格化流水线）+ `dog_companion` + 纹理预算 + `speech.ts` 统一气泡 | §1 成功标准 1–6；reducer 2000 步随机不变量 | ✅（换道取消，见 §2.3） |
+| 2 | 五类音效（离线合成，ADR 20260908204304） | 静音键有效；连点不叠音；静止 / 房间内不响 | ✅ |
 | 3 | 房间小物（Projects 台灯 / Publications 晾衣绳 / Contact 纸船） | 另写规格 | 未排期 |
 
 ---

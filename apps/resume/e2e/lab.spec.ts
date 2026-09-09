@@ -65,7 +65,14 @@ test.describe.configure({
 /** Lab 的启动 + 走廊入场动画有撕纸 loader，给足时间 */
 const LAB_READY_TIMEOUT = 30_000
 /** 进房 = 相机对齐 + 资源加载 + 开门 + 飞入 */
-const ROOM_ENTER_TIMEOUT = 20_000
+/**
+ * 进房（含传送）的等待上限。
+ *
+ * CI 放宽到 45 s：那里是 SwiftShader 软渲染 + 共享 runner，房间纹理偶尔要 20 s 以上才就位，
+ * 表现为「`data-lab-teleporting=true`、相位还在 aligning」的间歇失败（同一提交的 PR 轮全绿、
+ * 本地全量反复通过）。本地保持 20 s——真的退化了要能看出来，而不是被一个大超时吃掉。
+ */
+const ROOM_ENTER_TIMEOUT = process.env.CI ? 45_000 : 20_000
 
 /**
  * 打开 `/lab` 并等到可交互，返回是否拿到了 3D 环境。
@@ -183,7 +190,15 @@ test.afterEach(async () => {
  *
  * `toPass()` 重试整个块，是 Playwright 给这类"重试直到稳定"场景的工具。
  * 不用 `waitForTimeout` 猜一个固定延迟：那要么不够、要么白等。
+ *
+ * **内层的等待必须比外层的总预算短得多**（`ESC_SETTLE_TIMEOUT` vs `ESC_TOTAL_TIMEOUT`）。
+ * 两者相同（都是 20 s）时第一次尝试就吃光预算，`toPass` 一次都不重试——那正是这个
+ * 辅助函数要解决的问题，而它自己有过这个 bug：mobile WebKit 上第一次 ESC 若落在
+ * 房间相位刚好还不是 `entered` 的那一瞬，就再没有第二次机会（实测抓到）。
  */
+const ESC_SETTLE_TIMEOUT = 4_000
+const ESC_TOTAL_TIMEOUT = 45_000
+
 async function pressEscapeUntil(
   page: import('@playwright/test').Page,
   settled: () => Promise<void>,
@@ -191,7 +206,7 @@ async function pressEscapeUntil(
   await expect(async () => {
     await page.keyboard.press('Escape')
     await settled()
-  }).toPass({ timeout: 20_000, intervals: [300, 600, 1_000] })
+  }).toPass({ timeout: ESC_TOTAL_TIMEOUT, intervals: [300, 600, 1_000] })
 }
 
 /** 通过地图面板传送进一个房间 */
@@ -241,7 +256,7 @@ test.describe('Lab 进入与退出', () => {
     await teleportTo(page, 'contact')
     await pressEscapeUntil(page, async () => {
       await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-in-room', 'false', {
-        timeout: ROOM_ENTER_TIMEOUT,
+        timeout: ESC_SETTLE_TIMEOUT,
       })
     })
   })
@@ -796,6 +811,23 @@ test.describe('走廊世界状态', () => {
    * 这里留下的是**快而确定**的部分：组件真的挂载了（`data-lab-cat` 存在
    * —— 猫是 R3F 的 mesh，不在 DOM 里，没这个属性就无从断言），且初始态是睡着。
    */
+  test('狗：第一次位移就登场，之后一直在（data-lab-dog 离开 offstage）', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    /*
+      先等属性**出现**再断言初始态：狗的六张部件纹理要等加载（虽已进预载表，软渲染下仍有
+      几秒），属性在 `GuideDog` 第一帧才写。直接断言 'offstage' 会在 CI 上抓到"属性还不存在"。
+    */
+    await expect(html).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
+    // 方向键而不是滚轮：mobile WebKit 不支持 mouse.wheel；先点画布让焦点离开按钮（AGENTS 的坑 E4）
+    await page.mouse.click(720, 450)
+    for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowDown')
+    await expect(html).toHaveAttribute('data-lab-dog', /arrive|trot|run|sit/, { timeout: 20_000 })
+  })
+
   test('猫：挂载在走廊里，初始是睡着的', async ({ page }) => {
     if (!(await openLab(page))) {
       test.skip(true, '无 WebGL')
@@ -841,5 +873,63 @@ test.describe('走廊世界状态', () => {
     await page.getByTestId('nav-map').click()
     await expect(page.getByTestId('map-room-about')).toHaveAttribute('data-visited', 'true')
     await expect(page.getByTestId('map-room-contact')).toHaveAttribute('data-visited', 'false')
+  })
+})
+
+/**
+ * 招聘官路线（ADR 20260908204302）。
+ *
+ * 只测**快而确定**的部分：按钮进入 touring、任何输入当帧退出、字幕出现。
+ * 走完全程（58 秒）不在这里测——软渲染下导轨的插值追不上 tween，且 60 秒的
+ * E2E 只会在 CI 上随机红；完整计划由 `__tests__/tour.test.ts` 用注入时间跑完，
+ * 八站的画面由巡检脚本截。
+ */
+test.describe('招聘官路线', () => {
+  test('点脚印进入 touring，按一下方向键立刻回 free', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    // 等走廊子树真的挂载（导轨随它注册）：CI 的软渲染下纸已撕开而 Canvas 还在 Suspense
+    await expect(html).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
+
+    await page.getByTestId('nav-tour').click()
+    await expect(html).toHaveAttribute('data-lab-mode', 'touring')
+    await expect(page.getByTestId('tour-caption')).toBeVisible()
+    await expect(page.getByTestId('nav-tour')).toHaveAttribute('aria-pressed', 'true')
+
+    // 任何输入 = 还给用户：按一下方向键（mobile WebKit 不支持 mouse.wheel）
+    await page.mouse.click(720, 450)
+    await page.keyboard.press('ArrowDown')
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    await expect(page.getByTestId('tour-caption')).toHaveCount(0)
+  })
+
+  test('ESC 也能退出路线', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-lab-dog', /offstage|arrive|trot|sit/, { timeout: 30_000 })
+    await page.getByTestId('nav-tour').click()
+    await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'touring')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('html')).toHaveAttribute('data-lab-mode', 'free')
+  })
+
+  test('走廊模式属性在进房 / 退房时切换（状态机接线的可见面）', async ({ page }) => {
+    if (!(await openLab(page))) {
+      test.skip(true, '无 WebGL')
+      return
+    }
+    const html = page.locator('html')
+    await expect(html).toHaveAttribute('data-lab-mode', 'free')
+    await page.getByTestId('nav-map').click()
+    await page.getByTestId('map-room-about').click()
+    await expect(html).toHaveAttribute('data-lab-mode', /teleporting|inRoom/)
+    await expect(page.getByTestId('lab-ui')).toHaveAttribute('data-lab-room', 'about', { timeout: 60_000 })
+    await expect(html).toHaveAttribute('data-lab-mode', 'inRoom')
   })
 })

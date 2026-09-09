@@ -48,35 +48,12 @@ export const DOOR_HALF_SPAN = DOOR_Z_SPAN / 2 // 2.0
 export const DOOR_EDGE_CLEARANCE = 4.5
 export const DOOR_KEEP_RADIUS = DOOR_HALF_SPAN + DOOR_EDGE_CLEARANCE // 6.5
 
-/**
- * Keep-outs — doors only block their own wall.
- * Furniture / ends as documented in CorridorDecorations / CorridorSegment.
- *
- * ⚠️ **迁移期对照表，不要再改它。**
- *
- * 生产代码（`getMuralCollision`）已改用 `domain/corridor/landmarks.ts` 的
- * `muralKeepOuts()` —— 避让区由地标的 `keepOut` 声明派生，那里才是坐标的
- * 单一来源（ADR 20260908172231）。这份手写表保留一个版本作为**等价性证据**：
- * `__tests__/corridorLandmarks.test.ts` 断言两者逐项相等。
- *
- * 为什么要留这一步而不是直接删：壁画位置的变化在单测里看不见，只会在实机
- * 截图上表现为"画压在门上"。两个独立来源比对过一次之后，下一个 PR 删掉它。
- */
-export const MURAL_KEEP_OUTS: readonly MuralKeepOut[] = [
-  { side: 'both', z: -2, radius: 4.0, reason: 'welcome-avatar' },
-
-  { side: 'left', z: -8, radius: DOOR_KEEP_RADIUS, reason: 'door-about' },
-  { side: 'right', z: -20, radius: DOOR_KEEP_RADIUS, reason: 'door-projects' },
-  { side: 'left', z: -32, radius: DOOR_KEEP_RADIUS, reason: 'door-publications' },
-  { side: 'right', z: -44, radius: DOOR_KEEP_RADIUS, reason: 'door-gallery' },
-  { side: 'left', z: -56, radius: DOOR_KEEP_RADIUS, reason: 'door-contact' },
-
-  { side: 'left', z: -27, radius: 2.8, reason: 'desk' },
-  { side: 'right', z: -49, radius: 2.4, reason: 'cabinet' },
-  { side: 'left', z: -63, radius: 2.6, reason: 'potted-tree' },
-
-  { side: 'both', z: -95, radius: 5.5, reason: 'segment-door' },
-]
+/*
+  壁画避让区**全部**由地标表派生（`muralKeepOuts()`，ADR 20260908172231）。
+  迁移期这里曾留一张手写对照表，等价性由测试证明；窗（ADR 20260908204303）加进
+  地标表后，对照表就不再等价——它的历史任务完成了，删掉。避让规则改动只在
+  `domain/corridor/landmarks.ts` 一处。
+*/
 
 interface AlbumPick {
   albumId: string

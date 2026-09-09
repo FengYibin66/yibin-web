@@ -59,3 +59,14 @@ BASE=http://127.0.0.1:4321 node scripts/qa/walkthrough.mjs    # Classic，打静
 node scripts/qa/lab-walkthrough.mjs                          # Lab
 REDUCED=1 node scripts/qa/lab-walkthrough.mjs                # Lab，模拟"减少动效"
 ```
+
+## 活物与路线的三个坑（2026-09-08）
+
+- **`data-lab-dog` / `data-lab-cat` 在 DOM 上，狗猫本体不在。** 巡检时先看属性再看图：状态机在跑、
+  属性在变、图里没有，八成是 y 放错（狗第一版埋在地板下）；属性也没了，是 Suspense 隐藏 / 显示
+  子树时 cleanup 把属性删了。
+- **awake 不等于在前方。** 猫的滞回带到 12 单位，越过它 4 单位内它还醒着；要截到猫，先退到它睡着
+  （> 12），再单步前进到刚醒（≤ 8）。
+- **路线是 wall-clock 的。** `scrollTo` 是对目标 z 的 tween，软渲染下相机按导轨插值追目标、追不上；
+  巡检截图只看字幕与 `data-lab-mode`，不看精确位置。走完全程 58 秒不在巡检里等，由
+  `__tests__/tour.test.ts` 用注入时间验。

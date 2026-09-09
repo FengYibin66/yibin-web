@@ -35,11 +35,15 @@ describe('成就 id 注册表', () => {
       'contact_found',
       'corridor_enter',
       'corridor_explore',
+      // 小狗陪跑 30 秒（规格 lab-companions.md §4）
+      'dog_companion',
       'gallery_inspect',
-      // 摸柜子上那只守相框的猫（ADR 20260908160918）
+      // 摸走廊尽头打盹的猫（ADR 20260908160918）
       'pet_cat',
       'projects_inspect',
       'publications_read',
+      // 让路线带着走完一遍（ADR 20260908204302）
+      'tour_complete',
     ])
   })
 

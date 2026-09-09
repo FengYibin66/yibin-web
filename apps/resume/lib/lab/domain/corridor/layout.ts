@@ -58,6 +58,27 @@ export const CORRIDOR_FURNITURE: readonly CorridorFurniturePlacement[] = [
 ] as const
 
 /** 欢迎区（HeroText + Avatar + Doodles）在段内的位置 */
+/**
+ * 三扇窗（ADR 20260908204303，规格 lab-corridor-story.md §3）。
+ *
+ * 位置是按同一套避让规则算出的三个空位：右 −12.5 在壁画（−10）与 Projects 门避让区
+ * （−13.5 起）之间；左 −40.5 在 Publications 门避让区（到 −38.5）与壁画（−44）之间；
+ * 右 −62 在两块壁画（−58 / −68）之间。顺着走恰是伦敦 → 新加坡 → 北京的时间顺序。
+ * 时区在 `worldClock.ts`。
+ */
+export interface CorridorWindowPlacement {
+  readonly id: string
+  readonly city: 'london' | 'singapore' | 'beijing'
+  readonly relativeZ: number
+  readonly side: WallSide
+}
+
+export const CORRIDOR_WINDOWS: readonly CorridorWindowPlacement[] = [
+  { id: 'window-london', city: 'london', relativeZ: -12.5, side: 'right' },
+  { id: 'window-singapore', city: 'singapore', relativeZ: -40.5, side: 'left' },
+  { id: 'window-beijing', city: 'beijing', relativeZ: -62, side: 'right' },
+]
+
 export const HERO_RELATIVE_Z = -2
 
 /** bug 彩蛋 */

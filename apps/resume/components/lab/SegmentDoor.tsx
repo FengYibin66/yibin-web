@@ -1,11 +1,14 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import { LAB_FONT_LATIN_REGULAR, fontForText } from '@/lib/lab/domain/labFonts'
+import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import type { TallySpec } from '@/lib/lab/domain/sketch/types'
+import { sketchTexture } from '@/lib/lab/infra/sketch/textureCache'
 import { useAudio } from '@/context/AudioContext'
 
 const DOOR_HEIGHT     = 2.4
@@ -111,6 +114,9 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
         <meshBasicMaterial map={coffeeTex} transparent alphaTest={0.1} />
       </mesh>
 
+      {/* 走了几圈：门框上方一枚正字计数（规格 lab-corridor-story.md §4） */}
+      <LapTally y={topWallCenterY} />
+
       {/* === Top wall decoration: While True Loop === */}
       <mesh position={[0, topWallCenterY, 0.07]}>
         <planeGeometry args={[1.4, 1.4 / 1.833]} />
@@ -153,5 +159,30 @@ export function SegmentDoor({ position, label = 'while(true) { explore(); }' }: 
         {label}
       </Text>
     </group>
+  )
+}
+
+/**
+ * 段末门上的正字计数。第 0 圈什么都没有；之后每圈一画，满五画成一个"正"。
+ * 读的是世界状态里的圈数（ADR 20260908172231），不是相机位置。
+ */
+function LapTally({ y }: { y: number }) {
+  const lap = useCorridorStore(s => s.lap)
+  // 第 0 圈什么都不画，也不栅格化（早退在 hooks 之前：整个子组件不渲染）
+  if (lap <= 0) return null
+  return <LapTallyMark y={y} lap={lap} />
+}
+
+function LapTallyMark({ y, lap }: { y: number; lap: number }) {
+  const spec = useMemo<TallySpec>(
+    () => ({ kind: 'tally', id: `lap-${lap}`, size: { width: 160, height: 64 }, count: lap }),
+    [lap],
+  )
+  const texture = useMemo(() => sketchTexture(spec), [spec])
+  return (
+    <mesh position={[1.35, y + 0.55, 0.09]} rotation={[0, 0, -0.04]}>
+      <planeGeometry args={[0.6, 0.24]} />
+      <meshBasicMaterial map={texture} transparent alphaTest={0.02} depthWrite={false} />
+    </mesh>
   )
 }

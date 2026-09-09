@@ -14,6 +14,8 @@ import { nextLocaleLabel } from '@/lib/content/localeToggle'
 import { pushEscapeConsumer } from '@/lib/lab/app/escapeStack'
 import { ROOM_IDS } from '@/lib/lab/domain/ids'
 import { useCorridorStore } from '@/lib/lab/app/stores/corridorStore'
+import { useTour } from '@/hooks/useTour'
+import { isLabLoaded, onLabLoaded } from '@/lib/lab/app/labLoaded'
 
 /*
   地图里的房间名来自 `labUi.doors`，与走廊门牌是同一份（审计 E7）。
@@ -40,6 +42,11 @@ export function NavigationUI() {
   const { locale, toggle: toggleLocale } = useLocale()
 
   const [mapOpen, setMapOpen]               = useState(false)
+  /* 招聘官路线（ADR 20260908204302）：互斥归状态机、运动归导轨，这里只有按钮与字幕 */
+  const tour = useTour()
+  /* 走廊教程要等纸撕开再提——"点一扇门"在门还没画出来时是错的（产品评审） */
+  const [labLoaded, setLabLoaded] = useState(isLabLoaded)
+  useEffect(() => onLabLoaded(() => setLabLoaded(true)), [])
   /*
     地图上"这间去过没有"的来源（ADR 20260908172231）。用 `inked`（真的进过）
     而不是 `visited`（从门口路过）—— 地图要回答的是"还有哪些内容没看"。
@@ -67,12 +74,19 @@ export function NavigationUI() {
     滚轮解锁，键盘用户永远关不掉它。
   */
   useEffect(() => {
+    if (!labLoaded || tour.running) return // 纸没撕开不提；路线中"教你怎么操作"自相矛盾
     if (!hasEntered && !isTeleporting) {
       showTutorial('corridor_enter', 'corridor')
     } else if (hasEntered && !isTeleporting && !isInRoom) {
       showTutorial('corridor_explore', 'corridor')
+      /*
+        这里曾经再排一条"按脚印带你走"。它挤掉了原有的教程队列——「开始探索」关掉说明后
+        立刻又冒一条（那条 E2E 断言关掉后为 0），退房后房间教程也被它占位。
+        路线的入口改由按钮自己表达（实心反白 + aria-label，UX 评审的建议），不再占教程通道；
+        `tour_complete` 仍是成就，文案在成就面板里用。
+      */
     }
-  }, [hasEntered, isTeleporting, isInRoom, showTutorial])
+  }, [labLoaded, tour.running, hasEntered, isTeleporting, isInRoom, showTutorial])
 
   // Close panels when teleporting or in room
   useEffect(() => {
@@ -192,6 +206,46 @@ export function NavigationUI() {
       {/* Global achievement popup */}
       <AchievementPopup />
 
+      {/* 路线字幕：每站一句（规格 lab-corridor-story.md §5.1） */}
+      {tour.caption && (
+        <div
+          role="status"
+          data-testid="tour-caption"
+          data-tour-stop={tour.stopId ?? ''}
+          style={{
+            /*
+              像字幕，不像第二张成就纸卡：深底浅字、无描边、无斜角，在明暗与形状上与
+              成就 / 教程气泡（白底纸卡，bottom ≈ 90–150）一眼分开，且在它们之上（UX 评审）。
+            */
+            position: 'absolute',
+            bottom: 230,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            maxWidth: 'min(640px, 88vw)',
+            padding: '10px 20px',
+            background: 'rgba(42,31,14,0.84)',
+            color: '#fffdf7',
+            borderRadius: 6,
+            fontFamily: 'var(--font-sketch)',
+            fontSize: 20,
+            lineHeight: 1.35,
+            textAlign: 'center',
+            pointerEvents: 'none',
+            zIndex: 120,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 14,
+          }}
+        >
+          {tour.running && (
+            <span style={{ fontSize: 13, opacity: 0.6, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+              {tour.index}/{tour.total}
+            </span>
+          )}
+          <span>{labels.tour[tour.caption]}</span>
+        </div>
+      )}
+
       {/* Back button */}
       {isInRoom && (
         <button
@@ -240,6 +294,29 @@ export function NavigationUI() {
           transition: 'opacity 0.3s ease',
         }}
       >
+        {/* 带我走一遍 / 停止。加载完成前不显示（路线要导轨可用，状态机在 loading 会拒绝）；
+            房间里与传送中不显示（状态机那时也不会接受 TOUR_START） */}
+        {labLoaded && !isInRoom && !isTeleporting && (
+          <NavButton
+            onClick={() => {
+              if (tour.running) { tour.stop(); return }
+              closeAll()
+              void tour.start()
+            }}
+            active={tour.running}
+            solid={tour.running}
+            aria-label={tour.running ? labels.panels.stopTour : labels.panels.tour}
+            aria-pressed={tour.running}
+            data-testid="nav-tour"
+          >
+            {/* 一只小脚印：一个掌垫 + 三个脚趾，18 px 里再多就成一团灰点（UX 评审） */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <ellipse cx="12" cy="15.5" rx="4.4" ry="5.2" />
+              <circle cx="6.6" cy="8.6" r="2" /><circle cx="12" cy="6.4" r="2" /><circle cx="17.4" cy="8.6" r="2" />
+            </svg>
+          </NavButton>
+        )}
+
         {/* Map button */}
         <NavButton
           onClick={() => { setMapOpen(o => !o); setAudioOpen(false); setAchievementsOpen(false) }}
@@ -540,11 +617,14 @@ export function NavigationUI() {
 function NavButton({
   onClick,
   active,
+  solid,
   children,
   ...props
 }: {
   onClick: () => void
   active?: boolean
+  /** 实心反白：进行中的模式（路线）要与"面板开着"的浅色 active 一眼分开 */
+  solid?: boolean
   children: React.ReactNode
   [key: string]: unknown
 }) {
@@ -552,13 +632,13 @@ function NavButton({
     <button
       onClick={onClick}
       style={{
-        background: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
-        border: `1.5px solid ${active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
+        background: solid ? '#2a1f0e' : active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
+        border: `1.5px solid ${solid ? '#2a1f0e' : active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
         borderRadius: 8,
         width: 40, height: 40,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
-        color: '#2a1f0e',
+        color: solid ? '#fffdf7' : '#2a1f0e',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         transition: 'background 0.2s, border-color 0.2s',

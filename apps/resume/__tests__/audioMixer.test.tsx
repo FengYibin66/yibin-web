@@ -351,3 +351,21 @@ describe('旧 localStorage 偏好迁移', () => {
     expect(Number.isFinite(fresh.useAudioStore.getState().volumes.music)).toBe(true)
   })
 })
+
+describe('一次性音效的 3D 定位（ADR 20260908204304）', () => {
+  it('声明了 spatial 的音传 position 就定位到那个点', () => {
+    audioMixer.play('cat_meow', { position: [1.9, -1.2, -58] })
+    const howl = lastHowl()
+    expect(howl.posCalls.at(-1)).toEqual([1.9, -1.2, -58])
+  })
+
+  it('没声明 spatial 的音传了 position 也不定位 —— 脚步是玩家自己的', () => {
+    audioMixer.play('footstep_a', { position: [0, 0, 0] })
+    expect(lastHowl().posCalls).toHaveLength(0)
+  })
+
+  it('不传 position 的 spatial 音按 2D 播（老调用方不受影响）', () => {
+    audioMixer.play('dog_bark')
+    expect(lastHowl().posCalls).toHaveLength(0)
+  })
+})

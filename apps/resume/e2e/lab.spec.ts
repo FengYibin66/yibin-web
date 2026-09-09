@@ -65,7 +65,14 @@ test.describe.configure({
 /** Lab 的启动 + 走廊入场动画有撕纸 loader，给足时间 */
 const LAB_READY_TIMEOUT = 30_000
 /** 进房 = 相机对齐 + 资源加载 + 开门 + 飞入 */
-const ROOM_ENTER_TIMEOUT = 20_000
+/**
+ * 进房（含传送）的等待上限。
+ *
+ * CI 放宽到 45 s：那里是 SwiftShader 软渲染 + 共享 runner，房间纹理偶尔要 20 s 以上才就位，
+ * 表现为「`data-lab-teleporting=true`、相位还在 aligning」的间歇失败（同一提交的 PR 轮全绿、
+ * 本地全量反复通过）。本地保持 20 s——真的退化了要能看出来，而不是被一个大超时吃掉。
+ */
+const ROOM_ENTER_TIMEOUT = process.env.CI ? 45_000 : 20_000
 
 /**
  * 打开 `/lab` 并等到可交互，返回是否拿到了 3D 环境。

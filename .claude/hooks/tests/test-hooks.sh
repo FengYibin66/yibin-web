@@ -189,8 +189,91 @@ expect 0 pre-generated-edit.sh "$(write_in 'docs/adr/TEMPLATE.md' 'x')"        "
 expect 0 pre-generated-edit.sh "$(write_in 'docs/AGENTS.md' 'x')"             "放行非 adr 的 AGENTS.md"
 expect 0 pre-generated-edit.sh "$(write_in 'src/api.ts' 'x')"                  "放行普通源文件"
 
+echo "H5 pre-stale-media.sh"
+#
+# H5 与 H1–H4 不同：它要真的跑脚本才能判定。所以测试**不能**依赖
+# `apps/resume` 的真实流水线跑不跑得起来——CI 的 hooks-test job 没装那边的依赖，
+# 真实 `--check` 会落进 hook 的「跑不起来 → 放行」分支，于是「拦截」用例
+# 在本地绿、在 CI 红。第一版正是这么分裂的（本地 87/0，CI 86/1）。
+#
+# 现在改成**种两个自带的假流水线**：纯 node、零依赖、任何环境都能跑，
+# 直接测 hook 自己的判定逻辑：
+#
+#   exit≠0 且输出含 [待处理]  → 必须拦（产物过期）
+#   exit≠0 但不含该标记        → 必须放行（跑不起来 ≠ 产物过期）
+#
+# 假脚本放在 scripts/media/ 下是安全的：字体子集只扫 apps/resume 下
+# app/components/lib/hooks/context 里的 .ts/.tsx/.css，预载表只扫调用 useTexture
+# 的文件，都读不到它们。
+
+H5_ROOT="$(cd "$HOOKS_DIR/../.." && pwd)"
+H5_DIR="$H5_ROOT/apps/resume/scripts/media"
+H5_STALE="$H5_DIR/__h5_fake_stale__.mjs"
+H5_BROKEN="$H5_DIR/__h5_fake_broken__.mjs"
+
+cleanup_h5() { rm -f "$H5_STALE" "$H5_BROKEN"; }
+trap cleanup_h5 EXIT
+cleanup_h5
+
+write_fake_stale() {
+  cat > "$H5_STALE" <<'FAKE'
+if (process.argv.includes('--check')) {
+  console.log('  ! 假流水线  指纹过期（测试用）')
+  console.log('\n[待处理] 跑 node scripts/media/__h5_fake_stale__.mjs')
+  process.exit(1)
+}
+FAKE
+}
+
+write_fake_broken() {
+  cat > "$H5_BROKEN" <<'FAKE'
+if (process.argv.includes('--check')) {
+  console.error('boom: 假装缺依赖（测试用）')
+  process.exit(1)
+}
+FAKE
+}
+
+expect 0 pre-stale-media.sh "$(bash_in 'git status')"                   "放行非 push 命令"
+expect 0 pre-stale-media.sh "$(bash_in 'git commit -m x')"             "放行 commit（H5 只管 push）"
+expect 0 pre-stale-media.sh "$(bash_in 'ls push')"                     "放行非 git 命令"
+
+# 只有「过期」的假脚本在场 → 必须拦
+write_fake_stale
+expect 2 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"          "指纹过期时拦截"
+expect 0 pre-stale-media.sh "$(bash_in 'git push --dry-run origin x')"     "过期但 --dry-run 仍放行"
+expect 0 pre-stale-media.sh "$(bash_in 'git push -n origin x')"            "过期但 -n 仍放行（push 下 -n 是 dry-run）"
+rm -f "$H5_STALE"
+
+# 只有「跑不起来」的在场 → 必须放行。这是 H5 最重要的一条设计取舍：
+# 一个「本机没装 fontTools 就拦住所有 push」的守卫第一天就会被关掉。
+write_fake_broken
+expect 0 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"          "检查跑不起来时放行（跑不动 ≠ 过期）"
+rm -f "$H5_BROKEN"
+
+# 两个都撤掉 → 回到仓库真实状态，仍应放行
+expect 0 pre-stale-media.sh "$(bash_in 'git push origin feat/x')"          "撤掉假流水线后恢复放行"
+
+echo "H5 派生逻辑：清单必须覆盖到会咬人的那条"
+h5_derived=$(cd "$H5_ROOT/apps/resume" && grep -rlE 'argv.*--check|--check.*argv' scripts/media scripts/lab 2>/dev/null | sort)
+h5_count=$(printf '%s\n' "$h5_derived" | grep -c . )
+if printf '%s\n' "$h5_derived" | grep -q 'subset-fonts\.py'; then
+  printf '  ✅ 派生清单含 subset-fonts.py（共 %s 条）\n' "$h5_count"
+  pass=$((pass + 1))
+else
+  printf '  ❌ 派生清单**不含** subset-fonts.py（共 %s 条）——会静默少守字体子集那条\n' "$h5_count"
+  fail=$((fail + 1))
+fi
+if printf '%s\n' "$h5_derived" | grep -q 'freshness\.mjs'; then
+  printf '  ❌ 派生清单误纳 freshness.mjs（它是被 import 的库，不是可执行检查）\n'
+  fail=$((fail + 1))
+else
+  printf '  ✅ 派生清单未误纳 freshness.mjs\n'
+  pass=$((pass + 1))
+fi
+
 echo "fail-closed：守卫收到坏输入必须拦截而非放行"
-for s in pre-push-main.sh pre-no-verify.sh pre-secret-scan.sh pre-generated-edit.sh; do
+for s in pre-push-main.sh pre-no-verify.sh pre-secret-scan.sh pre-generated-edit.sh pre-stale-media.sh; do
   expect 2 "$s" 'not json at all' "$s 遇非法 JSON 拦截"
 done
 

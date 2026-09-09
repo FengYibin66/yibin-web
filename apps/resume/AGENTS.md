@@ -564,10 +564,16 @@ REDUCED=1 node scripts/qa/lab-walkthrough.mjs  # Lab，模拟"减少动效"（�
 > `entry-firstframe.mjs` 需要**已构建的 `out/`** ——它是截图，构图来自 3D
 > 场景，拼贴拼不出同一个画面。
 
-> **改过任何含中文的文件（包括代码注释）之后，提交前先跑
-> `python3 scripts/media/subset-fonts.py --check`。** 子集脚本扫的是**源码字节**，
-> 中文注释也算字符集的一部分 —— 加一段中文注释就会让指纹过期。CI 会抓
-> （`校验字体子集` 那一步），但那要等十分钟，本地一秒。同一天踩了三次。
+> **写下一个此前没出现过的字符（含代码注释里的）之后，指纹就过期了。**
+> 子集脚本扫 `app/components/lib/hooks/context` 下所有 `.ts/.tsx/.css`，把**出现过的
+> 字符集合**求指纹——所以常见汉字不会让它过期，**新字符会**。
+> 曾经这里写的是「扫源码字节」，不准确：那会让人以为改任何一个字节都过期，
+> 于是要么过度重跑、要么在「加了中文却没过期」时怀疑机制坏了。
+>
+> 现在由 **hook H5** 在 `git push` 时自动拦（`.claude/hooks/pre-stale-media.sh`），
+> 不必靠人记。CI 的「校验字体子集」仍是最终防线。
+> 历史：前人「同一天踩了三次」，2026-09-09 我又踩了第四次——跑过一次重新生成、
+> 之后又写了几处中文注释、忘了再跑，CI 十分钟后红。**它必须是提交前的最后一步。**
 
 > **界面字体（Space Grotesk / Inter / JetBrains Mono / Cormorant Garamond）不走上面的
 > 子集流水线，也不用 `next/font/google`**——它们是 `@fontsource` npm 依赖，`app/layout.tsx`

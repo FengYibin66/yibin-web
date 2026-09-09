@@ -76,6 +76,56 @@ for probe in "${PROBES[@]}"; do
   fi
 done
 
+# ── 缓存头 ────────────────────────────────────────────────────────────────────
+#
+# 为什么这一节存在：2026-09-09 上线后用户点「View details」被整页跳到一个裸的
+# RSC 数据文件上（满屏 `1:"$Sreact.fragment"`）。根因是 HTML 带着
+# `Cache-Control: public, max-age=3600`——浏览器手里的 HTML 是旧构建，而点击时
+# 取到的 `index.txt` 是新构建，Next 比对构建 ID 不一致，于是
+# `doMpaNavigation(res.url)` 把用户送到了那个 `.txt` 地址。
+#
+# 状态码全绿也发现不了这个：四条路由当时全是 200/404 正确值。**缓存头是独立的
+# 一层，必须单独断言。**
+#
+# 规则：HTML 与 RSC payload 不得带 max-age（必须每次校验）；内容哈希命名的
+# 静态资源应当 immutable。
+echo
+echo "── 缓存头 ──"
+
+# 路径 | must_not_match（ERE，匹配到即失败）| must_match（ERE，匹配不到即失败，`-` 跳过）
+HEADER_PROBES=(
+  "/|max-age=[1-9]|no-cache"                                     # 首页 HTML
+  "/classic/|max-age=[1-9]|no-cache"                             # 目录索引也走 .html 规则
+  "/lab/|max-age=[1-9]|no-cache"
+  "/classic/experience/mcallister/index.txt|max-age=[1-9]|no-cache"  # RSC payload
+  "/textures/corridor/companion/dog_body.webp|-|-"               # 资源：只看它不报错
+)
+
+for probe in "${HEADER_PROBES[@]}"; do
+  IFS='|' read -r path bad good <<<"$probe"
+  # `|| true` 是必须的：没有 Cache-Control 头时 grep 返回 1，在 pipefail 下整条管道
+  # 非零，赋值失败 → set -e 直接终止脚本，下面的兜底永远执行不到。第一版正是这样
+  # 只打了三行就静默退出，连汇总都没有。
+  cc=$(curl -sSI --max-time 20 "$BASE$path" 2>/dev/null \
+       | tr -d '\r' | grep -i '^cache-control:' | cut -d' ' -f2- | tr '\n' ' ' || true)
+  cc="${cc:-（无）}"
+
+  problem=""
+  if [ "$bad" != "-" ] && printf '%s' "$cc" | grep -qE "$bad"; then
+    problem="不该带 $bad —— 实际 Cache-Control: $cc"
+  elif [ "$good" != "-" ] && ! printf '%s' "$cc" | grep -qE "$good"; then
+    problem="应当含 $good —— 实际 Cache-Control: $cc"
+  fi
+
+  if [ -z "$problem" ]; then
+    printf '  ✓ %-46s %s\n' "$path" "$cc"
+    pass=$((pass + 1))
+  else
+    printf '  ✗ %-46s %s\n' "$path" "$problem"
+    fail=$((fail + 1))
+  fi
+done
+
 echo
 echo "$BASE — 通过 $pass / 失败 $fail"
 [ "$fail" -eq 0 ] || exit 1

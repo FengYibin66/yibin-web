@@ -1,36 +1,17 @@
 import { inkableLandmarkIds, landmarkById } from './landmarks'
 
 /**
- * 显形（墨迹）策略 —— `RevealMaterial` 的 `uProgress` 从哪来（ADR 20260908172231）。
+ * 显形（墨迹）策略——`RevealMaterial` 的 `uProgress` 从哪来（ADR 20260908172231）。
  *
- * ## 为什么是一条策略而不是三处各写
+ * `uProgress` **只有一个**，而三个特性都要写它（墨迹记忆、圈数、门 hover）。
+ * 三处各写就是三个写者抢一个 uniform，表现为闪烁，且没有任何测试守得住。
  *
- * `RevealMaterial`（草稿 → 上色的噪声擦除）此前只服务一件事：门 hover。
- * 但它同时是三个特性的机制：
- *
- * 1. **加载时把走廊画出来**（进度推进 → 地板 → 墙 → 门依次被画上色）
- * 2. **看过的永久上色**（墨迹记忆：回访时一眼看出哪些看过）
- * 3. **第二圈全上色**（段门上写着 `while(true) { explore(); }`，第二圈该不一样）
- *
- * 而 `uProgress` **只有一个**。三处各写就是三个写者抢一个 uniform：先写后写
- * 互相覆盖，表现为闪烁；而且"别人是不是也在写"这件事没有任何测试守得住。
- *
- * 取 `max` 的语义是「墨迹只会更浓，不会变淡」——这正好也是用户对"被画出来"
- * 的直觉，且让单调性可测（`__tests__/corridorInk.test.ts`）。
- *
- * ## 悬停为什么也走这里
- *
- * 悬停是瞬态的、组件本地的（不进 store），但它必须与其他三个来源**比大小**：
- * 一扇已经记住的门（1）被悬停（0.6）时不该变淡。让它作为参数进来而不是在
- * 组件里 `Math.max` 一下，是为了让这条规则只有一个地方。
+ * `max` 的语义是「墨迹只会更浓，不会变淡」，单调性可测
+ * （`__tests__/corridorInk.test.ts`）。悬停虽然是组件本地的瞬态量，
+ * 也作为参数进来比大小——一扇记住的门（1）被悬停（0.6）时不该变淡。
  */
 
-/**
- * 加载显形的窗口宽度 = 步长的多少倍。
- *
- * 1 = 一个画完才开始下一个（看起来是一格一格跳）；2 = 相邻两个的窗口重叠一半，
- * 视觉上连成一笔。取 2。
- */
+/** 加载显形的窗口宽度 = 步长的多少倍。1 = 一格一格跳；2 = 窗口重叠一半、连成一笔 */
 export const INK_LOAD_OVERLAP = 2
 
 export interface InkInputs {
@@ -44,12 +25,7 @@ export interface InkInputs {
 
 const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0)
 
-/**
- * 加载显形的顺序：越靠近入口的地标越早被画出来。
- *
- * 按 `|relativeZ|` 升序 —— 走廊朝 −Z 延伸，所以 `relativeZ` 更大（更接近 0）
- * 的地标离入口更近。用户看着走廊从脚下往远处被画出来，与相机朝向一致。
- */
+/** 加载显形的顺序：越靠近入口的越早。走廊朝 −Z 延伸，所以 `relativeZ` 降序 */
 const LOAD_ORDER: readonly string[] = [...inkableLandmarkIds()].sort((a, b) => {
   const za = landmarkById(a)?.relativeZ ?? 0
   const zb = landmarkById(b)?.relativeZ ?? 0
@@ -59,10 +35,8 @@ const LOAD_ORDER: readonly string[] = [...inkableLandmarkIds()].sort((a, b) => {
 const ORDER_INDEX = new Map(LOAD_ORDER.map((id, index) => [id, index]))
 
 /**
- * 「画出来」的进度窗（规格 lab-corridor-story.md §1，决定 D 的修订版）：
- * `introDrawLevel` 把 0.3 → 0.9 线性映射到 0 → 1。加载中 LabLoader 把 loadProgress 压在
- * 0.3 以下（门一笔没画，反正在纸后面）；撕纸开始时用 1.8 s 从 0.3 tween 到 1，门随撕纸
- * 被画出来。纸**不在 30% 撕开**——那版实测是空页面，见规格 §1 的修订注记。
+ * 「画出来」的进度窗（规格 §1 决定 D 的修订版）：0.3 → 0.9 线性映射到 0 → 1。
+ * 纸**不在 30% 撕开**——那版实测撕开后是空页面。
  */
 export const INTRO_TEAR_AT = 0.3
 export const INTRO_DRAWN_AT = 0.9
@@ -79,26 +53,13 @@ export function loadInkOrder(id: string): number {
 }
 
 /**
- * 加载过场里，这个地标此刻被"画"到什么程度。
+ * 加载过场里这个地标被「画」到什么程度。
  *
- * ## 它**不参与** `inkLevel`
+ * **不参与 `inkLevel`**：加载进度在加载完成后恒为 1，并进 `max` 会让所有门
+ * 永久上色，「只有看过的才上色」直接失效。加载显形是过场表演，演完退回稳态。
  *
- * ADR 20260908172231 的索引原本把公式写成
- * `max(加载, 记忆, 圈数, 悬停)`。实现时发现那是错的：加载进度在加载完成后
- * **恒为 1**，于是 `max` 会让走廊里所有门永久上色 —— "只有看过的才上色"
- * 这个效果直接失效，而它正是墨迹记忆的全部意义。
- *
- * 加载显形是**一段过场表演**（纸撕开之前，走廊被一笔笔画出来），演完就该
- * 退回稳态；稳态由记忆 / 圈数 / 悬停决定。所以它单独导出，由那段过场动画
- * 自己驱动材质，不进 `inkLevel`。ADR 的索引已追加注记。
- *
- * 每个地标占一个进度窗口 `[t0, t0 + width]`，窗口宽度是步长的
- * `INK_LOAD_OVERLAP` 倍，因此相邻地标的窗口重叠、视觉上连成一笔。
- * 首个地标的窗口从 0 开始、末个在 1 结束 —— 「进度 0 全是草稿、进度 1 全部
- * 上色」这两条边界天然成立。
- *
- * **已接线**：`LabLoader` 写 `corridorStore.loadProgress`，`DoorSection` 每帧读它算
- * `uDraw`（不订阅——撕纸那 1.8 s 里进度每帧变）。
+ * 每个地标占一个窗口 `[t0, t0 + width]`，宽度是步长的 `INK_LOAD_OVERLAP` 倍，
+ * 所以相邻窗口重叠、连成一笔；首个从 0 开始、末个在 1 结束。
  */
 export function loadIntroInk(id: string, loadProgress: number): number {
   const index = loadInkOrder(id)

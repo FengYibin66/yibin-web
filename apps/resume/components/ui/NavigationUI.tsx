@@ -207,19 +207,12 @@ export function NavigationUI() {
       data-lab-teleport-phase={teleportPhase ?? ''}
       data-lab-phase={roomLoadState.phase}
       /*
-        动效开关的实际取值（ADR 20260908172231）。0 = 系统要求减少动效。
-        没有它就无法验证"reduced 下持续动画真的停了"——截图比较受相机插值
-        尾巴干扰（整幅画面平移 0.1 像素会让大量子像素变化），而 3D 物体的
-        transform 不在 DOM 里。实测排查这件事时就卡在这里。
+        动效开关的实际取值（ADR 20260908172231）。3D 物体的 transform 不在 DOM 里，
+        而截图比较受相机插值尾巴干扰——没有这个属性就验不了「reduced 下真的停了」。
       */
       data-lab-motion={motionScale}
     >
-      {/*
-        成就气泡进 `bottom-center` 槽位，与滚动提示成为兄弟。
-        它原先在 globals.css 里写死 `bottom: 88px`，注释逐字写着
-        「88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距」——
-        那个手算的数现在没了（ADR 20260909182319 举的原型例子）。
-      */}
+      {/* 与滚动提示同槽的 column flex 兄弟，不再手算彼此的高度 */}
       <EdgeItem id="lab-achievement">
         <AchievementPopup />
       </EdgeItem>
@@ -231,10 +224,7 @@ export function NavigationUI() {
           data-testid="tour-caption"
           data-tour-stop={tour.stopId ?? ''}
           style={{
-            /*
-              像字幕，不像第二张成就纸卡：深底浅字、无描边、无斜角，在明暗与形状上与
-              成就 / 教程气泡（白底纸卡，bottom ≈ 90–150）一眼分开，且在它们之上（UX 评审）。
-            */
+            // 深底浅字、无描边：要与白底纸卡的成就 / 教程气泡一眼分开，且在它们之上
             position: 'absolute',
             bottom: 230,
             left: '50%',
@@ -264,11 +254,7 @@ export function NavigationUI() {
         </div>
       )}
 
-      {/*
-        房间内的返回按钮。与走廊的「← 退出 Lab」同槽位、同 order，
-        靠 `in-room` / `not-in-room` 互斥——这个约定原先只活在两个 JSX 条件里，
-        没有任何地方声明过它，于是也没有任何东西能断言它。
-      */}
+      {/* 与走廊的「← 退出 Lab」同槽同 order，靠 in-room / not-in-room 互斥 */}
       <EdgeItem id="lab-room-back" visible={isInRoom}>
         <button
           onClick={handleBackClick}
@@ -278,8 +264,7 @@ export function NavigationUI() {
             background: 'rgba(255,255,255,0.9)',
             border: '1.5px solid rgba(42,31,14,0.15)',
             borderRadius: 6,
-            // 触摸目标 44：原先 `padding: 8px 14px` + 13px 字 = 高 33px。
-            minHeight: 44,
+            minHeight: 44,   // 触摸目标
             padding: '0 14px',
             fontFamily: 'var(--font-sketch-bold)',
             fontSize: 13,
@@ -302,13 +287,7 @@ export function NavigationUI() {
         </button>
       </EdgeItem>
 
-      {/*
-        导航图标排。进 `top-bar` 槽位的右端，与左端的退出/返回是 flex 兄弟。
-
-        原先它是 `absolute (16,16)`、退出链接是 `fixed (20,20)`——**两个不同的角**，
-        谁也不知道对方多宽。320px 上实测：退出占 20→104、这排占 24→304，重叠 80px。
-        「同槽位是兄弟所以不重叠」对跨角情形不成立，所以才有 `col: 'stretch'` 这个槽位。
-      */}
+      {/* 进 `top-bar` 的右端，与左端的退出/返回是 flex 兄弟——分处两角时会撞 */}
       <EdgeItem id="lab-nav">
       <div
         style={{
@@ -369,18 +348,11 @@ export function NavigationUI() {
         </NavButton>
 
         {/*
-          窄屏只留「路线 + 地图 + 更多」三个。
+          窄屏只留「路线 + 地图 + 更多」。六个 44px 图标加间距是 304px，
+          加退出 84px 就超过 320——**放不下是根因**，光收进同一槽位只是把重叠
+          变成挤压。所以折叠与放大触摸目标不能分批。
 
-          为什么必须收：320px 上六个 40px 图标加间距是 280px，退出链接 84px，
-          两者相加 364 > 320——这才是那 80px 重叠的**根因**，收进同一个槽位
-          只能把「重叠」变成「挤压」，修不了「放不下」。而把触摸目标提到 44
-          会让这排变成 6×44+5×8 = 304，一个人就吃掉整个视口。
-          所以**收编与放大触摸目标是同一件事的两半，不能分批**。
-
-          留下的两个是按「进了走廊之后最可能想干什么」选的：
-          路线（用户点名要它更显眼）与地图（唯一的房间入口）。
-          其余四个是设置类，藏一层不损失可达性——而且「更多」面板里它们有**文字**，
-          比 18px 的图标更容易认。
+          其余四个是设置类，在「更多」面板里有**文字**，比 18px 图标更容易认。
         */}
         {!isNarrow && (
         <>
@@ -450,7 +422,7 @@ export function NavigationUI() {
         </>
         )}
 
-        {/* 窄屏：把音频 / 成就 / 帮助 / 语言收进「更多」。见 NARROW_KEEP 的注释 */}
+        {/* 窄屏：音频 / 成就 / 帮助 / 语言收进「更多」 */}
         {isNarrow && (
           <NavButton
             onClick={() => { setMoreOpen(o => !o); setMapOpen(false); setAudioOpen(false); setAchievementsOpen(false) }}
@@ -467,15 +439,7 @@ export function NavigationUI() {
       </div>
       </EdgeItem>
 
-      {/*
-        窄屏「更多」面板：音频 / 成就 / 帮助 / 语言。
-
-        它不是把四个图标竖着排一遍——面板里给的是**文字**。18px 的奖杯与问号
-        在手机上要猜，而这四个是设置类功能、不是高频操作，多一次点击换来能读懂
-        是划算的。（顶栏留下的两个反过来：路线与地图是高频，图标 + 一次点击更好。）
-
-        样式与地图面板同源（`TORN_EDGE_CLIP`）：同一个视图里两种纸边会显得像 bug。
-      */}
+      {/* 窄屏「更多」面板。样式与地图面板同源（`TORN_EDGE_CLIP`） */}
       {moreOpen && (
         <div
           role="dialog"
@@ -535,7 +499,6 @@ export function NavigationUI() {
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 10,
-                // 44：面板里的行同样是触摸目标，不因为在面板里就可以更小
                 minHeight: 44, padding: '0 4px',
                 // 写死族名而不是 'inherit'：门禁 styleTokens.test.ts 要求每个
                 // font-family 引用都能落到一条 @font-face 或系统字体上，
@@ -594,8 +557,7 @@ export function NavigationUI() {
               data-testid="map-close"
               style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6,
                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                       // 触摸目标 44：原先只有 padding:4 包一个 16px 的图标 = 24×24，
-                       // 是全 Lab 最小的可点元素。负外边距抵掉多出来的尺寸，标题行不变高。
+                       // 触摸目标 44；负外边距抵掉多出来的尺寸，标题行不变高
                        minWidth: 44, minHeight: 44, margin: -10, marginLeft: 0 }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round">
@@ -766,11 +728,7 @@ export function NavigationUI() {
 
 // ─── Small reusable nav button ────────────────────────────────────────────────
 
-/**
- * 撕纸边的裁剪路径。地图面板与窄屏「更多」面板共用——
- * 25 行的 polygon 抄第二份的话，改一处就会两个面板边缘不一样，
- * 而那种不一致只有把两个面板并排截图才看得出来。
- */
+/** 撕纸边的裁剪路径，地图面板与「更多」面板共用 */
 const TORN_EDGE_CLIP = `polygon(
     0% 0%, 100% 0%,
     99% 3%, 100% 6%, 98% 10%, 100% 14%, 99% 18%, 100% 22%, 98% 26%, 100% 30%,
@@ -811,8 +769,7 @@ function NavButton({
         background: solid ? '#2a1f0e' : active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
         border: `1.5px solid ${solid ? '#2a1f0e' : active ? 'rgba(42,31,14,0.3)' : 'rgba(42,31,14,0.12)'}`,
         borderRadius: 8,
-        // 44：WCAG 2.5.5 与 Apple HIG 的触摸目标下限。原先 40。
-        // 放大它必须与窄屏折叠同批——六个 44 加间距是 304px，320 视口装不下。
+        // 44 = WCAG 2.5.5 / Apple HIG 的触摸目标下限
         width: label ? 'auto' : 44, height: 44,
         minWidth: 44, minHeight: 44,
         paddingInline: label ? 12 : 0,

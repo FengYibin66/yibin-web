@@ -265,11 +265,7 @@ body {
 }
 
 /* ─── AchievementPopup ───────────────────────────────────────────────────── */
-/*
-  两条关键帧原先带 `translateX(-50%)`——那是配合 `left: 50%` 的自定心。
-  居中现在归 `bottom-center` 槽位（flex `align-items: center`），
-  这里必须去掉，否则气泡会整体左移半个自身宽度。
-*/
+/* 不带 `translateX(-50%)`：居中归 `bottom-center` 槽位的 flex */
 @keyframes popupEnter {
   from { opacity: 0; transform: translateY(50px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -288,16 +284,9 @@ body {
 }
 .achievement-popup {
   /*
-    **不再自己定位。** 它是 `bottom-center` 槽位里的一个 flex 兄弟
-    （`lib/layout/overlays.ts` 的 `lab-achievement`，ADR 20260909182319）。
-
-    此处原先是 `position: fixed; bottom: 88px`，注释逐字写着
-    「88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距」——
-    **一个组件手算另一个组件的高度**。被算的那条提示改一行字、换一种语言、
-    或在窄屏上折成两行，这个数就悄悄错了，而没有任何东西会报警。
-    这是那份 ADR 里举的原型例子，现在它自己没了。
-
-    `relative` 要保留：`::before` 的纸纹是 `absolute; top:-20%` 定位到它上面的。
+    不自己定位：它是 `bottom-center` 槽位里的 flex 兄弟
+    （`lab-achievement`，ADR 20260909182319）。
+    `relative` 要保留——`::before` 的纸纹靠它定位。
   */
   position: relative;
   background: #ffffff;
@@ -381,16 +370,7 @@ body {
 }
 @media (max-width: 767.98px) {
   .achievement-popup {
-    /*
-      这里原先还有一条 `bottom: 24px`——**第二个手写偏移**，与上面那个
-      `bottom: 88px` 是同一个病的窄屏分支。去掉 fixed 定位后它没被一起去掉，
-      而 `position: relative` 下 `bottom` 会把元素**往上顶 24px**：
-      实测 320px 上气泡从 553 挪到 529，正好压住 530–545 的滚动提示，
-      100% 覆盖——和收编之前一模一样的缺陷，只是换了实现路径。
-
-      桌面上量到「不重叠」，窄屏上量到「100% 重叠」，两者差的就是这一行。
-      这是「看数字 + 分档量」才抓得到的：只看桌面截图会以为已经修好。
-    */
+    /* 不要在这里加 bottom：`relative` 下它会把气泡往上顶，压住滚动提示 */
     padding: 10px 16px;
   }
   .achievement-popup .popup-title { font-size: 13px; }
@@ -506,8 +486,7 @@ body {
   font-weight: bold; font-size: 12px; letter-spacing: 1px;
   color: #1a1a1a; position: relative; z-index: 1;
 }
-/* 与 lib/layout/breakpoints.ts 的 NARROW_MAX 对齐：768 整点上「窄屏 CSS」与
-   Tailwind 的 `md:`（min-width 768）此前同时生效，是一条真实的 off-by-one */
+/* 与 `breakpoints.ts` 的 NARROW_MAX 对齐：768 整点上会与 Tailwind 的 `md:` 同时生效 */
 @media (max-width: 767.98px) {
   .achievements-panel { right: 16px; width: 260px; }
 }

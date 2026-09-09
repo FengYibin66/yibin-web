@@ -791,15 +791,9 @@ test.describe('路线入口的引导（规格 §5.2）', () => {
 
 test.describe('顶栏（ADR 20260909182319 第二期）', () => {
   /*
-    这两条量的是**渲染结果**，不是源码里的数字。
-
-    为什么不用源码棘轮：小于 44 的触摸目标在这个仓库有三种形态——内联的
-    `width: 40, height: 40`、只有 `padding: 4` 包一个 16px 图标的关闭按钮
-    （实测 24×24，全 Lab 最小）、以及纯文字链接 `← Exit Lab`（实测高 18）。
-    AST 查询只认第一种，另两种它看不见，于是门禁会在「已经全绿」的情况下
-    漏掉真正咬人的两种。`getBoundingClientRect` 三种都认。
-
-    也不给窄屏加 skip：mobile-safari 形态（390px）正是这次改动的全部内容。
+    量**渲染结果**而不是源码里的数字：小于 44 的形态有三种（内联方形声明、
+    只有 padding 的关闭按钮、纯文字链接），AST 只认第一种，
+    而 `getBoundingClientRect` 三种都认。
   */
   test('顶栏所有可点元素的触摸目标不小于 44×44', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
@@ -822,14 +816,8 @@ test.describe('顶栏（ADR 20260909182319 第二期）', () => {
   test('退出链接与导航图标排不重叠（跨槽位那处 80px）', async ({ page }) => {
     test.skip(!(await openLab(page)), '此形态没有 WebGL')
 
-    /*
-      原先退出在 `top-left`、图标排在 `top-right`，两个**不同**的槽位，
-      互相不知道对方多宽——320px 上实测重叠 80px。现在两者是 `top-bar`
-      这个贯通槽位的 flex 兄弟。
-
-      断言水平间距 ≥ 0 而不是「盒子不相交」：它们在同一行、y 完全重合，
-      矩形相交判定对这种情形是对的，但报出来的信息不如「差多少像素」有用。
-    */
+    // 断言水平间距而不是「盒子不相交」：它们在同一行、y 完全重合，
+    // 相交判定也对，但「差多少像素」的报错更有用
     const gap = await page.evaluate(() => {
       const a = document.querySelector('[data-overlay=lab-exit]')?.getBoundingClientRect()
       const b = document.querySelector('[data-overlay=lab-nav]')?.getBoundingClientRect()

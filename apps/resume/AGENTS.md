@@ -537,123 +537,22 @@ pnpm exec playwright install chromium webkit   # 首次需装浏览器
 
 ## 屏角挂件：先登记，再用 `<EdgeItem>`，别自己写 `position: fixed`
 
-ADR 20260909182319。**唯一有权写 `fixed` / `sticky` 的文件是
-`components/layout/EdgeLayer.tsx`**，由 `__tests__/overlayOwnership.test.ts` 守着
+ADR 20260909182319。唯一有权写 `fixed` / `sticky` 的文件是
+`components/layout/EdgeLayer.tsx`，由 `__tests__/overlayOwnership.test.ts` 守着
 （棘轮，数字只能往下）。
 
-要加一个钉在屏幕角上的东西，两步：
+加一个钉在屏幕角上的东西：先在 `lib/layout/overlays.ts` 的 `OVERLAY_REGISTRY`
+登记（`surface` / `slot` / `layer` / `presence` / `order` / `interactive`），
+再用 `<EdgeItem id="...">` 包起来放进页面的 `<EdgeLayerRoot>`。
 
-1. 在 `lib/layout/overlays.ts` 的 `OVERLAY_REGISTRY` 登记
-   （`slot` / `layer` / `presence` / `order` / `interactive`）
-2. 用 `<EdgeItem id="...">` 包起来，放进页面的 `<EdgeLayerRoot>` 里
+### 跨槽位照样会撞——`top-bar` 就是为此存在的
 
-### 为什么不能自己写坐标
+「是 flex 兄弟所以不重叠」**只对同一个槽位成立**。分处 `top-left` 与 `top-right`
+的两组挂件互不知道对方多宽（Lab 顶栏 320px 上实测撞 80px）。
+**要在一行里放两组东西就用 `top-bar`**，不要用 top-left + top-right。
 
-屏幕的四个角是**共享资源**。此前全站 15 处 `position: fixed` 各自写坐标与 z
-（15 个互不共享的数），撞不撞取决于内容宽度——2026-09-09 审计实测出四处真实重叠，
-其中一处**在桌面上**：入口页的域名水印与底部提示条逐字同坐标、z 差 70，
-水印 100% 被盖住，从那条提示上线那天起没人见过。
-
-而这个仓库已经为同一个抽象缺失付过一次钱：`globals.css` 里
-`.achievement-popup { bottom: 88px }` 的注释写着
-`88 = 32（提示的底距）+ 提示自身高度（约 20）+ 一段间距`——**一个组件手算另一个
-组件的高度**。被算的那个改一行字，这个数就悄悄错了，而没有任何东西会报警。
-
-同槽位的挂件是同一个 flex 容器的**兄弟**（不是各自绝对定位），所以同槽位内
-几何上不可能重叠。
-
-### 但**跨槽位**照样会撞——`top-bar` 就是为此存在的
-
-「是 flex 兄弟所以不重叠」**只对同一个槽位成立**。Lab 顶栏原先是 `top-left` 的
-`← Exit Lab`（20→104）与 `top-right` 的六个图标（24→304），两个不同的槽位，
-互相不知道对方多宽，320px 上实测重叠 80px。声明表只统一了坐标来源，没让它们
-互相知情。
-
-所以有 `top-bar` 这个 `col: 'stretch'` 的贯通槽位：整行两端钉住、`space-between`
-分列两端，两组挂件才真的成为兄弟。**要一行里放两组东西，用它，不要用 top-left
-+ top-right。**
-
-而收编本身修不了那 80px：六个 44px 触摸目标加间距是 304px，加退出的 84px
-是 388 > 320——**根因是放不下**，收进同槽位只把「重叠」变成「挤压」。
-所以窄屏折成三个（路线 + 地图 + 更多）与放大触摸目标是**同一件事的两半，
-不能分批做**：只放大不折叠，一排按钮就吃掉整个视口。
-
-### 挂件不许自己再写偏移，包括 CSS 里的
-
-收编 `AchievementPopup` 时我把 `globals.css` 的 `position: fixed; bottom: 88px`
-换成了 `position: relative`，但**漏了同一文件里 `@media (max-width: 768px)`
-下的第二条 `bottom: 24px`**。`relative` 配 `bottom` 会把元素**往上顶**：320px 上
-气泡从 553 挪到 529，正好 100% 压住 530–545 的滚动提示——和收编前一模一样的
-缺陷，只是换了实现路径。桌面上量到「不重叠」、窄屏上量到「100% 重叠」，
-差的就是那一行。**分档量，别只看桌面截图。**
-
-### 测试里渲染含屏角挂件的组件要用 `LabUiWrapper`
-
-`EdgeItem` 是 portal，容器由 `EdgeLayerRoot` 提供；**没有它时 `EdgeItem` 返回
-`null`**，于是退出链接、图标排、房间内返回在测试里根本不渲染，而报错是
-`getByTestId('nav-back')` 找不到元素，看不出真实原因（收编 Lab 顶栏时三个测试
-文件共 12 条一起红）。用 `__tests__/helpers/labUiWrapper.tsx` 的 `LabUiWrapper`
-（它同时包了 `LocaleProvider`）。
-
-**只渲染单个非挂件组件的用例不要包**——`EdgeLayerRoot` 会往容器里放九个空的
-槽位容器，`toBeEmptyDOMElement()` 必红。
-
-不让 `EdgeItem` 在缺容器时「就地渲染」降级，是因为那样忘了放 `EdgeLayerRoot`
-的页面会静默退回收编前的样子（各自定位、互相压住），**而没有任何测试会红**。
-形态与理由同 `LocaleProvider` 的 `throwingDefault`。
-
-### E2E：窄屏折叠后不要给窄屏加 skip
-
-`nav-audio` / `nav-achievements` / `nav-help` / `nav-locale` 在 <768 折进「更多」
-面板。`e2e/lab.spec.ts` 的 `navItem()` 助手两种形态都能拿到（直接按钮或面板里的
-行），每次返回**新的** locator——点了面板里的行之后面板会 `closeAll()`，
-缓存的 locator 立刻失效。
-
-**但测「此刻能不能点到」的用例不能用那个助手**：它在按钮不存在时会先真的点一下
-「更多」，而那一下会关掉地图面板，把被测条件本身改掉。实测后果是那条
-`test.fail()` 从「预期失败」变成「意外通过」，而 `elementFromPoint` 证明缺陷仍在
-（390px 上那个位置命中的是 `map-close`）。**用例形态变了要重新量，
-不能因为它变绿就当成修好了。**
-
-### Classic 顶栏：窄屏走汉堡菜单，不是「藏起来」
-
-`components/layout/Navbar.tsx`。改动前那 9 个导航入口（8 个锚点 + Gallery）
-是 `hidden md:flex`——**藏起来了而没有替代入口**，而 `/classic/` 在 390px 上
-高 18056px，用户只能一路滑。
-
-这类缺陷值得单独记一条，因为它的症状与「布局错乱」不同：**元素还在 DOM 里**
-（只是 `display: none`），所以按 `getByText` 断言「链接存在」会全绿，
-截图上也看不出「少了什么」——你得知道宽屏有什么才能发现窄屏少了什么。
-
-- 菜单面板放在 `<nav>` **里面**，不是第二个 `fixed` 元素：顶栏自己已经
-  `fixed top-0 w-full`，面板作为它的块级子元素天然跟着钉住，不需要再写一处坐标
-- 面板背景**不透明**（`var(--bg-base)`），不跟顶栏那层 80% + blur：
-  9 行、近半屏高的面板，半透明下文字对比度取决于背后正好是什么。
-  这个组件已因背景写死栽过一次（审计 E2），所以用主题变量而不是具体颜色
-- ESC 与**滚动**都收起。不锁滚动是刻意的：锁了要动 Lenis（`lenis.stop()`），
-  而这是下拉菜单不是模态
-- ESC 不接 `lib/lab/app/escapeStack`——那个栈是 Lab 的，Classic 没有第二个
-  ESC 消费者，引进去只是让 Classic 依赖 Lab 的运行时
-
-**两层测试各守一半，缺任一层都会漏**：`__tests__/navbarMenu.test.tsx` 守结构与
-行为（尤其那条**与宽屏那一排逐条对账**的断言——有人加第 10 个链接却忘了菜单
-会红），但 jsdom 不算 CSS，`hidden md:flex` 在那里无效、两组都在 DOM 里；
-「哪一档真的看得见、点得到」由 `e2e/staticExport.spec.ts` 在 390px 量渲染结果。
-
-### 触摸目标 44 的适用范围（别把它套到桌面文字链接上）
-
-- **控件**（按钮）两档都要 ≥44
-- **窄屏菜单里的行**要 ≥44
-- **宽屏平铺的文字链接豁免**：实测高 20px，但它们在 hover 指针下。
-  WCAG 2.5.8（AA，下限 24×24）对行内文字链接明确豁免，44 是 2.5.5（AAA）
-  针对触摸的要求。把 44 套上去等于为一个不存在的问题重做桌面顶栏——
-  我第一版没做这个区分，门禁于是在**桌面**上报出那 9 个链接，
-  正是 `.claude/hooks/AGENTS.md` 说的那种会训练人加豁免的误报
-
-**判据要量渲染结果，不要做源码棘轮**：小于 44 的形态在这个仓库有三种——
-内联 `width: 40, height: 40`、只有 `padding: 4` 的关闭按钮（24×24）、
-纯文字链接（高 18–20）。AST 只认第一种，另两种看不见，
-于是门禁会在「已经全绿」的情况下漏掉真正咬人的那两种。
+而收编本身修不了那 80px：六个 44px 图标加间距 304px，加退出 84px 超过 320
+——**根因是放不下**。所以窄屏折叠与放大触摸目标是同一件事的两半，不能分批。
 
 ### 路线入口的引导
 
@@ -676,36 +575,70 @@ ADR 20260909182319。**唯一有权写 `fixed` / `sticky` 的文件是
 
 ### 三个容易踩的点
 
-- **`interactive` 必须显式声明，不能从 `layer` 推断。** 我第一版让包装层无条件
-  `pointerEvents: 'auto'`，把入口页那条自己写着 `none` 的提示盖掉了，于是它从
-  「视觉遮挡但点得穿」变成**真的挡住主按钮**——实测点下去不跳转，比原样更糟。
-  而按 `layer === 'hint'` 推断也会错：路线引导的 coach mark 就是一个**可点的提示**。
-- **全屏覆盖层不进这张表**（`LabLoader` 9999 / `PaperTransition` 9998 /
-  `LabTutorial` 200 / lightbox 与图片预览）。它们的语义是「盖住一切」而不是
-  「占一个角」，重新定序会让画面出错，而 `lab.spec.ts` 那 61 条断言读的是
-  `data-lab-*` 属性、**对 z 序完全失明**。ADR 明确划为第二期、不做。
+- **`interactive` 必须显式声明，不能从 `layer` 推断。** 无条件
+  `pointerEvents: 'auto'` 会把写着 `none` 的提示变成真的挡住底下的按钮
+  （单测、tsc、构建全绿而按钮点不动）；而按 `layer === 'hint'` 推断也会错——
+  路线引导的 coach mark 就是一个可点的提示。
+- **挂件不许自己再写偏移，CSS 里也不行。** 去掉 `fixed` 之后 `position: relative`
+  配残留的 `bottom` 会把元素往上顶，重现同一个遮挡缺陷。桌面量到「不重叠」、
+  窄屏量到「100% 重叠」，差的就是一行 `@media` 里的偏移——**分档量**。
+- **全屏覆盖层不进这张表**（`LabLoader` / `PaperTransition` / `LabTutorial` /
+  lightbox / 图片预览）。语义是「盖住一切」而非「占一个角」，
+  而 `lab.spec.ts` 的断言对 z 序完全失明。ADR 划为第二期、不做。
 - **视口判据用 `hooks/useViewport()`，不要自己调 `matchMedia`**
-  （`__tests__/viewportReaders.test.ts` 棘轮）。返回的三个字段
-  `isNarrow` / `isTouch` / `canHover` **不许压成一个布尔**——历史上已有两次回归：
-  只看宽度会让拖窄的桌面窗口掉进手机静态图路径；只看 pointer 会让 iPad 横屏掉进去。
-  `null` 是「还没判定」，调用方必须处理（否则手机上会闪一下桌面版）。
+  （`__tests__/viewportReaders.test.ts` 棘轮）。三个字段不许压成一个布尔，
+  `null` 是「还没判定」，调用方必须处理。
 
-### 横向 flex 头部的收缩约束
+### 测试：两层各守一半
 
-与屏角无关，但同属这次审计修掉的一类（education 详情页标题被挤成 31px 宽、
-字形越出自身盒 137px）：
+- 组件测试渲染含屏角挂件的组件要用 `__tests__/helpers/labUiWrapper.tsx` 的
+  `LabUiWrapper`（已含 `LocaleProvider`）。没有它 `EdgeItem` 返回 `null`、
+  挂件根本不渲染，而报错只是「找不到元素」。只渲染单个非挂件组件的用例不要包。
+- **jsdom 不算 CSS**：`hidden md:flex` / `md:hidden` 在单测里都无效、两组元素都在
+  DOM 里，所以「哪一档看得见、点得到」只能在 E2E 量渲染结果。
+- **窄屏折叠后不要给窄屏加 skip**：`e2e/lab.spec.ts` 的 `navItem()` 两种形态都能
+  拿到（每次返回新 locator——点了面板里的行之后面板会 `closeAll()`）。
+  **但测「此刻能不能点到」的用例不能用它**：它在按钮不存在时会真的点一下「更多」，
+  把被测条件本身改掉。实测后果是一条 `test.fail()` 从预期失败变成意外通过。
+  **用例形态变了要重新量，不能因为它变绿就当成修好了。**
 
-- 刚性项必须有宽度上限。**横版图按宽度限制，不按高度**——
-  `NUS SOC.png` 是 5.6:1，`h-12 w-auto` 下宽 269px，320px 视口内容宽 272，
-  它一个人就吃光。视口越宽 logo 越宽、文字列越窄，所以 390px 比 320px 更糟。
+## Classic 顶栏：窄屏走汉堡菜单，不是「藏起来」
+
+`components/layout/Navbar.tsx`。9 个导航入口原先是 `hidden md:flex`
+——藏起来了而没有替代入口，而 `/classic/` 在 390px 上高 18056px。
+
+这类缺陷的症状与「布局错乱」不同：**元素还在 DOM 里**（只是 `display: none`），
+按 `getByText` 断言「链接存在」会全绿，截图也看不出少了什么。
+`__tests__/navbarMenu.test.tsx` 那条**与宽屏那一排逐条对账**的断言就是为它写的。
+
+- 菜单面板放在 `<nav>` **里面**，不是第二个 `fixed` 元素
+- 面板背景**不透明**（主题变量）：9 行近半屏高，半透明下对比度取决于背后是什么。
+  这个组件因背景写死栽过一次（审计 E2）
+- ESC 与滚动都收起；不锁滚动（锁了要动 Lenis，而这是下拉菜单不是模态）
+- ESC 不接 Lab 的 `escapeStack`：Classic 没有第二个 ESC 消费者
+
+### 触摸目标 44 的适用范围
+
+**控件**（按钮）与**窄屏菜单里的行**都要 ≥44；**宽屏平铺的文字链接豁免**
+（在 hover 指针下，WCAG 2.5.8 对行内文字链接明确豁免，44 是 2.5.5 针对触摸的要求）。
+把 44 套到桌面 hover 链接上等于为一个不存在的问题重做桌面顶栏，
+而那种误报会训练人给判据加豁免。
+
+**判据要量渲染结果，不要做源码棘轮**：小于 44 的形态有三种（内联方形声明、
+只有 padding 的关闭按钮、纯文字链接），AST 只认第一种。
+
+## 横向 flex 头部的收缩约束
+
+- 刚性项必须有宽度上限。**横版图按宽度限制，不按高度**——`NUS SOC.png` 是 5.6:1，
+  `h-12 w-auto` 下宽 269px，而 320px 视口内容宽 272。视口越宽 logo 越宽、
+  文字列越窄，所以 390px 比 320px 更糟。
 - **`flex-wrap` 与 `min-w-0` 不得同时出现在同一容器**：`min-w-0` 把可缩项的
   min-content 贡献抹成 0，容器于是永远认为「一行放得下」，`flex-wrap` 永不触发。
-- 需要「要么并排、要么换行」的多栏用 grid + 断点显式声明；中栏写
-  `minmax(0,1fr)` 而不是 `1fr`（后者的 min 是 `auto`，长单词会撑破网格）。
-- 判断溢出**不要只看 `documentElement.scrollWidth`**。它在被 `overflow` 裁掉时
-  仍等于视口宽——我就是这样漏掉了「日期行冲出右边缘」那一处，只有整页截图
-  （宽 557 CSS px > 390）才暴露。要逐元素查右边界，含 `Range.getClientRects()`
-  的**字形**矩形：QS 卡与 h1 的**盒子并不相交**（ix = −16px），越界的是字形。
+- 「要么并排、要么换行」用 grid + 断点显式声明；中栏写 `minmax(0,1fr)` 而非 `1fr`
+  （后者的 min 是 `auto`，长单词会撑破网格）。
+- 判断溢出**不要只看 `documentElement.scrollWidth`**：被 `overflow` 裁掉时它仍
+  等于视口宽。要逐元素查右边界，含 `Range.getClientRects()` 的**字形**矩形
+  ——实测过一处盒子不相交（ix = −16px）而字形越界 137px 的标题。
 
 ## 命令
 

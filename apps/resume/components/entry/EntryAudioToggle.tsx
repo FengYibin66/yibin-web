@@ -4,20 +4,10 @@ import { useAudio } from '@/context/AudioContext'
 import { useLabLabels } from '@/hooks/useLabLabels'
 
 /**
- * 入口页右上角的静音开关。
+ * 入口页右上角的静音开关。原先是 `ExplorerBar` 文本里的 `[ON]/[OFF]`——
+ * 提示里唯一可交互的元素，所以提示要能淡出，必须先把它挪出来。
  *
- * ## 它为什么被搬到这里
- *
- * 原先它是 `ExplorerBar` 那条底部提示**文本里**的 `[ON]` / `[OFF]`——
- * 一段约 30×16px 的内联文字，`pointerEvents: 'auto'`，是整条提示里唯一可交互的
- * 东西。而那条提示 100% 盖住了 Classic 面板的「打开简历」主按钮，必须能自动淡出；
- * **一淡出就把音频开关一起带走了**。所以顺序只能是「先把开关挪出来，再让提示消失」。
- *
- * 顺带修掉两个毛病：那 30×16 的命中区远低于 44×44 的触摸下限；而且
- * `[ON]/[OFF]` 这种写法对读屏是一串括号，没有可访问名。
- *
- * 视觉上与同槽位的 `LocaleToggle` 对齐（同样的 `--bg-surface` / `--bg-border` /
- * `--text-secondary`、同样的圆角），因为它们现在是同一个 flex 容器里的兄弟。
+ * 视觉上与同槽位的 `LocaleToggle` 对齐：它们现在是同一个 flex 容器里的兄弟。
  */
 export function EntryAudioToggle() {
   const { isMuted, toggleMute } = useAudio()

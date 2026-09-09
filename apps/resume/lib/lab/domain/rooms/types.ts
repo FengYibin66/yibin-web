@@ -2,20 +2,9 @@
 import type { AchievementId, DoorSlot, RoomId } from '../ids'
 
 /**
- * 房间声明 —— 每个房间的全部差异集中在一处。
+ * 房间声明——每个房间的全部差异集中在一处（ADR 20260903140615）。
  *
- * 加它的原因（ADR 20260903140615）：房间之间「谁动相机、动到哪、有没有雾、
- * 环境音怎么放、要哪些纹理」原先散落在各房间组件里，结果是同一件事有五种
- * 做法、四个房间三种完成度：
- *
- * - `PublicationsRoom` 有专门的 `usePublicationBrowseCamera`，所以取景正确
- * - `ProjectsRoom` 用**世界坐标** tween，而塔在门的局部坐标系里 → 四个物体
- *   在画面上只有指甲大且偏右（审计 A4）
- * - `AboutRoom` 与 `ContactRoom` 根本没有房间级相机 → 内容在取景外，Contact
- *   的留言纸（房间唯一的 CTA）用户根本看不到（审计 A1 / A3）
- *
- * 声明化之后，取景变成**数据**，可以用 Playwright 截图基线锁住；加房间等于
- * 加一个文件，不改任何编排代码。
+ * 取景是**数据**，可以用截图基线锁住；加房间等于加一个文件，不改编排代码。
  */
 
 export type Vec3 = readonly [number, number, number]
@@ -23,15 +12,11 @@ export type Vec3 = readonly [number, number, number]
 /**
  * 进房后的观察位姿。
  *
- * **坐标系是房间自己的局部空间**（房间根 `<group>` 建立的那个），不是世界
- * 坐标系。这一点是审计 A4 的直接根因：`ProjectsRoom` 写的
- * `gsap.to(camera.position, { x: 3, y: -3 })` 是**世界坐标**，而房间内容挂在
- * 门的 inner group 下（右墙的门整体旋转约 −60°），算下来相机离塔中心约 13
- * 单位——于是四个物体在画面上只有指甲大且偏右。
+ * **坐标系是房间自己的局部空间**（房间根 `<group>` 建立的那个），不是世界坐标。
+ * 混用是审计 A4 的直接根因：写世界坐标时房间内容挂在旋转约 −60° 的门 inner group
+ * 下，实算相机离目标 13 单位，四个物体在画面上只有指甲大。
  *
- * 选房间局部空间而不是门局部空间，是因为写房间的人思考的就是"相机站在塔前
- * 6 单位、看向塔中段"，而不是"门旋转后的第三象限"。CameraDirector 用挂载后
- * 的房间根 group 的 worldMatrix 做换算（ADR 20260903140617）。
+ * `CameraDirector` 用挂载后房间根的 worldMatrix 做换算（ADR 20260903140617）。
  */
 export interface RoomEntryPose {
   position: Vec3

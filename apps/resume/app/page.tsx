@@ -52,12 +52,6 @@ const EntryPreviewScene = dynamic<EntryPreviewSceneProps>(
 )
 
 export default function EntryPage() {
-  /*
-    `HTMLElement` 而不是 `HTMLDivElement`：Classic 面板已经是 `<a>`（审计 E3
-    要求可聚焦、可爬），两个面板的元素类型不同。这里只用到 style 与
-    addEventListener，`HTMLElement` 就够——强转成 Anchor 是把类型问题
-    藏起来而不是解决它。
-  */
   const leftRef  = useRef<HTMLDivElement>(null)
   // Classic 面板是 `<a>`（审计 E3 要求可聚焦、可爬），类型跟着元素走
   const rightRef = useRef<HTMLAnchorElement>(null)
@@ -291,15 +285,9 @@ export default function EntryPage() {
         屏幕的角是共享资源而没有所有权，谁 fixed 到同一坐标都不知道对方在。
       */}
     </div>
-    {/*
-      屏角挂件全部经 EdgeLayerRoot 放进声明好的槽位（ADR 20260909182319）。
-      这里不写任何坐标与 z——同槽位的挂件是同一个 flex 容器的兄弟，
-      几何上不可能重叠，而这正是原先四处重叠的成因。
-    */}
+    {/* 屏角挂件经 EdgeLayerRoot 放进声明好的槽位，这里不写坐标与 z（ADR 20260909182319） */}
     <EdgeLayerRoot>
-      {/* 语言在门户定，进 Lab / Classic 都沿用（见 EntryLocaleToggle 的说明） */}
       <EdgeItem id="entry-locale"><EntryLocaleToggle /></EdgeItem>
-      {/* 静音开关：原先是底部提示文本里的 [ON]/[OFF]，见 EntryAudioToggle 的说明 */}
       <EdgeItem id="entry-audio"><EntryAudioToggle /></EdgeItem>
       <EdgeItem id="entry-explorer-hint"><ExplorerBar /></EdgeItem>
       <EdgeItem id="entry-watermark">

@@ -18,13 +18,7 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
   // The inline script in layout.tsx <head> sets data-theme before paint (no FOUC),
   // so the useEffect sync only triggers a React state update, not a visible flash.
   const [isDark, setIsDark] = useState(true)
-  /**
-   * 窄屏汉堡菜单。
-   *
-   * 原先 `<768` 下那 9 个导航入口是 `hidden md:flex`——**藏起来了，没有替代入口**。
-   * 而 `/classic/` 在 390px 上高 18056px，用户只能一路滑。
-   * 这不是"手机上简化"，是那一档的导航功能整个消失。
-   */
+  /** 窄屏汉堡菜单。`<768` 下那 9 个导航入口原先是 `hidden md:flex`，没有替代入口 */
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -38,13 +32,8 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  /*
-    ESC 关菜单。
-
-    不用 `lib/lab/app/escapeStack`——那个栈是 Lab 的（走廊 / 房间 / 停靠视图三层
-    互相认领），Classic 页没有第二个 ESC 消费者，引进去只是让 Classic 依赖 Lab 的
-    运行时。真出现第二个的时候再收编。
-  */
+  // ESC 关菜单。不接 Lab 的 `escapeStack`：Classic 没有第二个 ESC 消费者，
+  // 引进去只是让它依赖 Lab 的运行时
   useEffect(() => {
     if (!menuOpen) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
@@ -52,14 +41,8 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
 
-  /*
-    滚动就收起。
-
-    菜单是钉在顶栏上的，而这一页有 18056px 可滑——不收起的话它会一路跟着，
-    盖住内容。这里刻意**不锁滚动**：锁了要动 Lenis（`lenis.stop()`），
-    而这是个下拉菜单不是模态，代价不值（Lenis 与 `scroll-padding-top`
-    互相干扰的坑见 AGENTS.md）。
-  */
+  // 滚动就收起：菜单钉在顶栏上，而这一页有 18056px 可滑。
+  // 刻意不锁滚动——锁了要动 Lenis，而这是下拉菜单不是模态
   useEffect(() => {
     if (!menuOpen) return
     const close = () => setMenuOpen(false)
@@ -78,8 +61,7 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
     <nav
       className="fixed top-0 w-full z-50 transition-all duration-300"
       style={
-        // 菜单开着也要不透明：菜单挂在顶栏里，透明背景下 9 个链接会和页面内容
-        // 叠在一起，字压字。
+        // 菜单开着也要不透明，否则 9 个链接与页面内容字压字
         scrolled || menuOpen
           ? {
               backdropFilter: 'blur(12px)',
@@ -121,7 +103,7 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* 汉堡：只在窄屏出现，宽屏那 9 个链接是平铺的 */}
+          {/* 汉堡：只在窄屏出现 */}
           <button
             type="button"
             onClick={() => setMenuOpen(o => !o)}
@@ -150,7 +132,6 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
           <button
             type="button"
             onClick={toggleTheme}
-            /* 44：原先 w-8 h-8 = 32×32，低于触摸目标下限 */
             className="inline-flex items-center justify-center w-11 h-11 rounded-full border transition-all duration-200 hover:border-[#00d4ff] hover:text-[#00d4ff]"
             style={{
               background: 'var(--bg-surface)',
@@ -166,12 +147,8 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
       </div>
 
       {/*
-        菜单面板。放在顶栏**里面**（不是第二个 fixed 元素）：顶栏自己已经是
-        `fixed top-0 w-full`，面板作为它的块级子元素天然跟着钉住，
-        不需要再写一处坐标——那正是 ADR 20260909182319 要消灭的东西。
-
-        每一项 `min-h-11`：9 个链接挨在一起时，小于 44 的行高在手机上点错的
-        概率很高，而点错的后果是跳到错误的锚点、再滑回来。
+        面板放在顶栏**里面**，不是第二个 fixed 元素：顶栏已经是 `fixed top-0 w-full`，
+        面板作为块级子元素天然跟着钉住，不需要再写一处坐标（ADR 20260909182319）。
       */}
       {menuOpen && (
         <div
@@ -180,16 +157,9 @@ export function Navbar({ brandHref = '/' }: NavbarProps) {
           style={{
             borderColor: 'var(--bg-border)',
             /*
-              面板自己**不透明**，不跟着顶栏那层 80% + blur。
-
-              顶栏细、半透明是刻意的设计；而这是 9 行、近半屏高的面板，
-              半透明下它的文字对比度取决于**背后正好是什么**——首屏那几个
-              彩色光斑经过 blur 之后仍会把某几行的底色抬亮。
-              深浅两档实拍都还读得动，但那是运气，不是保证。
-
-              这个组件已经因为背景写死栽过一次（审计 E2：滚动后写死
-              `rgba(7,11,18,0.80)`，浅色主题下变成深色条、品牌字几乎不可见），
-              所以用主题变量而不是具体颜色。
+              面板**不透明**，不跟顶栏那层 80% + blur：9 行近半屏高，
+              半透明下文字对比度取决于背后正好是什么。
+              用主题变量而不是具体颜色——这个组件因背景写死栽过一次（审计 E2）。
             */
             background: 'var(--bg-base)',
           }}

@@ -12,9 +12,7 @@ export function LocaleToggle() {
     <button
       type="button"
       onClick={toggle}
-      /* min-h/w-11 = 44px：原先 px-3 py-1 实测约 54×30，低于触摸目标下限。
-         这个组件同时用在 Classic 顶栏与门户右上角，两处都受益——门户那边
-         它与 44×44 的静音开关并排，尺寸一致才不显得歪。 */
+      /* min-h/w-11 = 44px 触摸目标 */
       className="inline-flex items-center justify-center px-3 min-h-11 min-w-11 rounded-full text-sm font-medium border transition-all duration-200
         hover:border-[#00d4ff] hover:text-[#00d4ff] hover:shadow-[0_0_12px_#00d4ff33]"
       style={{
@@ -23,15 +21,7 @@ export function LocaleToggle() {
         color: 'var(--text-secondary)',
       }}
       aria-label={labels.panels.toggleLanguage}
-      /*
-        测试用的稳定把手。
-
-        不能让 E2E 按 `aria-label` 或可见文字定位这个按钮：两者都随语言变
-        （标签刻意用**目标语言**写，见 `labUi.panels.toggleLanguage` 的注释），
-        于是"切过去再切回来"的用例第二次点击必然失配。而 `getByRole(name)`
-        匹配的是**可访问名**（= aria-label），不是可见文字，所以退回按
-        '中文' 定位同样不成立。既然两个自然把手都随语言变，就给一个不变的。
-      */
+      /* 稳定把手：可见文字与 aria-label 都随语言变，E2E 只能按它定位 */
       data-testid="locale-toggle"
     >
       {nextLocaleLabel(locale)}

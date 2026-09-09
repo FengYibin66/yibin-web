@@ -2,31 +2,16 @@ import { segmentIndexAtZ, segmentStartZ } from './layout'
 import { landmarksInSegment, type Landmark } from './landmarks'
 
 /**
- * 走廊世界状态 —— 类型与纯派生（ADR 20260908172231）。
+ * 走廊世界状态——类型与纯派生（ADR 20260908172231）。
  *
- * ## 这个文件存在的理由
+ * 走廊上的一切特性读的是同一组量（导轨在哪、多快、加载到哪、去过哪、第几圈、
+ * 几点、要不要减少动效），所以它们只有一个来源。
  *
- * 走廊要加的九件事（加载时把走廊画出来、时间线墙、招聘官路线、墨迹记忆、
- * 纸随风动、三扇窗、会说话的头像、第二圈变化、手绘地图）加上活物，读的是
- * **同一组量**：导轨在哪、多快、加载到哪、去过哪、第几圈、几点、要不要减少动效。
+ * 分工：本文件（domain）是**形状 + 纯函数**，不 import react / three / zustand；
+ * `app/stores/corridorStore.ts` 是运行时持有者；`hooks/useCorridorCamera.ts` 是
+ * **唯一**写导轨量的地方（门禁 `__tests__/railWriter.test.ts`）。
  *
- * 而在此之前这组量散在五处、且大半根本不存在：导轨 z 锁在
- * `useCorridorCamera` 的 ref 里（外部只能读 `camera.position.z`）、**速度没人算**、
- * 加载进度只有 `LabLoader` 知道、"去过哪扇门"没有任何地方记、圈数与当地时间
- * 不存在、`prefers-reduced-motion` 在 Lab 里完全没实现。
- *
- * 九件事若各自去建一套读法，会重演 `layout.ts` 之前的局面：同一组门的 Z 写在
- * 四处、段号计算写在三处（其中一处是裸 `/ 100`），改一处漏三处、不报错。
- *
- * ## 分工
- *
- * - 本文件（domain）：**形状 + 纯函数**。不 import react / three / zustand。
- * - `lib/lab/app/stores/corridorStore.ts`（app）：运行时持有者。
- * - `hooks/useCorridorCamera.ts`：**唯一**写导轨量的地方（门禁
- *   `__tests__/railWriter.test.ts` 全禁第二个写者）。
- *
- * store 不写相机 —— 它是导轨状态的**镜像**。相机所有权（ADR 20260903211244）
- * 完全不变：走廊侧仍由 `useCorridorCamera` 持有相机。
+ * store 不写相机——它是导轨状态的**镜像**，相机所有权不变。
  */
 
 // ─── 形状 ────────────────────────────────────────────────────────────────────

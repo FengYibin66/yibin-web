@@ -788,28 +788,15 @@ export function functionCalls(source: string, name: string, fileName = 'input.ts
 }
 
 /**
- * 文件里所有把元素**钉在视口上**的写法：`position: 'fixed' | 'sticky'`
- * 与 Tailwind className 里的 `fixed` / `sticky` token（含 `md:fixed` 这类前缀）。
+ * 把元素**钉在视口上**的写法：`position: 'fixed' | 'sticky'` 与 Tailwind
+ * className 里的 `fixed` / `sticky` token（含 `md:fixed` 这类前缀）。
+ * 给 `__tests__/overlayOwnership.test.ts` 用（ADR 20260909182319）。
  *
- * 给 ADR 20260909182319 的屏角单写者门禁用（`__tests__/overlayOwnership.test.ts`）：
- * 屏幕的四个角是共享资源，只有 `components/layout/EdgeLayer.tsx` 有权写坐标。
+ * **两种写法都要认**：这个仓库两种都在用（`ExplorerBar` 内联、`Navbar` className），
+ * 只认一种会恰好漏掉另一半，而漏掉没有任何症状。
  *
- * ## 为什么必须同时认两种写法
- *
- * 这个仓库两种都在用：`ExplorerBar` 写内联 `position: 'fixed'`，
- * `Navbar` 写 `className="fixed top-0"`。只认一种的门禁**恰好会漏掉另一半**，
- * 而漏掉没有任何症状——这是本仓库反复付过钱的失效形态
- * （ADR 20260903211320：正则版门禁对 20 个变异漏掉 10 个）。
- *
- * ## 刻意不认的
- *
- * - `position` 之外的属性名。`{ overflow: 'fixed' }` 不是定位。
- * - 非 `className` / `class` 的 JSX 属性里的 'fixed' 字面量。
- * - 模板字符串里由变量拼出的类名（`` `${cond ? 'fixed' : ''}` `` 的静态部分
- *   仍会被认到，但完全由变量决定的认不到）。变量拼类名不在本门禁的覆盖内，
- *   与 H1/H2 只看命令字面量是同一条边界。
- * - CSS 文件。`globals.css` 里的 `position: fixed` 由那份文件自己的注释与
- *   review 管；AST 扫的是 TS/TSX。
+ * 刻意不认：`position` 之外的属性名；非 className 属性里的 `'fixed'` 字面量；
+ * 完全由变量拼出的类名；CSS 文件（AST 扫的是 TS/TSX）。
  */
 export function fixedPositions(source: string, fileName = 'input.tsx'): Hit[] {
   const sf = parse(source, fileName)

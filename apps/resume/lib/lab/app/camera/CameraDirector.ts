@@ -1,36 +1,19 @@
 /**
- * 相机的唯一所有者（ADR 20260903140617）。
+ * 相机的唯一所有者（ADR 20260903140617），由
+ * `__tests__/cameraOwnership.test.ts` 守着写点棘轮。
  *
- * ## 为什么需要一个所有者
+ * 多个写者的后果不是风格不统一，而是**两个 tween 同时写 `camera.position`**：
+ * gsap 的后一个接管属性、前一个继续跑但被覆盖，相机停在两个目标之间。
  *
- * 「房间转场的相机动画由 `DoorSection` 统一编排，房间组件只提供目标 pose」
- * 这条约定在代码里被违反了四次（ProjectsRoom / TeleportRoom /
- * CorridorDecorations / 各房间自起 tween）。后果不是"风格不统一"，而是**两个
- * tween 同时写同一个 `camera.position`**：gsap 的后一个 tween 会接管属性，
- * 前一个继续跑但被覆盖，于是相机停在两个目标之间的某处。审计 A4（Projects
- * 房间四个物体只有指甲大且偏右）正是这么来的——房间自己写的是**世界坐标**
- * `{x:3, y:-3}`，而房间内容挂在旋转了约 −60° 的门 inner group 下。
+ * 分层：位姿**声明**在 domain（房间局部坐标）→ 换算与插值在这里 →
+ * 底层 orbit / 阻尼 / 限位交给 `camera-controls`。
  *
- * 约定靠不住，所以换成机制：写相机的入口只有这个类，
- * `__tests__/cameraOwnership.test.ts` 用 grep 守住。
- *
- * ## 分层
- *
- * - 位姿**声明**在 domain（`RoomDefinition.entryPose`，房间局部坐标）
- * - 换算与插值在这里（app 层）
- * - 底层 orbit / 阻尼 / 限位交给 `camera-controls`（yomotsu，MIT）
- *
- * 不自己搓 orbit 的理由：受限 orbit 要处理球面坐标的极点退化、阻尼、
- * 触摸双指缩放、以及"限位边界上不要抖"——这些 `camera-controls` 都做过了。
- *
- * ## 两种模式
- *
- * - **scripted**：gsap 插值 pose，每帧无过渡地推给 controls。用于进房、
- *   对焦、退房。时长由声明给（`entryPose.duration`），缓动与全站一致
- *   （`power2.inOut`），所以不用 camera-controls 自己那套指数平滑
- *   ——后者只有 `smoothTime`，给不出确定的时长。
- * - **free**：controls 直接吃输入，限位由 `RoomCameraFreedom` 给。
- *   `freedom` 为 null 的房间完全锁死（内容是平面构图，转动只会看到边界）。
+ * 两种模式：
+ * - **scripted**：gsap 插值 pose，每帧无过渡地推给 controls。时长由声明给，
+ *   所以不用 camera-controls 自己那套指数平滑（它只有 `smoothTime`，
+ *   给不出确定的时长）。
+ * - **free**：controls 直接吃输入，限位由 `RoomCameraFreedom` 给；
+ *   `null` 表示完全锁死（内容是平面构图，转动只会看到边界）。
  */
 import CameraControls from 'camera-controls'
 import gsap from 'gsap'

@@ -1,42 +1,16 @@
 /**
- * 走廊导轨 —— 相机的**另一个**持有者（ADR 20260903211244）。
+ * 走廊导轨——相机的**另一个**持有者（ADR 20260903211244）。
  *
- * ## 走廊为什么不用 CameraDirector
+ * 走廊里相机是一条沿 z 的一维轨道（x/y 固定、朝向恒定），与 `camera-controls`
+ * 的 orbit 模型是两种东西。所以 Lab 有两个相机持有者；关键是**同一时刻只有一个
+ * 在写**，由 `CameraDirector.owner` 与 `CameraRig` 的开发态断言保证。
  *
- * 走廊里相机是一条沿 z 的一维轨道：x / y 固定，z 随滚动插值，朝向始终看向前方。
- * 这与 `camera-controls` 的 orbit 模型（围绕一个 target 转）是两种东西，硬套过去
- * 要先给导演加一个 rail 模式——而那不会让任何事变简单。
+ * 走廊的传送**不能**走 `cameraDirector.moveToWorld({ duration: 0 })`：那条路径在
+ * 导演不持有相机时是空操作（`setLookAt(false)` 只改内部球面坐标，位姿要等
+ * `update()` 才应用，而 `update()` 在不持有时第一行就 return）。
  *
- * 所以 Lab 有**两个**相机持有者，`useCorridorCamera` 是走廊那个。这不是妥协，
- * 是走廊与房间的相机语义本来不同；关键在于**同一时刻只有一个在写**，由
- * `CameraDirector.owner` 与 `CameraRig` 的开发态断言保证。
- *
- * ## 这个模块存在的具体原因：传送不再瞬移
- *
- * `TeleportRoom` 原先调 `cameraDirector.moveToWorld({ duration: 0 })` 来把相机放到
- * 目标门前。那条路径**在导演不持有相机时是空操作**：
- *
- *   `moveToWorld(duration ≤ 0)` → `push()` → `controls.setLookAt(…, false)`
- *
- * 而 camera-controls 的 `setLookAt(enableTransition = false)` 只改它内部的
- * `_target` / `_spherical`，**相机位姿要等 `update()` 才应用**——而走廊里导演
- * 不持有相机，`update()` 第一行就 return。
- *
- * 后果：相机一动不动，随后 `DoorSection` 的对齐 tween 从**旧位置**飞过去。
- * 非 fast 模式下用户看到的是穿过整条走廊的 1 秒飞行，而不是瞬移；
- * `pendingDoorClick` 用 `camera.position.z` 算段号时也拿的是旧值。
- *
- * 而它的单测断言的是导演内部的 `snapshot()`（导演**想要**的位姿），不是
- * `camera.position`（相机**实际**的位姿）——所以测试一直是绿的。
- * 这条教训写进了 `apps/resume/AGENTS.md`：不要用 `snapshot()` 断言相机行为。
- *
- * ## 形态：注册表而不是全局状态
- *
- * 导轨的状态（目标 z、当前 z）住在 `useCorridorCamera` 的 ref 里，那是对的
- * ——它每帧插值，属于渲染循环。这里只做一件事：让**不在同一棵组件树上**的
- * `TeleportRoom` 能给它下一个命令。
- *
- * 命令而不是共享状态：`jumpTo` 是"立刻把导轨挪到这里"，语义完整、无中间态。
+ * 形态是**命令**而不是共享状态：导轨的每帧插值状态住在 `useCorridorCamera` 的
+ * ref 里，这里只让不在同一棵组件树上的 `TeleportRoom` 能下一个命令。
  */
 
 /** 导轨对外的命令面 */

@@ -7,26 +7,13 @@ import { en } from '@/lib/content/en'
 import { zh } from '@/lib/content/zh'
 
 /**
- * 返回链接的箭头恰好一个（2026-09-09）。
+ * 返回链接的箭头恰好一个。
  *
- * 上线后审计发现全部论文详情页底部显示「← ← Back to resume」。根因是**装饰性字符
- * 住在本地化文案里**：`classicUi.backToClassic` 当时是 `'← Back to resume'`，而
- * `PublicationDetailView` 的调用点又写了 `← {label}`。
+ * 装饰性字符不住在本地化文案里：文案是裸的，`←` 由组件渲染。
  *
- * 修法是把 `←` 从文案里拿出来、由组件渲染（正确先例：`LabScene` 的
- * `← {labels.panels.exitLab}`，文案是裸的 `'Exit Lab'`）。
- *
- * ## 为什么这条断言在**渲染结果**上，而不是在文案上
- *
- * 直觉写法是断言「文案里不含 `←`」。那样有两个问题：
- *
- * 1. 它守不住反向的错——有人把箭头从组件里删掉、加回文案，文案断言照样绿，
- *    而页面上又变成了另一种坏法（两个调用点里只有一个有箭头）。
- * 2. 它会诱使人写一份全局规则「文案不含方向箭头」，而 `labUi.fallback.webglCta`
- *    等键确实合法地含 `→`（它们的消费方不自己加箭头）。一旦有了例外清单，
- *    清单就开始腐化。
- *
- * 断言渲染结果没有这两个问题：无论箭头以后住在哪一侧，数出来不是一个就红。
+ * 断言在**渲染结果**上而不是文案上，两个理由：断言「文案不含 `←`」守不住反向的错
+ * （箭头从组件里删掉、加回文案，它照样绿）；而且会诱使人写一份全局规则
+ * 「文案不含方向箭头」，而 `labUi.fallback.webglCta` 等键合法地含 `→`。
  */
 function renderCount(node: React.ReactElement, glyph: string): number {
   render(<LocaleProvider>{node}</LocaleProvider>)

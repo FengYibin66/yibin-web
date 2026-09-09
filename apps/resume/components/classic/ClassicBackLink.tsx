@@ -17,7 +17,7 @@ export function ClassicBackLink({ href = '/classic/' }: { href?: string }) {
       className="inline-block mb-8 text-sm no-underline"
       style={{ color: 'var(--text-secondary)', letterSpacing: '0.04em' }}
     >
-      {label}
+      ← {label}
     </Link>
   )
 }

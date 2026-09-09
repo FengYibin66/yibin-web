@@ -55,9 +55,21 @@ export function ArtworkFrame({ image, index, onExpand }: ArtworkFrameProps) {
         </div>
       </div>
 
-      {/* Museum label card */}
+      {/*
+        Museum label card
+
+        默认可见；只有**支持悬停的设备**才起始透明、悬停淡入。
+        原先是 `opacity-0 group-hover:opacity-100`——触屏没有 hover 事件，
+        于是手机上每张照片的标题、地点、年份**永久不可见**，访客看到的是一批
+        没有任何说明的照片（实测 2026-09-09）。
+
+        用 `[@media(hover:hover)]:` 显式按指针能力分流，而不是按视口宽度：
+        窄窗口的桌面浏览器有鼠标，该保留悬停效果；iPad 横屏很宽但是触屏，
+        该常驻。这条规则的一般形式：**hover 携带的是信息（不是装饰）时，
+        在 `pointer: coarse` 下必须常驻或有等价显示路径。**
+      */}
       <div
-        className="mt-4 w-[85%] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        className="mt-4 w-[85%] transition-opacity duration-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
         style={{
           background: '#f5f0e8',
           borderLeft: '3px solid #c8a96e',

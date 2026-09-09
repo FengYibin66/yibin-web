@@ -7,9 +7,14 @@ function BackButton() {
   const params = useSearchParams()
   const router = useRouter()
 
+  // 无 `?from=` 时**仍然渲染**，默认回 `/classic`。
+  //
+  // 原先是 `if (!from || ...) return null`——而 Navbar 里的 `/gallery` 链接不带 query，
+  // 于是从 Classic 顶栏进相册的人一个返回入口都没有，只能按系统返回键或关标签。
+  // 这不是布局问题（按钮 z=9999 不会被挡），是逻辑上就没渲染。
+  // 默认回 `/classic` 而不是 `/lab`：直接打开相册链接的人没进过 3D 走廊，
+  // 把他扔进走廊是意外跳转。
   const from = params.get('from')
-  if (!from || (from !== 'lab' && from !== 'classic')) return null
-
   const isFromLab = from === 'lab'
   const label = isFromLab ? 'Back to Corridor' : 'Back to Portfolio'
   const href = isFromLab ? '/lab' : '/classic'

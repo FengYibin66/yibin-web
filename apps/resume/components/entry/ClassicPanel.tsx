@@ -96,14 +96,33 @@ export function ClassicPanel() {
         {hero.roles.join(' · ')}
       </p>
 
-      <div style={{ display: 'flex', gap: '28px', marginBottom: '40px' }}>
+      {/*
+        字号 9px → 11px（2026-09-09）。
+
+        9px 大写 + `.2em` 字距在 390×844 / DPR 3 上，笔画宽度不足一个稳定物理像素，
+        抗锯齿后是灰糊；而字距放大会进一步把字母拆散、降低字形辨识。11px 是
+        Apple HIG 最小正文（11pt）与 Material `labelSmall`（11sp）的共同下限。
+
+        抬字号必须同时改三处，否则 320px 上会溢出：
+          gap 28 → 16        三个标签变宽约 24%，原间距吃不下
+          flexWrap: 'wrap'   放不下就换行，而不是把容器推宽
+          justifyContent     换行后仍然居中，不然第二行会贴左
+        字距 .2em → .12em 抵消一部分增宽，同时 11px 下 .12em 的可读性优于 .2em。
+      */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: '16px',
+        marginBottom: '40px',
+      }}>
         {tags.map(({ icon, label }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '18px', color: ENTRY_COLORS.gold, marginBottom: '4px' }}>{icon}</div>
             <div style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '9px',
-              letterSpacing: '0.2em',
+              fontSize: '11px',
+              letterSpacing: '0.12em',
               color: ENTRY_COLORS.tag,
             }}>{label}</div>
           </div>

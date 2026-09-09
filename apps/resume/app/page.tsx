@@ -275,11 +275,23 @@ export default function EntryPage() {
       </a>
 
       {!isStacked && (
+        /*
+          从 `left:50% translateX(-50%)`（底部居中）移到左下角。
+
+          它原先与 `ExplorerBar` 逐字同坐标（都是 `fixed; bottom:16; left:50%;
+          translateX(-50%)`），而 ExplorerBar 是白底 + 2px 黑边、z=100，这条是 z=30
+          ——**桌面上它 100% 被盖住**，从 ExplorerBar 上线那天起就没人见过
+          （实测 2026-09-09：bar [415,736 451×49] × 域名条 [560,769 160×15]，
+          `elementFromPoint` 在域名条中心命中的是 bar）。
+
+          注意这条与 A2（ExplorerBar 盖住 Classic 面板 CTA）是**同一个缺陷的桌面镜像**：
+          屏幕的角是共享资源，而它没有所有权，谁 `position: fixed` 到同一坐标都不知道
+          对方在。这里只做位置避让；根治要一张槽位声明表（见 ADR 提案）。
+        */
         <div style={{
           position: 'fixed',
           bottom: '16px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: '24px',
           fontSize: '10px',
           color: 'rgba(42,31,14,0.25)',
           letterSpacing: '0.2em',

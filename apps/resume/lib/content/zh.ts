@@ -55,7 +55,8 @@ export const zh: SiteContent = {
       gallery: '相册：读书四个国家，工作三个国家。',
       contact: '联系：找到我最快的几种方式，各一次点击。',
       timeline: '这面墙就是简历：学校、公司、城市、年份。',
-      end: '走廊看完了。点一扇门进去，或者去左上角看完整简历。',
+      // 不要再写「左上角」，理由见 en.ts 同一键
+      end: '走廊看完了。点一扇门进去看房间。',
     },
     timeline: {
       present: '至今',
@@ -111,7 +112,7 @@ export const zh: SiteContent = {
       imagePreview: '图片预览',
       previewImage: '预览图片',
       previewNamed: '预览 {name}',
-      visitProject: '访问 →',
+      visitProject: '访问',
       skipTutorial: '跳过',
       startExploring: '开始探索',
       back: '返回',
@@ -229,7 +230,10 @@ export const zh: SiteContent = {
         qsRank: '#2',
         qsLabel: 'QS 全球排名',
         location: '英国·伦敦',
-        logo: '/education/imperial horizontal.png',
+        // 换用 Imperial.png：'imperial horizontal.png' 的透明背景被烤成了棋盘格像素
+        // （无 tRNS 块），页面上是一块灰白格子；Imperial.png 一直在仓库里没被用，
+        // 它是干净的白底校徽。见 2026-09-09 的资产核查。
+        logo: '/education/Imperial.png',
         keyModules: [
           'Structural Analysis',
           'Cementitious Materials',
@@ -704,6 +708,7 @@ export const zh: SiteContent = {
 
   classicUi: {
     learnMore: '了解更多',
-    backToClassic: '← 返回简历',
+    // 不带 `←`，理由见 en.ts 同一键
+    backToClassic: '返回简历',
   },
 }

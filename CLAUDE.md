@@ -38,7 +38,7 @@ apps/
     ├── llm-service/     # Python FastAPI
     └── contracts/       # OpenAPI + LLM 输出的 JSON Schema
 config/                  # 环境变量模板（*.example），生成 .env.* 见 scripts/env-build.sh
-docker/                  # nginx 配置 + Dockerfile
+docker/                  # nginx 配置 + Dockerfile（改 nginx 配置后必须重建容器，见 docker/AGENTS.md）
 docs/
 ├── adr/                 # 架构决策记录（制度见 ADR 20260822120805）
 ├── architecture/        # 架构现状与设计

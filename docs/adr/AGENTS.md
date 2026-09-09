@@ -16,7 +16,7 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 
 <!-- BEGIN:adr-index (生成物，勿手改；见 scripts/docs/gen_docs_index.py) -->
 
-共 25 份。按 ID（创建时间）升序。
+共 26 份。按 ID（创建时间）升序。
 
 | ID | 结论 | 状态 | 索引 |
 |----|------|------|------|
@@ -45,5 +45,6 @@ ADR 记录**有备选方案的选择**。写不出两个真实备选的，不是
 | [`20260908204302`](./20260908204302-corridor-touring-mode-wires-the-corridor-machine.md) | 招聘官路线作为走廊状态机的第四种模式接线；导轨新增 `scrollTo` / `hold` 两条命令，不新增相机写点 | 已接受 | resume 的 Lab 走廊新增「带我走一遍」自动路线（60 秒内依次停在头像、五扇门、猫与段末门前）。三条决定：① 路线是 `corridor.machine` 的第四种模式 `touring`，与传送、进房**由状态机互斥**，`SceneContext` 里五个传送布尔替换为机器快照（兑现 ADR 20260903140616 未完成的那一半，`corridor.machine` 从「已定义未接线」变为有真实消费者）；② 导轨命令面从 `jumpTo` 扩为 `jumpTo` / `scrollTo(z, {duration, ease})` / `hold(owner, onInput)` / `release(owner)`，命令只改导轨的 `targetZ`，**相机写点棘轮不动**（ADR 20260903211244）；③ 路线本身是 domain 的纯数据 + 纯步进函数（`tour.ts`：停靠点引用地标表 id、停留时长、字幕键），任何用户输入（滚轮 / 键盘 / 触摸 / 点门 / ESC）第一帧就退出路线。判定原则：**互斥关系归状态机，连续运动归导轨，路线内容归 domain；三者谁都不碰相机** |
 | [`20260908204303`](./20260908204303-corridor-timeline-is-a-declared-linear-mapping-on-segment-zero.md) | 走廊时间线是第 0 段上一条声明式的线性年份映射；简历条目加结构化年份与城市字段，`period` 字符串由门禁保证一致 | 已接受 | resume 的 Lab 走廊要「会讲履历」：墙脚有年份刻度、墙上按年份挂着经历 / 教育的手写便签、三扇窗透出三座城市此刻的天色。三条决定：① 时间线是 domain 里一份**声明**（`TIMELINE = { startYear: 2017, endYear: 2026, fromRelativeZ: −6, toRelativeZ: −90 }`）、只在第 0 段、z ↔ 年份线性，`year-mark` 与便签位置**由它派生**，不手写坐标；② `ExperienceItem` / `EducationEntry` 新增 `years: { start, end? }` 与 `cityId`，原 `period` 字符串保留给 Classic 显示，门禁 `contentYears.test.ts` 断言「解析 `period` 得到的年份 == `years`、en/zh 同值、`cityId` 合法」；③ 便签与刻度的落点由纯函数按地标表的避让区计算（不与门 / 家具 / 壁画重叠，同侧最小间距 2.4），门禁断言。判定原则：**位置是派生的，内容是声明的；两者都不许手写坐标** |
 | [`20260908204304`](./20260908204304-lab-creature-and-footstep-sounds-are-synthesized-offline.md) | Lab 活物与脚步的声音由仓库内脚本离线合成，不引入外部录音，也不在运行时合成 | 已接受 | resume 的 Lab 新增玩家脚步、狗爪声、狗叫、猫叫、气泡冒出四类音效。决定：全部由 `scripts/media/synth-sounds.mjs`（纯 Node，无依赖，写 WAV）**离线合成**，经既有 `encode-audio.mjs` 编成 m4a + ogg 进 `public/sounds/`，在 `SOUND_MANIFEST` 登记、走 `sfx` 总线与既有的 3D 定位；风格刻意是**卡通短音**（滑音、短噪声脉冲），与纸世界一致，不追求拟真。不用外部 CC0 录音（许可与风格两头不可控）、不在运行时用 WebAudio 合成（重复 ADR 20260903140618 收编裸 AudioContext 前的状态）。判定原则：**声音是素材，素材走流水线；流水线的输入必须在仓库里可复现** |
+| [`20260909163155`](./20260909163155-resume-fonts-self-hosted-from-fontsource-not-google-at-build-time.md) | resume 的四款界面字体改为自托管：从 `@fontsource` npm 包经 `next/font/local` 装船，构建时不再联 Google，并删除 `font-mocks.js` | 提议 | resume 的 Space Grotesk / Inter / JetBrains Mono / Cormorant Garamond 四款界面字体自 mock 引入以来**从未在线上生效**——`pnpm build` 带着 `NEXT_FONT_GOOGLE_MOCKED_RESPONSES`，而 Next 在该模式下把 mock CSS 里的 `https://fonts.gstatic.com/...` 地址**原样当作字体文件内容写出**，线上每个 woff2 都是 89 字节的 URL 字符串，浏览器报 `OTS parsing error`，全部回退到系统字体。决定：① 字体改为 npm 依赖 `@fontsource-variable/{inter,space-grotesk,jetbrains-mono}` + `@fontsource/cormorant-garamond`（OFL-1.1，npmmirror 可拉），经 `next/font/local` 引用包内 latin 子集 woff2；② 删除 `scripts/font-mocks.js` 与 `build` 脚本里的环境变量，`next/font/google` 从 resume 退出；③ 补一道产物门禁：`out/` 里每个 `.woff2` 必须以 `wOF2` 魔数开头。判定原则：**构建必须在离线的大陆机器上产出与本机完全相同的产物；任何「为了让构建过」而伪造的输入，都会变成线上的静默缺陷** |
 
 <!-- END:adr-index -->

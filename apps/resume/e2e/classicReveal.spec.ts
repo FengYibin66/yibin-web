@@ -33,8 +33,71 @@ test.beforeEach(({ page }) => {
   pageErrors.length = 0
   page.on('pageerror', e => { pageErrors.push(e.message) })
 })
+/**
+ * 导航把在途的 RSC 请求打断时 WebKit 报的那一条，**只有它**被豁免。
+ *
+ * 原文形如：
+ *   `/127.0.0.1:4321/classic/index.txt?_rsc=8k3n6Afe... due to access control checks.`
+ *
+ * ## 为什么这不是产品缺陷
+ *
+ * `index.txt` 是 Next App Router 自己的 RSC 载荷（静态导出下 `<route>/index.txt`），
+ * 请求由 Next 的客户端路由在 popstate 时发出、**不是我们的代码**。
+ * `goBack()` 当帧导航会把在途的那个 fetch 中止，而 WebKit 把这种中止
+ * 报成「access control checks」（同源却报访问控制，正是它的措辞）。
+ * Next 捕获取数失败后退回整页导航（`getAppBuildId() !== res.b → doMpaNavigation`），
+ * 页面照常工作——这条用例的显形断言全部通过，红的只有 `pageErrors` 这道夹具。
+ *
+ * ## 判断依据（2026-09-09，Classic 窄屏导航那批时首次撞上）
+ *
+ * - **同一个提交**的 `pull_request` 那次 CI 全绿，`push` 那次红 → 时序相关
+ * - 本地 webkit `--repeat-each=5` 全过 → 本机窗口太窄，CI 的共享机器更容易撞上
+ * - 那批改动只碰 Navbar（菜单 / 背景 / 尺寸 / 一个 `menuOpen` 才注册的滚动监听），
+ *   与取数无因果
+ *
+ * ## 它会掩盖什么
+ *
+ * 只掩盖「RSC 载荷请求被中止」这一条。正则钉住了 `index.txt?_rsc=` 与
+ * 那句固定结尾，**任何其他页面异常照旧让用例红** —— 不是把 `pageErrors`
+ * 整道夹具放宽。这一点很要紧：这道夹具当年是为了抓相机所有权断言的
+ * 首帧假阳性才加的（那次在 122 个用例全绿的情况下漏到实机）。
+ */
+const ABORTED_RSC_FETCH = /index\.txt\?_rsc=\S* due to access control checks\.$/
+
 test.afterEach(() => {
-  expect(pageErrors, '页面抛了未捕获异常').toEqual([])
+  const unexpected = pageErrors.filter(m => !ABORTED_RSC_FETCH.test(m))
+  expect(unexpected, '页面抛了未捕获异常').toEqual([])
+})
+
+/*
+  守住上面那条豁免的**范围**。
+
+  一条豁免腐烂的典型路径是被逐步放宽（下一次红了就多加一个 `.*`），
+  而放宽之后没有任何症状——它只会让这道夹具越来越不抓东西。
+  所以把「该命中什么、不该命中什么」固化成断言：
+  改宽了正则，这里立刻红。
+
+  这条不碰浏览器，两个形态各跑一次也是微秒级。
+*/
+test('RSC 中止的豁免范围没有被放宽', () => {
+  expect(
+    ABORTED_RSC_FETCH.test(
+      '/127.0.0.1:4321/classic/index.txt?_rsc=8k3n6AfebTMiPh9T due to access control checks.',
+    ),
+    '应当命中 CI 上实际出现的那条原文',
+  ).toBe(true)
+
+  for (const other of [
+    'ReferenceError: x is not defined',
+    'Could not load /textures/foo.webp',
+    "TypeError: undefined is not an object (evaluating 'a.b')",
+    // 同一个 URL 但别的失败原因：不能顺带放过
+    '/127.0.0.1:4321/classic/index.txt?_rsc=abc something else',
+    // 别的资源被同样的原因中止：也不在豁免范围内
+    '/127.0.0.1:4321/textures/x.webp due to access control checks.',
+  ]) {
+    expect(ABORTED_RSC_FETCH.test(other), `不该被豁免：${other}`).toBe(false)
+  }
 })
 
 /** 每个选择器下 opacity < 0.99 的元素；`onlyAboveViewport` 只看已滚过（bottom < 0）的 */

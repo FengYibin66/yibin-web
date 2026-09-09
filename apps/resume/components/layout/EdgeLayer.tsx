@@ -11,6 +11,7 @@ import {
   overlayById,
   zOfLayer,
   type EdgeSlot,
+  type OverlayPresence,
 } from '@/lib/layout/overlays'
 import { useViewport } from '@/hooks/useViewport'
 
@@ -48,6 +49,9 @@ import { useViewport } from '@/hooks/useViewport'
  * **可点的提示**。是不是装饰与它在哪一层无关，所以必须显式声明。
  */
 
+/** 由调用方经 `visible` 决定可见性的 presence（本组件判不了，见 EdgeItemProps） */
+const CALLER_DRIVEN = new Set<OverlayPresence>(['first-visit', 'in-room', 'not-in-room'])
+
 type SlotElements = Partial<Record<EdgeSlot, HTMLDivElement | null>>
 
 const SlotContext = createContext<SlotElements | null>(null)
@@ -59,7 +63,9 @@ function slotStyle(slot: EdgeSlot, isNarrow: boolean): React.CSSProperties {
   // 一律叠 safe-area：刘海屏的左右、手势条的底部。不叠的话手机横屏时挂件会被
   // 圆角或手势条压住，而那只在真机上看得见（模拟器与 headless 都不复现）。
   const v = `calc(${inset}px + env(safe-area-inset-${row === 'top' ? 'top' : 'bottom'}, 0px))`
-  const h = `calc(${inset}px + env(safe-area-inset-${col === 'right' ? 'right' : 'left'}, 0px))`
+  const hLeft  = `calc(${inset}px + env(safe-area-inset-left, 0px))`
+  const hRight = `calc(${inset}px + env(safe-area-inset-right, 0px))`
+  const h = col === 'right' ? hRight : hLeft
 
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -74,10 +80,25 @@ function slotStyle(slot: EdgeSlot, isNarrow: boolean): React.CSSProperties {
   else if (row === 'bottom') style.bottom = v
   else { style.top = '50%'; style.transform = 'translateY(-50%)' }
 
-  if (col === 'left') style.left = h
+  if (col === 'stretch') {
+    // 贯通整行：两端都钉住，`space-between` 把占位者分列两端。
+    // 这是「几何上不可能重叠」对**跨角**情形的唯一实现方式——分处 top-left 与
+    // top-right 的两组挂件互相不知道对方多宽，320px 上实测撞 80px。
+    // 两端各用自己那一侧的 safe-area。第一版两边都写了 `h`（它按 col 派生，
+    // stretch 落在 left 分支），于是右端吃的是**左边**的缺口宽度——
+    // 刘海屏横屏时左右缺口不一样，右端会偏。这是测试输出里
+    // `right: calc(16px + env(safe-area-inset-left))` 露出来的。
+    style.left = hLeft
+    style.right = hRight
+    style.justifyContent = 'space-between'
+    // 顶栏两端高度不同（12px 的文字链接 vs 44px 的按钮排），居中对齐才不歪。
+    // 同时允许内容收缩：宽度不够时挤，而不是把兄弟推出视口。
+    style.minWidth = 0
+  } else if (col === 'left') style.left = h
   else if (col === 'right') style.right = h
   else {
-    // 到这里 row 只可能是 top / bottom —— 声明表里没有 middle-center 槽位，
+    // 到这里 col 只可能是 'center'，row 只可能是 top / bottom —— 声明表里没有
+    // middle-center 槽位，
     // TypeScript 按「相关联的解构收窄」直接证明了这一点（我第一版在这里写了
     // `row === 'middle' ? …` 的三元，tsc 报 TS2367「比较没有交集」，
     // 也就是那是一段永远不会走到的死代码）。
@@ -136,8 +157,11 @@ export interface EdgeItemProps {
   /** 必须已在 `OVERLAY_REGISTRY` 登记；未登记会抛，而不是静默不渲染 */
   id: string
   /**
-   * `presence: 'first-visit'` 的挂件由调用方控制可见性（持久化归调用方，
-   * 形态见 `lib/lab/tutorialStorage.ts`）。其余 presence 由本组件按视口判定。
+   * `first-visit` / `in-room` / `not-in-room` 三种 presence 的挂件由调用方控制
+   * 可见性（持久化与房间状态都不在 layout 层）。其余 presence 由本组件按视口判定。
+   *
+   * 传 `undefined` 等于「可见」——这是刻意的：忘了传的症状是挂件常驻，
+   * 那是看得见的；反过来默认隐藏的话，症状是挂件消失，而**没有任何测试会红**。
    */
   visible?: boolean
   children: React.ReactNode
@@ -161,7 +185,11 @@ export function EdgeItem({ id, visible, children }: EdgeItemProps) {
   // 视口未判定前不渲染任何依赖视口的挂件：默认某一边会在手机上闪一下桌面版
   if (entry.presence === 'desktop' && (!viewport || viewport.isNarrow)) return null
   if (entry.presence === 'narrow' && (!viewport || !viewport.isNarrow)) return null
-  if (entry.presence === 'first-visit' && visible === false) return null
+  // 首访、房间内外三种 presence 的可见性由调用方给：
+  // 首访是 localStorage（持久化归调用方），房间状态在 SceneContext 里——
+  // layout 层不该 import Lab 的 context（分层方向单向朝内）。
+  // 声明的作用是让门禁能推理互斥，不是让本组件去判。
+  if (CALLER_DRIVEN.has(entry.presence) && visible === false) return null
 
   return createPortal(
     <div

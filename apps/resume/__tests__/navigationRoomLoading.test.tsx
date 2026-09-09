@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { LocaleProvider } from '@/components/providers/LocaleProvider'
+import { LabUiWrapper } from './helpers/labUiWrapper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { RoomLoadPhase, RoomLoadState } from '@/context/SceneContext'
@@ -111,7 +112,7 @@ describe('NavigationUI room loading guard', () => {
     'disables map room buttons during the %s phase',
     (phase) => {
       setRoomLoadPhase(phase)
-      render(<NavigationUI />, { wrapper: LocaleProvider })
+      render(<NavigationUI />, { wrapper: LabUiWrapper })
 
       fireEvent.click(screen.getByRole('button', { name: 'Open map' }))
       const projectsButton = screen.getByRole('button', { name: 'Projects' })
@@ -127,7 +128,7 @@ describe('NavigationUI room loading guard', () => {
     'keeps map room buttons enabled during the %s phase',
     (phase) => {
       setRoomLoadPhase(phase)
-      render(<NavigationUI />, { wrapper: LocaleProvider })
+      render(<NavigationUI />, { wrapper: LabUiWrapper })
 
       fireEvent.click(screen.getByRole('button', { name: 'Open map' }))
       expect(screen.getByRole('button', { name: 'Projects' })).toBeEnabled()
@@ -137,7 +138,7 @@ describe('NavigationUI room loading guard', () => {
   it('disables Back accessibly while teleporting from an entered room', () => {
     setRoomLoadPhase('entered')
     sceneMocks.isTeleporting = true
-    render(<NavigationUI />, { wrapper: LocaleProvider })
+    render(<NavigationUI />, { wrapper: LabUiWrapper })
 
     const backButton = screen.getByRole('button', { name: 'Back to corridor' })
     expect(backButton).toBeDisabled()
@@ -149,7 +150,7 @@ describe('NavigationUI room loading guard', () => {
 
   it('requests exit from Back while entered and not teleporting', () => {
     setRoomLoadPhase('entered')
-    render(<NavigationUI />, { wrapper: LocaleProvider })
+    render(<NavigationUI />, { wrapper: LabUiWrapper })
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to corridor' }))
 

@@ -80,6 +80,18 @@ export function zOfLayer(layer: OverlayLayer): number {
  * 原先四个角的内边距有 16/20/24/32 四种写法，没有共识。
  */
 export const EDGE_SLOTS = {
+  /**
+   * 贯通整行的顶栏。**这是唯一 `col: 'stretch'` 的槽位，存在理由是跨槽位重叠。**
+   *
+   * 「同槽位是 flex 兄弟所以不可能重叠」只对同一个槽位成立。Lab 顶栏原先是
+   * `top-left` 的 `← Exit Lab`（20→104）与 `top-right` 的六个图标（24→304）——
+   * **两个不同槽位**，在 320px 上实测重叠 80px。把它们放进同一行、
+   * `space-between` 分列两端，才真的变成兄弟。
+   *
+   * 起草 ADR 时我把 A4 写成「这个抽象自然修掉」，那是不准确的：
+   * 分处两角的两组挂件，抽象只统一了坐标来源，没有让它们互相知道对方多宽。
+   */
+  'top-bar':       { row: 'top',    col: 'stretch', direction: 'row'   },
   'top-left':      { row: 'top',    col: 'left',   direction: 'row'    },
   'top-center':    { row: 'top',    col: 'center', direction: 'row'    },
   'top-right':     { row: 'top',    col: 'right',  direction: 'row'    },
@@ -116,10 +128,40 @@ export type OverlayPresence =
   | 'narrow'
   /** 仅首次访问（持久化在 localStorage，形态见 lib/lab/tutorialStorage.ts） */
   | 'first-visit'
+  /**
+   * 仅在房间内 / 仅在走廊。这一对是**互斥声明**：`overlayOwnership.test.ts` 据此
+   * 允许两个挂件占同一槽位的同一个 `order`（Lab 的走廊退出链接与房间内返回按钮）。
+   *
+   * 与 `desktop` / `narrow` 不同，`EdgeItem` **判不了**它——房间状态在
+   * `SceneContext` 里，而 `EdgeItem` 属于 layout 层、不该 import Lab 的 context
+   * （分层方向单向朝内）。所以这两种 presence 的可见性由调用方经 `visible` 传入，
+   * 声明的作用是让门禁能推理互斥。
+   */
+  | 'in-room'
+  | 'not-in-room'
+
+/**
+ * 挂件所属的页面。
+ *
+ * **不是分类标签，是门禁的必要输入。** 「同槽位的两个挂件必须可证互斥或 order 不同」
+ * 这条断言在跨页面时会误报：入口页的底部提示与 Lab 走廊的滚动提示都是
+ * `bottom-center` / `order: 10`，而它们永远不会同时存在——不是因为互斥条件，
+ * 是因为**它们在两个不同的页面上**。
+ *
+ * 没有这个字段，门禁只有两条路：要么误报（然后被人加豁免，
+ * `.claude/hooks/AGENTS.md`：「误报会训练人绕过守卫，那比漏报更危险」），
+ * 要么放弃这条断言。
+ */
+export type OverlaySurface =
+  /** 门户 `/`（左 Lab 右 Classic 那一屏） */
+  | 'entry'
+  /** `/lab` 走廊与房间 */
+  | 'lab'
 
 export interface OverlayEntry {
   /** 稳定标识。也是 DOM 上的 `data-overlay` 值，E2E 靠它定位 */
   readonly id: string
+  readonly surface: OverlaySurface
   readonly slot: EdgeSlot
   readonly layer: OverlayLayer
   readonly presence: OverlayPresence
@@ -149,12 +191,12 @@ export interface OverlayEntry {
  * 「已定义未接线」在本仓库是债务（ADR 20260903211338），
  * `overlayRegistry.test.ts` 会断言每条都有生产消费者。
  *
- * Lab 的挂件（`← Exit Lab`、房间内返回、六个导航图标、底部提示、成就气泡）
- * 在下一批收编，那时再加进来。
+ * Lab 的挂件已在第二批收编。仍**不在**表内的是全屏覆盖层（见文件头「不管什么」）。
  */
 export const OVERLAY_REGISTRY: readonly OverlayEntry[] = [
   {
     id: 'entry-locale',
+    surface: 'entry',
     slot: 'top-right',
     layer: 'chrome',
     presence: 'always',
@@ -164,6 +206,7 @@ export const OVERLAY_REGISTRY: readonly OverlayEntry[] = [
   },
   {
     id: 'entry-audio',
+    surface: 'entry',
     slot: 'top-right',
     layer: 'chrome',
     presence: 'always',
@@ -174,6 +217,7 @@ export const OVERLAY_REGISTRY: readonly OverlayEntry[] = [
   },
   {
     id: 'entry-explorer-hint',
+    surface: 'entry',
     slot: 'bottom-center',
     layer: 'hint',
     presence: 'first-visit',
@@ -182,8 +226,66 @@ export const OVERLAY_REGISTRY: readonly OverlayEntry[] = [
     what: '入口页底部的「点一扇门进入」提示。原先常驻，100% 盖住 Classic 面板的'
       + '「打开简历」按钮；现在只首访出现并自动淡出',
   },
+  // ── Lab（第二批收编：顶栏与底部）──────────────────────────────────────────
+  {
+    id: 'lab-exit',
+    surface: 'lab',
+    slot: 'top-bar',
+    layer: 'chrome',
+    presence: 'not-in-room',
+    order: 10,
+    interactive: true,
+    what: '走廊左上的「← 退出 Lab」。原先 LabScene 自己 fixed 到 (20,20)，'
+      + '与右上那排图标分属两个槽位，320px 上实测重叠 80px',
+  },
+  {
+    id: 'lab-room-back',
+    surface: 'lab',
+    slot: 'top-bar',
+    layer: 'chrome',
+    presence: 'in-room',
+    order: 10,
+    interactive: true,
+    what: '房间内的返回按钮。与 lab-exit 同槽同 order，靠 in-room / not-in-room 互斥'
+      + '——这个约定原先只活在两个 JSX 条件里，没有任何地方声明过',
+  },
+  {
+    id: 'lab-nav',
+    surface: 'lab',
+    slot: 'top-bar',
+    layer: 'chrome',
+    presence: 'always',
+    order: 20,
+    interactive: true,
+    what: 'Lab 顶栏右侧的导航图标排（路线 / 地图 / 音频 / 成就 / 帮助 / 语言）。'
+      + '窄屏折成三个：路线 + 地图 + 更多',
+  },
+  {
+    id: 'lab-scroll-hint',
+    surface: 'lab',
+    slot: 'bottom-center',
+    layer: 'hint',
+    presence: 'not-in-room',
+    order: 10,
+    interactive: false,
+    what: '走廊底部的「滚动 / 上下滑」提示',
+  },
+  {
+    id: 'lab-achievement',
+    surface: 'lab',
+    slot: 'bottom-center',
+    layer: 'popup',
+    presence: 'always',
+    order: 20,
+    interactive: false,
+    what: '成就气泡。**这是本表存在理由的原型**：它原先在 globals.css 里写死'
+      + ' bottom: 88px，注释逐字写着「88 = 32（提示的底距）+ 提示自身高度（约 20）'
+      + '+ 一段间距」——一个组件手算另一个组件的高度。现在它与 lab-scroll-hint 是'
+      + '同一个 column flex 的兄弟，那个数消失了',
+  },
   {
     id: 'entry-watermark',
+    surface: 'entry',
     slot: 'bottom-left',
     layer: 'hint',
     presence: 'desktop',

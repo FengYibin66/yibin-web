@@ -48,9 +48,15 @@ export function useViewport(): Viewport | null {
   const [viewport, setViewport] = useState<Viewport | null>(null)
 
   useEffect(() => {
+    // 环境里没有 matchMedia 就停在 `null`（= 还没判定）。调用方本来就必须处理这个态，
+    // 所以这不是静默降级；而抛异常会把「读不到视口」升级成整个 Lab 白屏。
+    // jsdom 默认不提供 matchMedia，收编 Lab 顶栏时三个组件测试因此一起红。
+    if (typeof window.matchMedia !== 'function') return
+
     const narrow = window.matchMedia(NARROW_QUERY)
     const coarse = window.matchMedia(COARSE_QUERY)
     const hover = window.matchMedia(HOVER_QUERY)
+    const lists = [narrow, coarse, hover]
 
     const read = () => setViewport({
       isNarrow: narrow.matches,
@@ -59,17 +65,36 @@ export function useViewport(): Viewport | null {
     })
 
     read()
-    // 用 MediaQueryList 的 change 而不是 window.resize：resize 在滚动时也会
-    // 在移动 Safari 上触发（地址栏收起改变视口高度），而这三个查询都只关心
-    // 宽度与指针能力，没必要跟着高度变化重算。
-    narrow.addEventListener('change', read)
-    coarse.addEventListener('change', read)
-    hover.addEventListener('change', read)
-    return () => {
-      narrow.removeEventListener('change', read)
-      coarse.removeEventListener('change', read)
-      hover.removeEventListener('change', read)
+
+    /*
+      用 MediaQueryList 的 change 而不是 window.resize：resize 在滚动时也会
+      在移动 Safari 上触发（地址栏收起改变视口高度），而这三个查询都只关心
+      宽度与指针能力，没必要跟着高度变化重算。
+
+      两种订阅形态都要认：`MediaQueryList` 直到 **Safari 14**（2020）才实现
+      `addEventListener`，更早的版本只有已废弃的 `addListener`。只写前者会在
+      Safari 13 上完全不响应旋转与分屏——而那类设备正是最需要窄屏判据的一批。
+      没有任何一方时（精简的测试替身）就只读一次：值仍是对的，只是不再跟随变化。
+    */
+    type LegacyMql = MediaQueryList & {
+      addListener?: (cb: () => void) => void
+      removeListener?: (cb: () => void) => void
     }
+    const subscribe = (mql: MediaQueryList) => {
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', read)
+        return () => mql.removeEventListener('change', read)
+      }
+      const legacy = mql as LegacyMql
+      if (typeof legacy.addListener === 'function') {
+        legacy.addListener(read)
+        return () => legacy.removeListener?.(read)
+      }
+      return () => {}
+    }
+
+    const unsubscribes = lists.map(subscribe)
+    return () => { for (const off of unsubscribes) off() }
   }, [])
 
   return viewport

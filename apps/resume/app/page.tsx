@@ -9,6 +9,8 @@ import gsap from 'gsap'
 import { ClassicPanel } from '@/components/entry/ClassicPanel'
 import { ExplorerBar } from '@/components/entry/ExplorerBar'
 import { EntryLocaleToggle } from '@/components/entry/EntryLocaleToggle'
+import { EntryAudioToggle } from '@/components/entry/EntryAudioToggle'
+import { EdgeItem, EdgeLayerRoot } from '@/components/layout/EdgeLayer'
 import { AudioProvider } from '@/context/AudioContext'
 import type { EntryPreviewSceneProps } from '@/components/entry/EntryPreviewScene'
 
@@ -274,38 +276,43 @@ export default function EntryPage() {
         <ClassicPanel />
       </a>
 
-      {!isStacked && (
-        /*
-          从 `left:50% translateX(-50%)`（底部居中）移到左下角。
+      {/*
+        域名水印。**定位与出现条件都不在这里**——由
+        `EdgeItem id="entry-watermark"` 放进 `bottom-left` 槽位、
+        `presence: 'desktop'` 决定只在宽屏出现（ADR 20260909182319）。
 
-          它原先与 `ExplorerBar` 逐字同坐标（都是 `fixed; bottom:16; left:50%;
-          translateX(-50%)`），而 ExplorerBar 是白底 + 2px 黑边、z=100，这条是 z=30
-          ——**桌面上它 100% 被盖住**，从 ExplorerBar 上线那天起就没人见过
-          （实测 2026-09-09：bar [415,736 451×49] × 域名条 [560,769 160×15]，
-          `elementFromPoint` 在域名条中心命中的是 bar）。
+        它原先自己写 `fixed; bottom:16; left:50%; translateX(-50%)`，与
+        `ExplorerBar` **逐字同坐标**、z 差 70（30 vs 100），于是桌面上被那条
+        白底提示 100% 盖住，从 ExplorerBar 上线那天起没人见过（实测 2026-09-09：
+        bar [415,736 451×49] × 水印 [560,769 160×15]，`elementFromPoint`
+        在水印中心命中的是 bar）。
 
-          注意这条与 A2（ExplorerBar 盖住 Classic 面板 CTA）是**同一个缺陷的桌面镜像**：
-          屏幕的角是共享资源，而它没有所有权，谁 `position: fixed` 到同一坐标都不知道
-          对方在。这里只做位置避让；根治要一张槽位声明表（见 ADR 提案）。
-        */
-        <div style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '24px',
+        这条与「提示盖住『打开简历』主按钮」是同一个缺陷的**桌面镜像**：
+        屏幕的角是共享资源而没有所有权，谁 fixed 到同一坐标都不知道对方在。
+      */}
+    </div>
+    {/*
+      屏角挂件全部经 EdgeLayerRoot 放进声明好的槽位（ADR 20260909182319）。
+      这里不写任何坐标与 z——同槽位的挂件是同一个 flex 容器的兄弟，
+      几何上不可能重叠，而这正是原先四处重叠的成因。
+    */}
+    <EdgeLayerRoot>
+      {/* 语言在门户定，进 Lab / Classic 都沿用（见 EntryLocaleToggle 的说明） */}
+      <EdgeItem id="entry-locale"><EntryLocaleToggle /></EdgeItem>
+      {/* 静音开关：原先是底部提示文本里的 [ON]/[OFF]，见 EntryAudioToggle 的说明 */}
+      <EdgeItem id="entry-audio"><EntryAudioToggle /></EdgeItem>
+      <EdgeItem id="entry-explorer-hint"><ExplorerBar /></EdgeItem>
+      <EdgeItem id="entry-watermark">
+        <span style={{
           fontSize: '10px',
           color: 'rgba(42,31,14,0.25)',
           letterSpacing: '0.2em',
           fontFamily: 'var(--font-mono, monospace)',
-          zIndex: 30,
-          pointerEvents: 'none',
         }}>
           resume.yibinfeng.com
-        </div>
-      )}
-    </div>
-    {/* 语言在门户定，进 Lab / Classic 都沿用（见 EntryLocaleToggle 的说明） */}
-    <EntryLocaleToggle />
-    <ExplorerBar />
+        </span>
+      </EdgeItem>
+    </EdgeLayerRoot>
     </AudioProvider>
   )
 }

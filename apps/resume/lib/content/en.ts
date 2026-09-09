@@ -132,8 +132,12 @@ export const en: SiteContent = {
       classicCta: 'Open the résumé',
       classicTags: ['AI Research', 'Frontend', 'Structural'],
       explorerBar: 'EXPLORER',
-      explorerHint: 'Click a door to enter. Audio is currently',
-      explorerHintTouch: 'Tap a door to enter. Audio is currently',
+      // 句末不再拼 [ON]/[OFF]：那个静音开关已搬到右上角的 EntryAudioToggle
+      // （原先它是本条提示里唯一可交互的元素，约 30×16px，远低于触摸下限；
+      //  而本条提示必须能自动淡出——它 100% 盖住了「打开简历」主按钮）。
+      // 留着「Audio is currently」会让句子断在那儿。
+      explorerHint: 'Click a door to enter.',
+      explorerHintTouch: 'Tap a door to enter.',
     },
     fallback: {
       webglTitle: 'The Lab needs WebGL',
